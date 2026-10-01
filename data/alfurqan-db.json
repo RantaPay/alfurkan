@@ -1,0 +1,278 @@
+{
+  "school": {
+    "name": "Al-Furqan International College",
+    "shortName": "Al-Furqan",
+    "motto": "Knowledge, Discipline & Excellence",
+    "address": "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria",
+    "email": "bursary@alfurqan.edu.ng",
+    "phone": "+234 803 456 7890 / +234 812 345 6789",
+    "currentTerm": "1st Term",
+    "currentSession": "2026/2027 Academic Session",
+    "bankName": "Jaiz Bank",
+    "accountNumber": "0012489301",
+    "accountName": "Al-Furqan International College - Fees",
+    "bursarName": "Alhaji Ibrahim S. Danladi"
+  },
+  "students": [
+    {
+      "id": "std_001",
+      "regNumber": "AFIC/2026/0101",
+      "fullName": "Fatima Abubakar Sadiq",
+      "class": "JSS 1 Diamond",
+      "gender": "Female",
+      "parentName": "Dr. Abubakar Sadiq",
+      "parentPhone": "08031112233",
+      "parentEmail": "abubakar.sadiq@gmail.com",
+      "totalTermBill": 165000,
+      "totalPaid": 165000,
+      "balanceRemaining": 0,
+      "status": "FULL",
+      "lastPaymentDate": "2026-09-18",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_002",
+      "regNumber": "AFIC/2026/0102",
+      "fullName": "Yusuf Umar Faruk",
+      "class": "JSS 2 Gold",
+      "gender": "Male",
+      "parentName": "Alhaji Umar Faruk",
+      "parentPhone": "08023456789",
+      "parentEmail": "umar.faruk@yahoo.com",
+      "totalTermBill": 175000,
+      "totalPaid": 90000,
+      "balanceRemaining": 85000,
+      "status": "PARTIAL",
+      "lastPaymentDate": "2026-09-22",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_003",
+      "regNumber": "AFIC/2026/0103",
+      "fullName": "Aisha Mohammed Bello",
+      "class": "JSS 3 Emerald",
+      "gender": "Female",
+      "parentName": "Hajiya Maryam Bello",
+      "parentPhone": "08055667788",
+      "parentEmail": "maryam.bello@outlook.com",
+      "totalTermBill": 180000,
+      "totalPaid": 180000,
+      "balanceRemaining": 0,
+      "status": "FULL",
+      "lastPaymentDate": "2026-09-15",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_004",
+      "regNumber": "AFIC/2026/0104",
+      "fullName": "Ibrahim Shehu Danladi",
+      "class": "SS 1 Science",
+      "gender": "Male",
+      "parentName": "Engr. Shehu Danladi",
+      "parentPhone": "08099887766",
+      "parentEmail": "shehu.danladi@gmail.com",
+      "totalTermBill": 210000,
+      "totalPaid": 100000,
+      "balanceRemaining": 110000,
+      "status": "PARTIAL",
+      "lastPaymentDate": "2026-09-25",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_005",
+      "regNumber": "AFIC/2026/0105",
+      "fullName": "Zainab Sani Zaria",
+      "class": "SS 2 Arts",
+      "gender": "Female",
+      "parentName": "Barrister Sani Zaria",
+      "parentPhone": "08144332211",
+      "parentEmail": "sani.zaria@legal.ng",
+      "totalTermBill": 195000,
+      "totalPaid": 0,
+      "balanceRemaining": 195000,
+      "status": "UNPAID",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_006",
+      "regNumber": "AFIC/2026/0106",
+      "fullName": "Abdulrahman Aliyu Kano",
+      "class": "SS 3 Science",
+      "gender": "Male",
+      "parentName": "Alhaji Aliyu Kano",
+      "parentPhone": "08088776655",
+      "parentEmail": "aliyu.kano@kano.gov.ng",
+      "totalTermBill": 230000,
+      "totalPaid": 230000,
+      "balanceRemaining": 0,
+      "status": "FULL",
+      "lastPaymentDate": "2026-09-12",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_007",
+      "regNumber": "AFIC/2026/0107",
+      "fullName": "Khadijah Usman Idris",
+      "class": "JSS 1 Gold",
+      "gender": "Female",
+      "parentName": "Mallam Usman Idris",
+      "parentPhone": "08066554433",
+      "parentEmail": "usman.idris@gmail.com",
+      "totalTermBill": 165000,
+      "totalPaid": 75000,
+      "balanceRemaining": 90000,
+      "status": "PARTIAL",
+      "lastPaymentDate": "2026-09-20",
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "std_008",
+      "regNumber": "AFIC/2026/0108",
+      "fullName": "Mustapha Kabir Ahmed",
+      "class": "SS 2 Science",
+      "gender": "Male",
+      "parentName": "Dr. Kabir Ahmed",
+      "parentPhone": "08077665544",
+      "parentEmail": "kabir.ahmed@abu.edu.ng",
+      "totalTermBill": 205000,
+      "totalPaid": 0,
+      "balanceRemaining": 205000,
+      "status": "UNPAID",
+      "createdAt": "2026-09-01"
+    }
+  ],
+  "receipts": [
+    {
+      "id": "rcpt_001",
+      "receiptNumber": "AFIC-RCP-2026-0001",
+      "studentId": "std_001",
+      "regNumber": "AFIC/2026/0101",
+      "studentName": "Fatima Abubakar Sadiq",
+      "studentClass": "JSS 1 Diamond",
+      "parentName": "Dr. Abubakar Sadiq",
+      "parentPhone": "08031112233",
+      "parentEmail": "abubakar.sadiq@gmail.com",
+      "amountPaid": 165000,
+      "totalTermBill": 165000,
+      "previousTotalPaid": 0,
+      "newTotalPaid": 165000,
+      "balanceRemaining": 0,
+      "paymentStatus": "FULL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "JAIZ/TRF/20260918/984210",
+      "items": [
+        {
+          "name": "Tuition / School Fees",
+          "category": "Tuition",
+          "amount": 120000
+        },
+        {
+          "name": "First Term Textbooks",
+          "category": "Books",
+          "amount": 25000
+        },
+        {
+          "name": "College Uniform (2 Sets)",
+          "category": "Uniform",
+          "amount": 15000
+        },
+        {
+          "name": "PTA Termly Levy",
+          "category": "PTA",
+          "amount": 5000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027",
+      "date": "18 Sep 2026",
+      "timestamp": "2026-09-18T10:14:22.000Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi (Bursar)",
+      "securityHash": "AFIC-VERIFIED-984210",
+      "notes": "Full payment confirmed via Jaiz Bank corporate transfer.",
+      "qrCodeDataUrl": "data:image/png;base64,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"
+    },
+    {
+      "id": "rcpt_002",
+      "receiptNumber": "AFIC-RCP-2026-0002",
+      "studentId": "std_002",
+      "regNumber": "AFIC/2026/0102",
+      "studentName": "Yusuf Umar Faruk",
+      "studentClass": "JSS 2 Gold",
+      "parentName": "Alhaji Umar Faruk",
+      "parentPhone": "08023456789",
+      "parentEmail": "umar.faruk@yahoo.com",
+      "amountPaid": 90000,
+      "totalTermBill": 175000,
+      "previousTotalPaid": 0,
+      "newTotalPaid": 90000,
+      "balanceRemaining": 85000,
+      "paymentStatus": "PARTIAL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "GTB/NIP/20260922/741982",
+      "items": [
+        {
+          "name": "Tuition (Part Payment 1)",
+          "category": "Tuition",
+          "amount": 65000
+        },
+        {
+          "name": "Textbooks Pack",
+          "category": "Books",
+          "amount": 25000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027",
+      "date": "22 Sep 2026",
+      "timestamp": "2026-09-22T14:32:05.000Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi (Bursar)",
+      "securityHash": "AFIC-VERIFIED-741982",
+      "notes": "Part payment installment 1. Balance of ₦85,000 due before mid-term exams.",
+      "qrCodeDataUrl": "data:image/png;base64,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"
+    },
+    {
+      "id": "rcpt_003",
+      "receiptNumber": "AFIC-RCP-2026-0003",
+      "studentId": "std_003",
+      "regNumber": "AFIC/2026/0103",
+      "studentName": "Aisha Mohammed Bello",
+      "studentClass": "JSS 3 Emerald",
+      "parentName": "Hajiya Maryam Bello",
+      "parentPhone": "08055667788",
+      "parentEmail": "maryam.bello@outlook.com",
+      "amountPaid": 180000,
+      "totalTermBill": 180000,
+      "previousTotalPaid": 0,
+      "newTotalPaid": 180000,
+      "balanceRemaining": 0,
+      "paymentStatus": "FULL",
+      "paymentMethod": "Bank Deposit",
+      "bankReference": "JAIZ-DEP-0915-4421",
+      "items": [
+        {
+          "name": "JSS 3 Full Tuition",
+          "category": "Tuition",
+          "amount": 135000
+        },
+        {
+          "name": "Textbooks & Revision Kits",
+          "category": "Books",
+          "amount": 30000
+        },
+        {
+          "name": "PTA & Practical Fees",
+          "category": "PTA",
+          "amount": 15000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027",
+      "date": "15 Sep 2026",
+      "timestamp": "2026-09-15T09:20:11.000Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi (Bursar)",
+      "securityHash": "AFIC-VERIFIED-442109",
+      "notes": "Full payment bank deposit teller presented and confirmed.",
+      "qrCodeDataUrl": "data:image/png;base64,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"
+    }
+  ]
+}
