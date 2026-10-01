@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   User,
   Users,
+  UserPlus,
 } from "lucide-react";
+import { AddStudentModal } from "@/components/students/AddStudentModal";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -22,6 +24,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -73,6 +76,15 @@ export default function StudentsPage() {
               Search any Al-Furqan student to view payment history or issue an official receipt
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-2 cursor-pointer w-fit"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Enroll New Student(s)</span>
+          </button>
         </div>
 
         {/* Filter & Search Bar */}
@@ -196,6 +208,12 @@ export default function StudentsPage() {
         onClose={() => setIsModalOpen(false)}
         preselectedStudent={selectedStudent}
         onReceiptCreated={() => fetchStudents()}
+      />
+
+      <AddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onStudentAdded={() => fetchStudents()}
       />
     </div>
   );

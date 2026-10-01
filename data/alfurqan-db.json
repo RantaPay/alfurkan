@@ -11,9 +11,54 @@
     "bankName": "Jaiz Bank",
     "accountNumber": "0012489301",
     "accountName": "Al-Furqan International College - Fees",
-    "bursarName": "Alhaji Ibrahim S. Danladi"
+    "bursarName": "Alhaji Ibrahim S. Danladi",
+    "bursarPin": "1234",
+    "logoUrl": ""
   },
   "students": [
+    {
+      "id": "std_1790893615143_1_vsf",
+      "regNumber": "AFIC/2026/0111",
+      "fullName": "Usman Shehu Shagari",
+      "class": "SS 3 Arts",
+      "gender": "Male",
+      "parentName": "Shehu Shagari",
+      "parentPhone": "08099223344",
+      "totalTermBill": 220000,
+      "totalPaid": 0,
+      "balanceRemaining": 220000,
+      "status": "UNPAID",
+      "createdAt": "2026-10-01"
+    },
+    {
+      "id": "std_1790893615143_0_v6u",
+      "regNumber": "AFIC/2026/0110",
+      "fullName": "Maryam Kabir Danbatta",
+      "class": "SS 1 Gold",
+      "gender": "Female",
+      "parentName": "Kabir Danbatta",
+      "parentPhone": "08077112233",
+      "totalTermBill": 195000,
+      "totalPaid": 0,
+      "balanceRemaining": 195000,
+      "status": "UNPAID",
+      "createdAt": "2026-10-01"
+    },
+    {
+      "id": "std_1790893607148_9x4",
+      "regNumber": "AFIC/2026/0109",
+      "fullName": "Nura Mohammed Bello",
+      "class": "JSS 2 Diamond",
+      "gender": "Male",
+      "parentName": "Alhaji Mohammed Bello",
+      "parentPhone": "08033221100",
+      "totalTermBill": 170000,
+      "totalPaid": 0,
+      "balanceRemaining": 170000,
+      "status": "UNPAID",
+      "createdAt": "2026-10-01",
+      "lastPaymentDate": "2026-10-01"
+    },
     {
       "id": "std_001",
       "regNumber": "AFIC/2026/0101",
@@ -24,7 +69,7 @@
       "parentPhone": "08031112233",
       "parentEmail": "abubakar.sadiq@gmail.com",
       "totalTermBill": 165000,
-      "totalPaid": 355000,
+      "totalPaid": 520000,
       "balanceRemaining": 0,
       "status": "FULL",
       "lastPaymentDate": "2026-10-01",
@@ -142,6 +187,77 @@
     }
   ],
   "receipts": [
+    {
+      "id": "rcpt_1790893619654",
+      "receiptNumber": "AFIC-RCP-2026-0006",
+      "studentId": "std_1790893607148_9x4",
+      "regNumber": "AFIC/2026/0109",
+      "studentName": "Nura Mohammed Bello",
+      "studentClass": "JSS 2 Diamond",
+      "parentName": "Alhaji Mohammed Bello",
+      "parentPhone": "08033221100",
+      "amountPaid": 100000,
+      "totalTermBill": 170000,
+      "previousTotalPaid": 0,
+      "newTotalPaid": 100000,
+      "balanceRemaining": 70000,
+      "paymentStatus": "PARTIAL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "JAIZ/NIP/20261001/889911",
+      "items": [
+        {
+          "name": "1st Term Tuition (Part)",
+          "category": "Tuition",
+          "amount": 100000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027 Academic Session",
+      "date": "1 Oct 2026",
+      "timestamp": "2026-10-01T22:26:59.605Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi",
+      "qrCodeDataUrl": "data:image/png;base64,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",
+      "securityHash": "AFIC-HASH-ABQRHA",
+      "notes": "Part payment for 1st term tuition",
+      "isVoided": true,
+      "voidReason": "Parent transfer was declined by central clearing",
+      "voidedAt": "2026-10-01T22:27:08.367Z",
+      "voidedBy": "Alhaji Ibrahim S. Danladi"
+    },
+    {
+      "id": "rcpt_1790892850816",
+      "receiptNumber": "AFIC-RCP-2026-0005",
+      "studentId": "std_001",
+      "regNumber": "AFIC/2026/0101",
+      "studentName": "Fatima Abubakar Sadiq",
+      "studentClass": "JSS 1 Diamond",
+      "parentName": "Dr. Abubakar Sadiq",
+      "parentPhone": "08031112233",
+      "parentEmail": "abubakar.sadiq@gmail.com",
+      "amountPaid": 165000,
+      "totalTermBill": 165000,
+      "previousTotalPaid": 355000,
+      "newTotalPaid": 520000,
+      "balanceRemaining": 0,
+      "paymentStatus": "FULL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "TRF/NIP/850816",
+      "items": [
+        {
+          "name": "School Fees / Tuition",
+          "category": "Tuition",
+          "amount": 165000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027 Academic Session",
+      "date": "1 Oct 2026",
+      "timestamp": "2026-10-01T22:14:10.790Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi",
+      "qrCodeDataUrl": "data:image/png;base64,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",
+      "securityHash": "AFIC-HASH-39K7OJ",
+      "notes": "Full payment cleared. Verified by Bursary."
+    },
     {
       "id": "rcpt_1790892360207",
       "receiptNumber": "AFIC-RCP-2026-0004",

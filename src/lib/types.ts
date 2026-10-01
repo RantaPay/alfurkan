@@ -21,7 +21,7 @@ export interface Student {
   id: string;
   regNumber: string; // e.g. AFIC/2026/001
   fullName: string;
-  class: string; // e.g. JSS 1 Gold, SS 2 Science
+  class: string; // e.g. JSS 1 Diamond, SS 2 Science
   gender: "Male" | "Female";
   parentName: string;
   parentPhone: string;
@@ -32,6 +32,17 @@ export interface Student {
   status: PaymentStatus;
   lastPaymentDate?: string;
   createdAt: string;
+}
+
+export interface CreateStudentInput {
+  fullName: string;
+  regNumber?: string;
+  class: string;
+  gender: "Male" | "Female";
+  parentName: string;
+  parentPhone: string;
+  parentEmail?: string;
+  totalTermBill: number;
 }
 
 export interface ReceiptItem {
@@ -68,6 +79,10 @@ export interface Receipt {
   qrCodeDataUrl?: string;
   securityHash: string;
   notes?: string;
+  isVoided?: boolean;
+  voidReason?: string;
+  voidedAt?: string;
+  voidedBy?: string;
 }
 
 export interface SchoolProfile {
@@ -84,6 +99,7 @@ export interface SchoolProfile {
   accountName: string;
   bursarName: string;
   logoUrl?: string;
+  bursarPin?: string;
 }
 
 export interface ReportSummary {

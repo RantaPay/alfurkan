@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Receipt, SchoolProfile } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
-import { ShieldCheck, CheckCircle2, Clock, QrCode as QrIcon } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Clock, QrCode as QrIcon, AlertCircle } from "lucide-react";
 
 interface ReceiptDocumentProps {
   receipt: Receipt;
@@ -20,18 +20,28 @@ export function ReceiptDocument({ receipt, school }: ReceiptDocumentProps) {
       className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-200/90 max-w-3xl mx-auto relative overflow-hidden print:shadow-none print:border-none print:p-4 print:max-w-full"
     >
       {/* Background Watermark Stamp */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.04] select-none">
-        <span className="text-8xl sm:text-9xl font-black rotate-[-25deg] tracking-widest uppercase">
-          {isFullPayment ? "PAID IN FULL" : "PARTIAL PAYMENT"}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.05] select-none">
+        <span
+          className={`text-7xl sm:text-9xl font-black rotate-[-25deg] tracking-widest uppercase ${
+            receipt.isVoided ? "text-rose-600 opacity-20" : ""
+          }`}
+        >
+          {receipt.isVoided ? "VOID / CANCELLED" : isFullPayment ? "PAID IN FULL" : "PARTIAL PAYMENT"}
         </span>
       </div>
 
       {/* Top Header: School Branding & Crest */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b-2 border-slate-900/10">
         <div className="flex items-center gap-4 text-center sm:text-left">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white font-black text-2xl shadow-lg shrink-0 print:border print:border-slate-800">
-            AF
-          </div>
+          {school?.logoUrl ? (
+            <div className="h-16 w-16 rounded-2xl border border-slate-200 p-1.5 bg-white shadow-md shrink-0 flex items-center justify-center overflow-hidden">
+              <img src={school.logoUrl} alt={school.name} className="h-full w-full object-contain" />
+            </div>
+          ) : (
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white font-black text-2xl shadow-lg shrink-0 print:border print:border-slate-800">
+              AF
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-center sm:justify-start gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -50,12 +60,16 @@ export function ReceiptDocument({ receipt, school }: ReceiptDocumentProps) {
 
         {/* Receipt Number & Date Badge */}
         <div className="text-center sm:text-right shrink-0">
-          <span className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-mono font-bold text-xs border border-slate-200">
-            OFFICIAL DIGITAL RECEIPT
+          <span className={`inline-block px-3 py-1 rounded-full font-mono font-bold text-xs border ${
+            receipt.isVoided 
+              ? "bg-rose-100 text-rose-800 border-rose-300"
+              : "bg-slate-100 text-slate-800 border-slate-200"
+          }`}>
+            {receipt.isVoided ? "VOIDED / REVOKED RECEIPT" : "OFFICIAL DIGITAL RECEIPT"}
           </span>
           <div className="mt-2 text-xs font-bold text-slate-500">
             Receipt No:{" "}
-            <span className="text-slate-900 font-mono text-sm font-black">
+            <span className={`font-mono text-sm font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-900"}`}>
               {receipt.receiptNumber}
             </span>
           </div>
@@ -68,9 +82,37 @@ export function ReceiptDocument({ receipt, school }: ReceiptDocumentProps) {
         </div>
       </div>
 
-      {/* Dynamic Status Banner: FULL vs PARTIAL */}
+      {/* Dynamic Status Banner: VOIDED vs FULL vs PARTIAL */}
       <div className="my-6">
-        {isFullPayment ? (
+        {receipt.isVoided ? (
+          <div className="rounded-2xl bg-rose-50 border-2 border-rose-500/50 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-rose-950 text-sm sm:text-base tracking-wide">
+                    RECEIPT REVOKED • CANCELLED & VOID
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
+                    INVALIDATED
+                  </span>
+                </div>
+                <p className="text-xs text-rose-800 mt-1">
+                  Cancellation Reason: <strong>&quot;{receipt.voidReason || "Payment Revoked / Duplicate Entry"}&quot;</strong>
+                </p>
+                <div className="text-[11px] text-rose-700/80 mt-0.5">
+                  Voided By: <strong>{receipt.voidedBy || "Bursar"}</strong> • {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleString() : ""}
+                </div>
+              </div>
+            </div>
+            <div className="text-right shrink-0 bg-white/80 px-4 py-2 rounded-xl border border-rose-200">
+              <div className="text-[10px] font-bold text-rose-600 uppercase">Ledger Status</div>
+              <div className="text-sm font-black text-rose-800 uppercase">REVERSED IN LEDGER</div>
+            </div>
+          </div>
+        ) : isFullPayment ? (
           <div className="rounded-2xl bg-emerald-50 border-2 border-emerald-500/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">

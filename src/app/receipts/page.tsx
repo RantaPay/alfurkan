@@ -18,7 +18,7 @@ import {
 export default function ReceiptsLedgerPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "FULL" | "PARTIAL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "FULL" | "PARTIAL" | "VOIDED">("ALL");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +41,11 @@ export default function ReceiptsLedgerPage() {
   }, []);
 
   const filtered = receipts.filter((r) => {
-    const matchesStatus = statusFilter === "ALL" || r.paymentStatus === statusFilter;
+    let matchesStatus = true;
+    if (statusFilter === "FULL") matchesStatus = !r.isVoided && (r.paymentStatus === "FULL" || r.balanceRemaining === 0);
+    else if (statusFilter === "PARTIAL") matchesStatus = !r.isVoided && (r.paymentStatus === "PARTIAL" && r.balanceRemaining > 0);
+    else if (statusFilter === "VOIDED") matchesStatus = !!r.isVoided;
+
     const q = query.toLowerCase().trim();
     const matchesQuery =
       !q ||
@@ -82,7 +86,7 @@ export default function ReceiptsLedgerPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-stretch sm:self-auto">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-stretch sm:self-auto">
             <button
               type="button"
               onClick={() => setStatusFilter("ALL")}
@@ -115,6 +119,17 @@ export default function ReceiptsLedgerPage() {
               }`}
             >
               Part Payments
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("VOIDED")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === "VOIDED"
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Voided
             </button>
           </div>
         </div>
@@ -163,7 +178,12 @@ export default function ReceiptsLedgerPage() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {isFull ? (
+                        {receipt.isVoided ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-800 border border-rose-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            <span>VOIDED</span>
+                          </span>
+                        ) : isFull ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                             <span>FULL</span>

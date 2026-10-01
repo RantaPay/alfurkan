@@ -15,6 +15,12 @@ import {
   Download,
   AlertCircle,
   Building2,
+  Ban,
+  AlertTriangle,
+  Lock,
+  Loader2,
+  X,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function ReceiptViewPage() {
@@ -27,6 +33,16 @@ export default function ReceiptViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  // Voiding State
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState("Bank transfer bounced / invalid payment proof");
+  const [customVoidReason, setCustomVoidReason] = useState("");
+  const [bursarPinInput, setBursarPinInput] = useState("");
+  const [voidError, setVoidError] = useState("");
+  const [isVoiding, setIsVoiding] = useState(false);
+  const [voidSuccess, setVoidSuccess] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -66,10 +82,92 @@ export default function ReceiptViewPage() {
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    if (!receipt) return;
+    const element = document.getElementById("printable-receipt");
+    if (!element) return;
+
+    setIsDownloadingPdf(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`AlFurqan_Receipt_${receipt.receiptNumber}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed, falling back to print", err);
+      window.print();
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleVoidReceipt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!receipt) return;
+    setVoidError("");
+
+    const finalReason = voidReason === "Other" ? customVoidReason.trim() : voidReason;
+    if (!finalReason) {
+      setVoidError("Please specify a cancellation reason.");
+      return;
+    }
+
+    const expectedPin = school?.bursarPin || "1234";
+    if (bursarPinInput !== expectedPin) {
+      setVoidError("Incorrect Bursar PIN. (Default system PIN: 1234)");
+      return;
+    }
+
+    try {
+      setIsVoiding(true);
+      const res = await fetch("/api/receipts/void", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptId: receipt.id,
+          reason: finalReason,
+          voidedBy: school?.bursarName || "Authorized Bursar",
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      setReceipt(data.receipt);
+      setIsVoidModalOpen(false);
+      setVoidSuccess(true);
+      setTimeout(() => setVoidSuccess(false), 5000);
+    } catch (err: any) {
+      setVoidError(err.message || "Failed to void receipt.");
+    } finally {
+      setIsVoiding(false);
+    }
   };
 
   if (loading) {
@@ -108,7 +206,7 @@ export default function ReceiptViewPage() {
 
   // WhatsApp Pre-composed Message for parent
   const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-    `Assalamu Alaikum ${receipt.parentName},\n\nOfficial Fee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your official clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nBursary Department\nAl-Furqan International College`
+    `Assalamu Alaikum ${receipt.parentName},\n\nOfficial Fee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your official clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nBursary Department\nAl-Furqan International College`
   )}`;
 
   return (
@@ -125,9 +223,14 @@ export default function ReceiptViewPage() {
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
             <div className="h-4 w-px bg-slate-200" />
-            <span className="font-mono text-xs font-black text-slate-800">
+            <span className={`font-mono text-xs font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
               {receipt.receiptNumber}
             </span>
+            {receipt.isVoided && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                VOIDED
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -136,20 +239,44 @@ export default function ReceiptViewPage() {
               href={parentWaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#25D366] hover:bg-[#1EBE5D] text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              className={`text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                receipt.isVoided ? "bg-slate-500 hover:bg-slate-600 opacity-80" : "bg-[#25D366] hover:bg-[#1EBE5D]"
+              }`}
             >
               <MessageSquare className="h-4 w-4 fill-white" />
-              <span>Send to Parent WhatsApp</span>
+              <span>{receipt.isVoided ? "Send Notice via WA" : "Send to Parent WhatsApp"}</span>
             </a>
 
-            {/* Print / Save as PDF Button */}
+            {/* Direct 1-Click PDF Download Button */}
+            <button
+              type="button"
+              disabled={isDownloadingPdf}
+              onClick={handleDownloadPdf}
+              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Download high-resolution .pdf document"
+            >
+              {isDownloadingPdf ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span>Download PDF (.pdf)</span>
+                </>
+              )}
+            </button>
+
+            {/* Browser Print Button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="bg-[#075E54] hover:bg-[#128C7E] text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Print via Thermal or Desktop Printer"
             >
-              <Printer className="h-4 w-4" />
-              <span>Print / Download PDF</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print</span>
             </button>
 
             {/* Copy Link Button */}
@@ -159,19 +286,170 @@ export default function ReceiptViewPage() {
               className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Share2 className="h-3.5 w-3.5" />
-              <span>{copied ? "Link Copied!" : "Copy Link"}</span>
+              <span>{copied ? "Link Copied!" : "Copy"}</span>
             </button>
+
+            {/* Void / Cancel Receipt Trigger */}
+            {!receipt.isVoided ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setVoidError("");
+                  setBursarPinInput("");
+                  setIsVoidModalOpen(true);
+                }}
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Cancel receipt and reverse student payment in ledger"
+              >
+                <Ban className="h-3.5 w-3.5 text-rose-600" />
+                <span>Void Receipt</span>
+              </button>
+            ) : (
+              <span className="text-rose-600 text-xs font-bold flex items-center gap-1 px-2 py-1 bg-rose-50 rounded-lg">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Cancelled</span>
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Void Success Notification Toast */}
+        {voidSuccess && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in duration-200">
+            <CheckCircle2 className="h-5 w-5 text-rose-600 shrink-0" />
+            <span>
+              Receipt {receipt.receiptNumber} has been successfully voided. Student ledger and debt balance have been automatically adjusted.
+            </span>
+          </div>
+        )}
 
         {/* The Official Printable Digital Receipt Document */}
         <ReceiptDocument receipt={receipt} school={school || undefined} />
 
         {/* Print instructions notice (Hidden in print) */}
         <div className="print:hidden text-center text-xs text-slate-500 py-4">
-          Tip: Click <strong>&quot;Print / Download PDF&quot;</strong> to save a clean PDF copy or print via your thermal/desktop printer.
+          Tip: Click <strong>&quot;Download PDF (.pdf)&quot;</strong> to directly save a high-res PDF copy, or <strong>&quot;Send to Parent WhatsApp&quot;</strong> to forward official clearance to the parent.
         </div>
       </div>
+
+      {/* Void Confirmation Modal */}
+      {isVoidModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-rose-700">
+                <ShieldAlert className="h-5 w-5" />
+                <h3 className="text-base font-black">Void Official Receipt</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVoidModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="bg-rose-50 p-4 rounded-2xl border border-rose-200 text-rose-900 text-xs space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
+                <span>Financial Ledger Reversal Warning</span>
+              </div>
+              <p className="leading-relaxed">
+                Voiding receipt <strong className="font-mono">{receipt.receiptNumber}</strong> will reverse the payment of <strong className="font-mono">{formatNaira(receipt.amountPaid)}</strong> from <strong>{receipt.studentName}&apos;s</strong> ledger. Their debt balance will increase back to the unpaid amount.
+              </p>
+            </div>
+
+            {voidError && (
+              <div className="p-3 rounded-xl bg-rose-100 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{voidError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVoidReceipt} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Reason for Cancellation
+                </label>
+                <select
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-300 font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="Bank transfer bounced / invalid payment proof">
+                    Bank transfer bounced / invalid bank proof
+                  </option>
+                  <option value="Duplicate payment entry by mistake">
+                    Duplicate payment entry by mistake
+                  </option>
+                  <option value="Incorrect student selected during issuance">
+                    Incorrect student selected during issuance
+                  </option>
+                  <option value="Payment reversal or parent refund processed">
+                    Payment reversal or parent refund processed
+                  </option>
+                  <option value="Other">Other (Specify Below)</option>
+                </select>
+              </div>
+
+              {voidReason === "Other" && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Specify Custom Reason
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customVoidReason}
+                    onChange={(e) => setCustomVoidReason(e.target.value)}
+                    placeholder="Provide detailed explanation for cancellation audit trail..."
+                    className="w-full p-2.5 rounded-xl border border-slate-300 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Enter Bursar Passcode PIN</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Default: 1234</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={bursarPinInput}
+                    onChange={(e) => setBursarPinInput(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter 4-digit PIN"
+                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 font-mono font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsVoidModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVoiding}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Ban className="h-4 w-4" />
+                  <span>{isVoiding ? "Voiding..." : "Confirm Void"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

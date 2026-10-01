@@ -10,6 +10,8 @@ import {
   CreditCard,
   Calendar,
   ShieldCheck,
+  Upload,
+  Lock,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -26,6 +28,8 @@ export default function SettingsPage() {
     accountNumber: "0012489301",
     accountName: "Al-Furqan International College - Fees",
     bursarName: "Alhaji Ibrahim S. Danladi",
+    logoUrl: "",
+    bursarPin: "1234",
   });
 
   const [loading, setLoading] = useState(true);
@@ -50,6 +54,24 @@ export default function SettingsPage() {
 
     fetchSettings();
   }, []);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Logo image should be under 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setSchool((prev) => ({ ...prev, logoUrl: reader.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +98,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <Navbar schoolName={school.name} currentTerm={`${school.currentTerm} (${school.currentSession})`} />
+      <Navbar schoolName={school.name} currentTerm={`${school.currentTerm} (${school.currentSession})`} logoUrl={school.logoUrl} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
@@ -145,6 +167,50 @@ export default function SettingsPage() {
                   onChange={(e) => setSchool({ ...school, address: e.target.value })}
                   className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                 />
+              </div>
+
+              {/* Logo / Crest Upload */}
+              <div className="sm:col-span-2 pt-3 border-t border-slate-100">
+                <label className="block font-bold text-slate-700 mb-2">
+                  Official School Crest / Logo
+                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center p-1.5 bg-slate-50 relative overflow-hidden shrink-0 shadow-xs">
+                    {school.logoUrl ? (
+                      <img src={school.logoUrl} alt="School Crest" className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="h-full w-full rounded-xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white font-black text-xl">
+                        AF
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 text-xs text-slate-500">
+                    <p className="font-medium text-slate-600">
+                      Upload your official school badge or crest (.png, .jpg, .svg). It will be printed on all digital receipts and verification screens.
+                    </p>
+                    <div className="flex items-center gap-3 pt-0.5">
+                      <label className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-colors inline-flex items-center gap-1.5 text-xs border border-slate-300">
+                        <Upload className="h-3.5 w-3.5 text-[#075E54]" />
+                        <span>Upload Logo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
+                        />
+                      </label>
+                      {school.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setSchool({ ...school, logoUrl: "" })}
+                          className="text-rose-600 hover:text-rose-800 text-xs font-bold hover:underline cursor-pointer"
+                        >
+                          Remove Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -230,6 +296,34 @@ export default function SettingsPage() {
                   onChange={(e) => setSchool({ ...school, bursarName: e.target.value })}
                   className="w-full h-10 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Bursar Passcode & Security */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <Lock className="h-5 w-5 text-[#075E54]" />
+              <h2 className="text-sm font-black text-slate-900">
+                Bursar Authorization PIN & Void Protection
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Bursar Security PIN (4 Digits)
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={school.bursarPin || "1234"}
+                  onChange={(e) => setSchool({ ...school, bursarPin: e.target.value.replace(/\D/g, "") })}
+                  className="w-full h-10 px-3.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 tracking-widest text-base focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                />
+                <span className="block text-[11px] text-slate-400 mt-1">
+                  This passcode is required to authorize voiding/cancelling receipts or performing ledger reversals. Default: <strong>1234</strong>
+                </span>
               </div>
             </div>
           </div>

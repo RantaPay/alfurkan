@@ -24,6 +24,8 @@ const DEFAULT_SCHOOL: SchoolProfile = {
   accountNumber: "0012489301",
   accountName: "Al-Furqan International College - Fees",
   bursarName: "Alhaji Ibrahim S. Danladi",
+  bursarPin: "1234",
+  logoUrl: "",
 };
 
 const DEFAULT_STUDENTS: Student[] = [
@@ -284,6 +286,12 @@ export async function readDB(): Promise<DatabaseSchema> {
     if (!dbCache?.students || !dbCache?.receipts) {
       throw new Error("Invalid DB format");
     }
+    if (!dbCache.school) {
+      dbCache.school = DEFAULT_SCHOOL;
+    } else {
+      dbCache.school.bursarPin = dbCache.school.bursarPin || "1234";
+      dbCache.school.logoUrl = dbCache.school.logoUrl || "";
+    }
     return dbCache;
   } catch {
     // Initialize default DB
@@ -516,4 +524,108 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile>): Prom
   db.school = { ...db.school, ...updates };
   await writeDB(db);
   return db.school;
+}
+
+// Student Creation & Bulk Import
+export async function createStudent(input: any): Promise<Student> {
+  const db = await readDB();
+  
+  let regNumber = input.regNumber?.trim();
+  if (!regNumber) {
+    const year = new Date().getFullYear();
+    const count = db.students.length + 1;
+    regNumber = `AFIC/${year}/${String(count + 100).padStart(4, "0")}`;
+  }
+
+  const totalBill = Number(input.totalTermBill) || 165000;
+
+  const newStudent: Student = {
+    id: "std_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5),
+    regNumber,
+    fullName: input.fullName.trim(),
+    class: input.class.trim(),
+    gender: input.gender || "Male",
+    parentName: input.parentName.trim(),
+    parentPhone: input.parentPhone.trim(),
+    parentEmail: input.parentEmail?.trim(),
+    totalTermBill: totalBill,
+    totalPaid: 0,
+    balanceRemaining: totalBill,
+    status: "UNPAID",
+    createdAt: new Date().toISOString().split("T")[0],
+  };
+
+  db.students.unshift(newStudent);
+  await writeDB(db);
+  return newStudent;
+}
+
+export async function importStudentsBulk(studentsList: any[]): Promise<Student[]> {
+  const db = await readDB();
+  const created: Student[] = [];
+  const year = new Date().getFullYear();
+
+  for (let i = 0; i < studentsList.length; i++) {
+    const s = studentsList[i];
+    if (!s.fullName?.trim()) continue;
+
+    const count = db.students.length + 1;
+    const regNumber = s.regNumber?.trim() || `AFIC/${year}/${String(count + 100).padStart(4, "0")}`;
+    const totalBill = Number(s.totalTermBill) || 165000;
+
+    const newStudent: Student = {
+      id: "std_" + Date.now() + "_" + i + "_" + Math.random().toString(36).substring(2, 5),
+      regNumber,
+      fullName: s.fullName.trim(),
+      class: s.class?.trim() || "JSS 1",
+      gender: s.gender || "Male",
+      parentName: s.parentName?.trim() || "Parent/Guardian",
+      parentPhone: s.parentPhone?.trim() || "08000000000",
+      parentEmail: s.parentEmail?.trim(),
+      totalTermBill: totalBill,
+      totalPaid: 0,
+      balanceRemaining: totalBill,
+      status: "UNPAID",
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+
+    db.students.unshift(newStudent);
+    created.push(newStudent);
+  }
+
+  await writeDB(db);
+  return created;
+}
+
+// Receipt Void / Cancellation
+export async function voidReceipt(receiptId: string, reason: string, voidedBy?: string): Promise<Receipt> {
+  const db = await readDB();
+  const receipt = db.receipts.find((r) => r.id === receiptId);
+  if (!receipt) {
+    throw new Error("Receipt not found");
+  }
+
+  if (receipt.isVoided) {
+    throw new Error("This receipt is already voided.");
+  }
+
+  receipt.isVoided = true;
+  receipt.voidReason = reason.trim();
+  receipt.voidedAt = new Date().toISOString();
+  receipt.voidedBy = voidedBy || db.school.bursarName;
+
+  // Re-adjust student ledger
+  const student = db.students.find((s) => s.id === receipt.studentId);
+  if (student) {
+    const validReceipts = db.receipts.filter(
+      (r) => r.studentId === student.id && !r.isVoided
+    );
+    const newTotalPaid = validReceipts.reduce((sum, r) => sum + r.amountPaid, 0);
+    student.totalPaid = newTotalPaid;
+    student.balanceRemaining = Math.max(0, student.totalTermBill - newTotalPaid);
+    student.status = student.balanceRemaining === 0 ? "FULL" : newTotalPaid > 0 ? "PARTIAL" : "UNPAID";
+  }
+
+  await writeDB(db);
+  return receipt;
 }

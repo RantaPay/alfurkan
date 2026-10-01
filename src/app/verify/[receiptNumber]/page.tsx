@@ -79,34 +79,66 @@ export default function VerifyReceiptPage() {
             </div>
           ) : (
             <>
-              {/* Authenticity Verified Banner */}
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
-                <div className="inline-flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-wider">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>OFFICIALLY VERIFIED RECEIPT</span>
-                </div>
-                <div className="text-lg font-black text-white font-mono">
-                  {receipt.receiptNumber}
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Issued on {receipt.date} • {receipt.term} ({receipt.session})
-                </p>
-              </div>
+              {receipt.isVoided ? (
+                <>
+                  <div className="p-4 rounded-2xl bg-rose-500/15 border-2 border-rose-500/50 text-center space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 text-rose-400 font-black text-xs uppercase tracking-wider">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>RECEIPT REVOKED • VOID & INVALID</span>
+                    </div>
+                    <div className="text-xl font-black text-rose-200 font-mono line-through">
+                      {receipt.receiptNumber}
+                    </div>
+                    <p className="text-xs font-bold text-rose-300">
+                      Reason: &quot;{receipt.voidReason || "Payment Revoked / Cancelled"}&quot;
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Voided by {receipt.voidedBy || "Bursar"} on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : ""}
+                    </p>
+                  </div>
 
-              {/* Status Badge */}
-              <div className="text-center">
-                {receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0 ? (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/20">
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span>CLEARED • FULL PAYMENT</span>
+                  <div className="text-center">
+                    <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-rose-600 text-white font-black text-sm shadow-lg shadow-rose-600/30">
+                      <AlertTriangle className="h-5 w-5" />
+                      <span>NO CLEARANCE • REVOKED PASS</span>
+                    </div>
+                    <p className="text-[11px] text-rose-400 mt-2 font-semibold">
+                      Security Alert: This receipt was cancelled by Bursary. Direct student to the Bursar.
+                    </p>
                   </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20">
-                    <Clock className="h-5 w-5" />
-                    <span>PARTIAL PAYMENT • ₦{receipt.balanceRemaining.toLocaleString()} REMAINING</span>
+                </>
+              ) : (
+                <>
+                  {/* Authenticity Verified Banner */}
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+                    <div className="inline-flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-wider">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>OFFICIALLY VERIFIED RECEIPT</span>
+                    </div>
+                    <div className="text-lg font-black text-white font-mono">
+                      {receipt.receiptNumber}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Issued on {receipt.date} • {receipt.term} ({receipt.session})
+                    </p>
                   </div>
-                )}
-              </div>
+
+                  {/* Status Badge */}
+                  <div className="text-center">
+                    {receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0 ? (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/20">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span>CLEARED • FULL PAYMENT</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20">
+                        <Clock className="h-5 w-5" />
+                        <span>PARTIAL PAYMENT • ₦{receipt.balanceRemaining.toLocaleString()} REMAINING</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               {/* Student Particulars */}
               <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 space-y-3 text-xs">

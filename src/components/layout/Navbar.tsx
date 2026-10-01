@@ -17,12 +17,14 @@ interface NavbarProps {
   onOpenIssueModal?: () => void;
   schoolName?: string;
   currentTerm?: string;
+  logoUrl?: string;
 }
 
 export function Navbar({
   onOpenIssueModal,
   schoolName = "Al-Furqan International College",
   currentTerm = "1st Term 2026/2027",
+  logoUrl,
 }: NavbarProps) {
   const pathname = usePathname();
 
@@ -40,9 +42,15 @@ export function Navbar({
         <div className="flex items-center justify-between h-18">
           {/* Brand Logo & School Header */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white shadow-md shadow-emerald-900/10 group-hover:scale-105 transition-all">
-              <span className="font-black text-xl tracking-wider">AF</span>
-            </div>
+            {logoUrl ? (
+              <div className="h-11 w-11 rounded-2xl border border-slate-200 p-1 bg-white shadow-xs group-hover:scale-105 transition-all overflow-hidden flex items-center justify-center">
+                <img src={logoUrl} alt={schoolName} className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white shadow-md shadow-emerald-900/10 group-hover:scale-105 transition-all">
+                <span className="font-black text-xl tracking-wider">AF</span>
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5 font-black text-slate-900 text-sm sm:text-base leading-tight">
                 <span>{schoolName}</span>

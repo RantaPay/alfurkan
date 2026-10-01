@@ -20,10 +20,13 @@ import {
   Users,
   Search,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
+import { AddStudentModal } from "@/components/students/AddStudentModal";
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<Student | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -79,9 +82,20 @@ export default function DashboardPage() {
         {/* Hero Section & Quick Receipt Generator Launcher */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#0b6e63] to-[#043e37] p-6 sm:p-10 text-white shadow-xl shadow-emerald-950/10">
           <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-bold border border-white/20 mb-4 backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-[#FFB21D]" />
-              <span>Official School Bursary Platform</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-bold border border-white/20 backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-[#FFB21D]" />
+                <span>Official School Bursary Platform</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAddStudentOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold border border-white/25 transition-all cursor-pointer shadow-xs"
+              >
+                <UserPlus className="h-3.5 w-3.5 text-[#FFB21D]" />
+                <span>Enroll Student / CSV Import</span>
+              </button>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
@@ -276,7 +290,12 @@ export default function DashboardPage() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {isFull ? (
+                        {receipt.isVoided ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-50 text-rose-800 border border-rose-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            <span>VOIDED</span>
+                          </span>
+                        ) : isFull ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                             <span>PAID IN FULL</span>
@@ -316,7 +335,7 @@ export default function DashboardPage() {
                           {/* 1-Click WhatsApp Share */}
                           <a
                             href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                              `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download official digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nBursary Department, Al-Furqan International College`
+                              `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download official digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nBursary Department, Al-Furqan International College`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -350,6 +369,13 @@ export default function DashboardPage() {
         onClose={() => setIsModalOpen(false)}
         preselectedStudent={selectedStudentForReceipt}
         onReceiptCreated={() => loadData()}
+      />
+
+      {/* Add Student / Bulk Import Modal */}
+      <AddStudentModal
+        isOpen={isAddStudentOpen}
+        onClose={() => setIsAddStudentOpen(false)}
+        onStudentAdded={() => loadData()}
       />
     </div>
   );
