@@ -2,7 +2,7 @@
   "school": {
     "name": "Al-Furqan International College",
     "shortName": "Al-Furqan",
-    "motto": "Knowledge, Discipline & Excellence",
+    "motto": "Knowledge and Guidance",
     "address": "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria",
     "email": "bursary@alfurqan.edu.ng",
     "phone": "+234 803 456 7890 / +234 812 345 6789",
@@ -13,9 +13,25 @@
     "accountName": "Al-Furqan International College - Fees",
     "bursarName": "Alhaji Ibrahim S. Danladi",
     "bursarPin": "1234",
-    "logoUrl": ""
+    "logoUrl": "/logo.png"
   },
   "students": [
+    {
+      "id": "std_1790893811543_798",
+      "regNumber": "AFIC/2026/xx1",
+      "fullName": "Oneboy",
+      "class": "JSS 3 Emerald",
+      "gender": "Female",
+      "parentName": "Dauda black",
+      "parentPhone": "09077414595",
+      "parentEmail": "",
+      "totalTermBill": 165000,
+      "totalPaid": 165000,
+      "balanceRemaining": 0,
+      "status": "FULL",
+      "createdAt": "2026-10-01",
+      "lastPaymentDate": "2026-10-01"
+    },
     {
       "id": "std_1790893615143_1_vsf",
       "regNumber": "AFIC/2026/0111",
@@ -188,6 +204,40 @@
   ],
   "receipts": [
     {
+      "id": "rcpt_1790894039274",
+      "receiptNumber": "AFIC-RCP-2026-0007",
+      "studentId": "std_1790893811543_798",
+      "regNumber": "AFIC/2026/xx1",
+      "studentName": "Oneboy",
+      "studentClass": "JSS 3 Emerald",
+      "parentName": "Dauda black",
+      "parentPhone": "09077414595",
+      "parentEmail": "",
+      "amountPaid": 165000,
+      "totalTermBill": 165000,
+      "previousTotalPaid": 0,
+      "newTotalPaid": 165000,
+      "balanceRemaining": 0,
+      "paymentStatus": "FULL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "TRF/NIP/039274",
+      "items": [
+        {
+          "name": "School Fees / Tuition",
+          "category": "Tuition",
+          "amount": 165000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027 Academic Session",
+      "date": "1 Oct 2026",
+      "timestamp": "2026-10-01T22:33:59.254Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi",
+      "qrCodeDataUrl": "data:image/png;base64,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",
+      "securityHash": "AFIC-HASH-D2B5T0",
+      "notes": "Full payment cleared. Verified by Bursary."
+    },
+    {
       "id": "rcpt_1790893619654",
       "receiptNumber": "AFIC-RCP-2026-0006",
       "studentId": "std_1790893607148_9x4",
@@ -251,7 +301,7 @@
       ],
       "term": "1st Term",
       "session": "2026/2027 Academic Session",
-      "date": "1 Oct 2026",
+      "date": "1 Oct 2026", 
       "timestamp": "2026-10-01T22:14:10.790Z",
       "issuedBy": "Alhaji Ibrahim S. Danladi",
       "qrCodeDataUrl": "data:image/png;base64,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",

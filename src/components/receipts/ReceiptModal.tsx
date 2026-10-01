@@ -193,8 +193,8 @@ export function ReceiptModal({
         {/* Modal Header */}
         <div className="bg-[#075E54] text-white px-5 sm:px-7 py-4.5 flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-white border border-white/20">
-              <ReceiptIcon className="h-5 w-5" />
+            <div className="h-11 w-11 rounded-2xl bg-white p-1 flex items-center justify-center border border-white/30 overflow-hidden shadow-xs shrink-0">
+              <img src="/logo.png" alt="Al-Furqan Crest" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-1.5 font-black text-sm sm:text-base leading-tight">
@@ -202,7 +202,7 @@ export function ReceiptModal({
                 <Sparkles className="h-4 w-4 text-[#FFB21D]" />
               </div>
               <p className="text-[11px] text-emerald-100 font-medium">
-                Al-Furqan International College • Verified Bursary Clearance
+                Al-Furqan International Academy • Verified Bursary Clearance
               </p>
             </div>
           </div>

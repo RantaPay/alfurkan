@@ -24,7 +24,7 @@ export function Navbar({
   onOpenIssueModal,
   schoolName = "Al-Furqan International College",
   currentTerm = "1st Term 2026/2027",
-  logoUrl,
+  logoUrl = "/logo.png",
 }: NavbarProps) {
   const pathname = usePathname();
 

@@ -51,11 +51,11 @@ export default function VerifyReceiptPage() {
       <div className="w-full max-w-md bg-slate-950 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Verification Header */}
         <div className="bg-[#075E54] p-5 text-center relative overflow-hidden">
-          <div className="h-14 w-14 rounded-2xl bg-white/20 border border-white/30 text-white flex items-center justify-center mx-auto mb-2 text-xl font-black">
-            AF
+          <div className="h-16 w-16 rounded-2xl bg-white p-1.5 shadow-lg mx-auto mb-2 flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="Al-Furqan Crest" className="h-full w-full object-contain" />
           </div>
           <h1 className="text-base font-black tracking-tight text-white">
-            Al-Furqan International College
+            Al-Furqan International Academy
           </h1>
           <p className="text-[11px] text-emerald-100 font-medium mt-0.5">
             Gate Clearance & Receipt Verification Portal

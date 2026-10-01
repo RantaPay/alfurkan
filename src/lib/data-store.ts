@@ -14,7 +14,7 @@ interface DatabaseSchema {
 const DEFAULT_SCHOOL: SchoolProfile = {
   name: "Al-Furqan International College",
   shortName: "Al-Furqan",
-  motto: "Knowledge, Discipline & Excellence",
+  motto: "Knowledge and Guidance",
   address: "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria",
   email: "bursary@alfurqan.edu.ng",
   phone: "+234 803 456 7890 / +234 812 345 6789",
@@ -25,7 +25,7 @@ const DEFAULT_SCHOOL: SchoolProfile = {
   accountName: "Al-Furqan International College - Fees",
   bursarName: "Alhaji Ibrahim S. Danladi",
   bursarPin: "1234",
-  logoUrl: "",
+  logoUrl: "/logo.png",
 };
 
 const DEFAULT_STUDENTS: Student[] = [

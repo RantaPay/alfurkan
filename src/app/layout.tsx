@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description:
     "Official school fees receipt generation, gate clearance verification, and debtor management system for Al-Furqan International College.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logo.png",
   },
 };
 
