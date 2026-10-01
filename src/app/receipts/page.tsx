@@ -14,6 +14,7 @@ import {
   Clock,
   Receipt as ReceiptIcon,
 } from "lucide-react";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function ReceiptsLedgerPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -58,8 +59,9 @@ export default function ReceiptsLedgerPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <Navbar />
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+        <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -242,5 +244,6 @@ export default function ReceiptsLedgerPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

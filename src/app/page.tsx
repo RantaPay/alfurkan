@@ -23,6 +23,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,8 +76,9 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <Navbar onOpenIssueModal={() => handleOpenIssueModal()} />
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+        <Navbar onOpenIssueModal={() => handleOpenIssueModal()} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Hero Section & Quick Receipt Generator Launcher */}
@@ -378,5 +380,6 @@ export default function DashboardPage() {
         onStudentAdded={() => loadData()}
       />
     </div>
+    </AuthGuard>
   );
 }

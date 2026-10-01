@@ -113,3 +113,14 @@ export interface ReportSummary {
   partialPaymentCount: number;
   unpaidCount: number;
 }
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "Bursar" | "Admin" | "Cashier";
+  pin: string;
+  password?: string;
+  title: string;
+  avatar?: string;
+}

@@ -13,6 +13,7 @@ import {
   Upload,
   Lock,
 } from "lucide-react";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function SettingsPage() {
   const [school, setSchool] = useState<SchoolProfile>({
@@ -97,8 +98,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <Navbar schoolName={school.name} currentTerm={`${school.currentTerm} (${school.currentSession})`} logoUrl={school.logoUrl} />
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+        <Navbar schoolName={school.name} currentTerm={`${school.currentTerm} (${school.currentSession})`} logoUrl={school.logoUrl} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
@@ -341,5 +343,6 @@ export default function SettingsPage() {
         </form>
       </main>
     </div>
+    </AuthGuard>
   );
 }

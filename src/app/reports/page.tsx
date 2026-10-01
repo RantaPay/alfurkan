@@ -17,6 +17,7 @@ import {
   Building2,
   Calendar,
 } from "lucide-react";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function ReportsPage() {
   const [term, setTerm] = useState("1st Term");
@@ -104,10 +105,11 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      <div className="print:hidden">
-        <Navbar />
-      </div>
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
+        <div className="print:hidden">
+          <Navbar />
+        </div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Printable Official Report Header (Shown only during print) */}
@@ -384,5 +386,6 @@ export default function ReportsPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

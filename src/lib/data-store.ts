@@ -1,14 +1,36 @@
 import fs from "fs/promises";
 import path from "path";
 import QRCode from "qrcode";
-import { Student, Receipt, SchoolProfile, ReportSummary, ReceiptItem } from "./types";
+import { Student, Receipt, SchoolProfile, ReportSummary, ReceiptItem, StaffUser } from "./types";
 
 const DB_FILE = path.join(process.cwd(), "data", "alfurqan-db.json");
+
+export const DEFAULT_USERS: StaffUser[] = [
+  {
+    id: "usr_bursar",
+    name: "Alhaji Ibrahim S. Danladi",
+    email: "bursar@alfurqan.edu.ng",
+    role: "Bursar",
+    pin: "1234",
+    password: "bursar2026",
+    title: "Chief Bursar & Head of Finance",
+  },
+  {
+    id: "usr_admin",
+    name: "Dr. Shehu Danladi",
+    email: "admin@alfurqan.edu.ng",
+    role: "Admin",
+    pin: "9988",
+    password: "admin2026",
+    title: "Principal & College Director",
+  },
+];
 
 interface DatabaseSchema {
   school: SchoolProfile;
   students: Student[];
   receipts: Receipt[];
+  users?: StaffUser[];
 }
 
 const DEFAULT_SCHOOL: SchoolProfile = {
@@ -290,7 +312,10 @@ export async function readDB(): Promise<DatabaseSchema> {
       dbCache.school = DEFAULT_SCHOOL;
     } else {
       dbCache.school.bursarPin = dbCache.school.bursarPin || "1234";
-      dbCache.school.logoUrl = dbCache.school.logoUrl || "";
+      dbCache.school.logoUrl = dbCache.school.logoUrl || "/logo.png";
+    }
+    if (!dbCache.users || dbCache.users.length === 0) {
+      dbCache.users = DEFAULT_USERS;
     }
     return dbCache;
   } catch {
@@ -628,4 +653,32 @@ export async function voidReceipt(receiptId: string, reason: string, voidedBy?: 
 
   await writeDB(db);
   return receipt;
+}
+
+// Staff Authentication Queries
+export async function authenticateStaff(input: {
+  mode: "password" | "pin";
+  email?: string;
+  password?: string;
+  pin?: string;
+}): Promise<StaffUser | null> {
+  const db = await readDB();
+  const users = db.users || DEFAULT_USERS;
+
+  if (input.mode === "pin") {
+    const user = users.find((u) => u.pin === input.pin?.trim());
+    return user || null;
+  } else {
+    const user = users.find(
+      (u) =>
+        u.email.toLowerCase() === input.email?.toLowerCase().trim() &&
+        u.password === input.password
+    );
+    return user || null;
+  }
+}
+
+export async function getStaffUsers(): Promise<StaffUser[]> {
+  const db = await readDB();
+  return db.users || DEFAULT_USERS;
 }

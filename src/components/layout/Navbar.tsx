@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import {
   Receipt,
   BarChart3,
@@ -11,6 +12,8 @@ import {
   Building2,
   ShieldCheck,
   CheckCircle2,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -27,6 +30,7 @@ export function Navbar({
   logoUrl = "/logo.png",
 }: NavbarProps) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: Building2 },
@@ -114,6 +118,37 @@ export function Navbar({
                 <PlusCircle className="h-4 w-4 stroke-[2.5]" />
                 <span className="hidden sm:inline">Issue New Receipt</span>
                 <span className="sm:hidden">Issue</span>
+              </Link>
+            )}
+
+            {/* Staff User Profile & Logout */}
+            {user ? (
+              <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+                <div className="hidden sm:block text-right">
+                  <div className="text-xs font-black text-slate-800 leading-tight">
+                    {user.name.split(" ")[0]} {user.name.split(" ").slice(-1)[0]}
+                  </div>
+                  <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                    {user.role}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  title="Sign Out of Portal"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <UserIcon className="h-3.5 w-3.5" />
+                <span>Login</span>
               </Link>
             )}
           </div>
