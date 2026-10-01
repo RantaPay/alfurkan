@@ -269,6 +269,21 @@ export function ReceiptModal({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (searchResults.length > 0) {
+                          const std = searchResults[0];
+                          setSelectedStudent(std);
+                          setSearchQuery("");
+                          setSearchResults([]);
+                          const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
+                          setItems([
+                            { name: "School Fees / Tuition", category: "Tuition", amount: rem },
+                          ]);
+                        }
+                      }
+                    }}
                     placeholder="Search by student registration number (e.g. AFIC/2026/0101) or name..."
                     className="w-full h-11 pl-10 pr-4 rounded-2xl border border-slate-300 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] placeholder:text-slate-400 shadow-inner bg-slate-50/50"
                   />

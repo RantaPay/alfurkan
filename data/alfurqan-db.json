@@ -24,10 +24,10 @@
       "parentPhone": "08031112233",
       "parentEmail": "abubakar.sadiq@gmail.com",
       "totalTermBill": 165000,
-      "totalPaid": 165000,
+      "totalPaid": 355000,
       "balanceRemaining": 0,
       "status": "FULL",
-      "lastPaymentDate": "2026-09-18",
+      "lastPaymentDate": "2026-10-01",
       "createdAt": "2026-09-01"
     },
     {
@@ -142,6 +142,45 @@
     }
   ],
   "receipts": [
+    {
+      "id": "rcpt_1790892360207",
+      "receiptNumber": "AFIC-RCP-2026-0004",
+      "studentId": "std_001",
+      "regNumber": "AFIC/2026/0101",
+      "studentName": "Fatima Abubakar Sadiq",
+      "studentClass": "JSS 1 Diamond",
+      "parentName": "Dr. Abubakar Sadiq",
+      "parentPhone": "08031112233",
+      "parentEmail": "abubakar.sadiq@gmail.com",
+      "amountPaid": 190000,
+      "totalTermBill": 165000,
+      "previousTotalPaid": 165000,
+      "newTotalPaid": 355000,
+      "balanceRemaining": 0,
+      "paymentStatus": "FULL",
+      "paymentMethod": "Bank Transfer",
+      "bankReference": "34567890",
+      "items": [
+        {
+          "name": "School Fees / Tuition",
+          "category": "Tuition",
+          "amount": 165000
+        },
+        {
+          "name": "Books & Exercise Pack",
+          "category": "Books",
+          "amount": 25000
+        }
+      ],
+      "term": "1st Term",
+      "session": "2026/2027 Academic Session",
+      "date": "1 Oct 2026",
+      "timestamp": "2026-10-01T22:06:00.167Z",
+      "issuedBy": "Alhaji Ibrahim S. Danladi",
+      "qrCodeDataUrl": "data:image/png;base64,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",
+      "securityHash": "AFIC-HASH-QSG4ZK",
+      "notes": "Full payment cleared. Verified by Bursary."
+    },
     {
       "id": "rcpt_001",
       "receiptNumber": "AFIC-RCP-2026-0001",
