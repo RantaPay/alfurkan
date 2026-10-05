@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Navbar } from "@/components/layout/Navbar";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Student, ReportSummary, SchoolProfile } from "@/lib/types";
 import { formatNaira, formatNumber } from "@/lib/utils";
 import {
@@ -106,12 +106,8 @@ export default function ReportsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-        <div className="print:hidden">
-          <Navbar />
-        </div>
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <SidebarLayout>
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Printable Official Report Header (Shown only during print) */}
         <div className="hidden print:block text-center pb-6 border-b-2 border-slate-900 mb-6">
           <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight">
@@ -385,7 +381,7 @@ export default function ReportsPage() {
           </div>
         </div>
       </main>
-    </div>
+      </SidebarLayout>
     </AuthGuard>
   );
 }

@@ -1,357 +1,427 @@
 "use client";
 
-import Image from "next/image";
+import { useState } from "react";
 import { Receipt, SchoolProfile } from "@/lib/types";
-import { formatNaira } from "@/lib/utils";
-import { ShieldCheck, CheckCircle2, Clock, QrCode as QrIcon, AlertCircle } from "lucide-react";
+import { formatNaira, amountInWords } from "@/lib/utils";
+import { ShieldCheck, CheckCircle2, Clock, AlertCircle, FileText, ScrollText } from "lucide-react";
 
 interface ReceiptDocumentProps {
   receipt: Receipt;
-  school?: SchoolProfile;
+  school?: SchoolProfile | null;
   hideActions?: boolean;
 }
 
 export function ReceiptDocument({ receipt, school }: ReceiptDocumentProps) {
+  const [viewFormat, setViewFormat] = useState<"traditional" | "statement">("traditional");
+
   const isFullPayment = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+  const writtenAmount = amountInWords(receipt.amountPaid);
+  const serialNo = receipt.receiptNumber.replace(/^AFIC-RCP-/, "AFIA/ ");
+
+  // Formatted date
+  const receiptDate = receipt.date || new Date(receipt.timestamp).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
-    <div
-      id="printable-receipt"
-      className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-200/90 max-w-3xl mx-auto relative overflow-hidden print:shadow-none print:border-none print:p-4 print:max-w-full"
-    >
-      {/* Background Watermark Stamp */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.05] select-none">
-        <span
-          className={`text-7xl sm:text-9xl font-black rotate-[-25deg] tracking-widest uppercase ${
-            receipt.isVoided ? "text-rose-600 opacity-20" : ""
-          }`}
-        >
-          {receipt.isVoided ? "VOID / CANCELLED" : isFullPayment ? "PAID IN FULL" : "PARTIAL PAYMENT"}
-        </span>
+    <div className="space-y-5 max-w-4xl mx-auto font-sans">
+      {/* Format Selector Tab (Hidden when printing) */}
+      <div className="print:hidden flex items-center justify-between bg-white/90 backdrop-blur-xs p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-600 pl-2">Receipt Format:</span>
+          <button
+            type="button"
+            onClick={() => setViewFormat("traditional")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewFormat === "traditional"
+                ? "bg-[#075E54] text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <ScrollText className="h-4 w-4" />
+            <span>Official Treasury Paper Slip (Standard)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewFormat("statement")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewFormat === "statement"
+                ? "bg-[#075E54] text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Detailed Ledger Statement</span>
+          </button>
+        </div>
+        <div className="text-xs text-slate-500 font-semibold pr-3 hidden sm:block">
+          Official Bursary Receipt
+        </div>
       </div>
 
-      {/* Top Header: School Branding & Crest */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b-2 border-slate-900/10">
-        <div className="flex items-center gap-4 text-center sm:text-left">
-          {school?.logoUrl ? (
-            <div className="h-16 w-16 rounded-2xl border border-slate-200 p-1.5 bg-white shadow-md shrink-0 flex items-center justify-center overflow-hidden">
-              <img src={school.logoUrl} alt={school.name} className="h-full w-full object-contain" />
+      {/* Main Printable Document */}
+      <div
+        id="printable-receipt"
+        className="bg-[#FCFBF7] text-slate-900 rounded-3xl shadow-xl border-2 border-slate-300 p-8 sm:p-12 relative overflow-hidden print:shadow-none print:border print:border-slate-400 print:p-8 print:max-w-full font-sans"
+        style={{
+          boxShadow: "0 12px 36px -6px rgba(0, 0, 0, 0.09), 0 0 0 1px rgba(0,0,0,0.04)",
+        }}
+      >
+        {/* Subtle Bank-Security Paper Guilloche Border */}
+        <div className="absolute inset-3 border-2 border-slate-300/70 rounded-2xl pointer-events-none" />
+        <div className="absolute inset-4 border border-dashed border-slate-300/50 rounded-xl pointer-events-none" />
+
+        {/* 1. Large Centered Watermark of School Logo */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center select-none overflow-hidden">
+          <img
+            src={school?.logoUrl || "/logo.png"}
+            alt="School Crest Watermark"
+            className="w-88 h-88 sm:w-[460px] sm:h-[460px] object-contain opacity-[0.08] grayscale contrast-125 mix-blend-multiply"
+          />
+        </div>
+
+        {/* Void Stamp Overlay if Receipt is Cancelled */}
+        {receipt.isVoided && (
+          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center select-none z-30">
+            <div className="border-4 sm:border-8 border-rose-600/70 text-rose-700/90 px-8 py-3 rounded-2xl font-black text-4xl sm:text-7xl tracking-widest uppercase rotate-[-22deg] shadow-lg bg-rose-50/50 backdrop-blur-[1px]">
+              REVOKED / VOID
             </div>
-          ) : (
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] flex items-center justify-center text-white font-black text-2xl shadow-lg shrink-0 print:border print:border-slate-800">
-              AF
+            <div className="text-sm sm:text-base font-bold text-rose-800 rotate-[-22deg] mt-3 bg-white/90 px-5 py-1.5 rounded-lg border border-rose-300 shadow-xs">
+              Cancelled on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : receiptDate} • {receipt.voidReason || "Duplicate Entry"}
             </div>
-          )}
-          <div>
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                {school?.name || "AL-FURQAN INTERNATIONAL COLLEGE"}
+          </div>
+        )}
+
+        {/* TOP HEADER: School Crest, Institution Title & Serial */}
+        <div className="relative z-10 pb-6 border-b-2 border-slate-900/20">
+          <div className="flex items-start justify-between gap-5">
+            {/* Left: School Crest Logo */}
+            <div className="shrink-0 flex flex-col items-center">
+              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl p-1.5 bg-white border-2 border-emerald-900/30 shadow-xs flex items-center justify-center overflow-hidden">
+                <img
+                  src={school?.logoUrl || "/logo.png"}
+                  alt={school?.name || "Al-Furqan"}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
+
+            {/* Center: Official Institutional Header */}
+            <div className="flex-1 text-center px-3">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight uppercase leading-tight">
+                {school?.name || "AL-FURQAN INTERNATIONAL ACADEMY"}
               </h1>
-              <ShieldCheck className="h-5 w-5 text-[#075E54] shrink-0" />
+              <p className="text-sm sm:text-base font-bold text-emerald-900 italic mt-1">
+                {school?.motto || "Knowledge and Guidance"} • العلم والتربية
+              </p>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1.5 font-medium leading-relaxed">
+                {school?.address || "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria"}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                Tel: <strong className="text-slate-700">{school?.phone || "+234 803 456 7890"}</strong> • Email: <strong className="text-slate-700">{school?.email || "bursary@alfurqan.edu.ng"}</strong>
+              </p>
             </div>
-            <p className="text-xs font-semibold text-emerald-800 italic mt-0.5">
-              &quot;{school?.motto || "Knowledge, Discipline & Excellence"}&quot;
-            </p>
-            <p className="text-[11px] text-slate-500 mt-1 max-w-md">
-              {school?.address || "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja"} • Tel: {school?.phone || "+234 803 456 7890"}
-            </p>
-          </div>
-        </div>
 
-        {/* Receipt Number & Date Badge */}
-        <div className="text-center sm:text-right shrink-0">
-          <span className={`inline-block px-3 py-1 rounded-full font-mono font-bold text-xs border ${
-            receipt.isVoided 
-              ? "bg-rose-100 text-rose-800 border-rose-300"
-              : "bg-slate-100 text-slate-800 border-slate-200"
-          }`}>
-            {receipt.isVoided ? "VOIDED / REVOKED RECEIPT" : "OFFICIAL DIGITAL RECEIPT"}
-          </span>
-          <div className="mt-2 text-xs font-bold text-slate-500">
-            Receipt No:{" "}
-            <span className={`font-mono text-sm font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-900"}`}>
-              {receipt.receiptNumber}
+            {/* Right: Receipt Serial Number & Date */}
+            <div className="shrink-0 text-right space-y-1.5">
+              <div className="inline-block border-2 border-rose-800/80 bg-rose-50 text-rose-900 px-3 py-1 rounded-md text-xs font-black tracking-widest uppercase shadow-2xs">
+                ORIGINAL
+              </div>
+              <div className="text-sm text-slate-700 font-bold">
+                No:{" "}
+                <span className={`font-mono font-black text-base sm:text-lg ${receipt.isVoided ? "line-through text-rose-600" : "text-rose-700"}`}>
+                  {serialNo}
+                </span>
+              </div>
+              <div className="text-sm text-slate-600">
+                Date: <strong className="text-slate-900 underline font-mono text-sm sm:text-base">{receiptDate}</strong>
+              </div>
+              <div className="text-xs text-slate-500 font-medium">
+                Term: <strong className="text-slate-800">{receipt.term}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner Title: Official Receipt */}
+          <div className="text-center mt-4 pt-3 border-t border-slate-300 flex items-center justify-center gap-4">
+            <span className="h-0.5 bg-slate-400 flex-1 max-w-[120px]" />
+            <span className="text-lg sm:text-xl font-black tracking-widest text-slate-900 uppercase px-3">
+              Official Receipt
             </span>
-          </div>
-          <div className="text-xs text-slate-500 font-medium mt-0.5">
-            Date Issued: <strong className="text-slate-700">{receipt.date}</strong>
-          </div>
-          <div className="text-[11px] text-slate-500">
-            Term: <strong>{receipt.term} ({receipt.session})</strong>
+            <span className="h-0.5 bg-slate-400 flex-1 max-w-[120px]" />
           </div>
         </div>
-      </div>
 
-      {/* Dynamic Status Banner: VOIDED vs FULL vs PARTIAL */}
-      <div className="my-6">
-        {receipt.isVoided ? (
-          <div className="rounded-2xl bg-rose-50 border-2 border-rose-500/50 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <AlertCircle className="h-6 w-6" />
+        {/* VIEW 1: TRADITIONAL TREASURY PAPER SLIP (Matching User Images) */}
+        {viewFormat === "traditional" ? (
+          <div className="relative z-10 py-7 space-y-6">
+            {/* Row 1: Received from */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2.5">
+              <span className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide shrink-0">
+                RECEIVED from:
+              </span>
+              <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 flex flex-wrap items-baseline justify-between gap-3">
+                <span className="text-lg sm:text-xl font-black text-slate-950 tracking-wide">
+                  {receipt.studentName}
+                </span>
+                <span className="text-sm text-slate-700 font-semibold">
+                  Adm / Reg No: <strong className="font-mono text-slate-950 font-black text-base">{receipt.regNumber}</strong> • Class: <strong className="text-slate-950 text-base">{receipt.studentClass}</strong>
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-rose-950 text-sm sm:text-base tracking-wide">
-                    RECEIPT REVOKED • CANCELLED & VOID
+            </div>
+
+            {/* Row 2: The sum of (AMOUNT IN WORDS) */}
+            <div className="space-y-1">
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-2.5">
+                <span className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide shrink-0">
+                  the sum of:
+                </span>
+                <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1">
+                  <span className="text-base sm:text-lg font-bold text-slate-900 italic leading-relaxed">
+                    {writtenAmount}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
-                    INVALIDATED
-                  </span>
-                </div>
-                <p className="text-xs text-rose-800 mt-1">
-                  Cancellation Reason: <strong>&quot;{receipt.voidReason || "Payment Revoked / Duplicate Entry"}&quot;</strong>
-                </p>
-                <div className="text-[11px] text-rose-700/80 mt-0.5">
-                  Voided By: <strong>{receipt.voidedBy || "Bursar"}</strong> • {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleString() : ""}
                 </div>
               </div>
             </div>
-            <div className="text-right shrink-0 bg-white/80 px-4 py-2 rounded-xl border border-rose-200">
-              <div className="text-[10px] font-bold text-rose-600 uppercase">Ledger Status</div>
-              <div className="text-sm font-black text-rose-800 uppercase">REVERSED IN LEDGER</div>
-            </div>
-          </div>
-        ) : isFullPayment ? (
-          <div className="rounded-2xl bg-emerald-50 border-2 border-emerald-500/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-6 w-6" />
+
+            {/* Row 3: Being (Purpose) */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2.5">
+              <span className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide shrink-0">
+                being:
+              </span>
+              <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-sm sm:text-base font-semibold text-slate-900">
+                  {receipt.paymentStatus === "FULL" ? "Full Settlement of" : "Part-Payment installment towards"}{" "}
+                  <strong>{receipt.term}, {receipt.session}</strong> fees & educational package
+                  {receipt.items && receipt.items.length > 0
+                    ? ` (${receipt.items.map((i) => i.name).join(", ")})`
+                    : ""}
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-emerald-900 text-sm tracking-wide">
-                    PAID IN FULL • CLEARED
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
-                    GATE & EXAM PASS
+            </div>
+
+            {/* Row 4: Parent & Guardian particulars */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2.5 text-sm text-slate-800">
+              <span className="font-bold text-slate-800 uppercase tracking-wide shrink-0">
+                Payer / Guardian:
+              </span>
+              <div className="flex-1 border-b border-dotted border-slate-300 pb-1 flex flex-wrap items-center justify-between gap-3">
+                <span><strong>{receipt.parentName}</strong> (Tel: <strong className="font-mono text-slate-900">{receipt.parentPhone}</strong>)</span>
+                <span className="text-xs text-slate-600 font-medium">
+                  Payment Method: <strong className="text-slate-900">{receipt.paymentMethod}</strong>
+                  {receipt.bankReference ? ` • Ref: ${receipt.bankReference}` : ""}
+                </span>
+              </div>
+            </div>
+
+            {/* BOTTOM SECTION: Boxed Amount + Rubber Stamp + Signatures */}
+            <div className="pt-6 flex flex-col md:flex-row items-end justify-between gap-6">
+              {/* Boxed Amount on the Left (Traditional double-border box) */}
+              <div className="w-full md:max-w-md space-y-3.5">
+                <div className="border-4 border-double border-slate-900 bg-white p-4 rounded-xl shadow-xs inline-block w-full">
+                  <div className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">
+                    Amount Paid:
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black font-mono text-slate-950 tracking-tight flex items-baseline justify-between">
+                    <span>{formatNaira(receipt.amountPaid)}</span>
+                    <span className="text-2xl text-slate-400 font-serif">=</span>
+                  </div>
+                </div>
+
+                {/* Ledger Balance Summary */}
+                <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs sm:text-sm space-y-1.5">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Total Term Bill:</span>
+                    <strong className="font-mono text-slate-900 text-sm">{formatNaira(receipt.totalTermBill)}</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Total Paid to Date:</span>
+                    <strong className="font-mono text-slate-900 text-sm">{formatNaira(receipt.newTotalPaid)}</strong>
+                  </div>
+                  <div className={`flex justify-between pt-1.5 border-t border-slate-200 font-black ${
+                    receipt.balanceRemaining === 0 ? "text-emerald-800" : "text-amber-800"
+                  }`}>
+                    <span>Balance Remaining:</span>
+                    <span className="font-mono text-sm sm:text-base">
+                      {receipt.balanceRemaining === 0 ? "₦0.00 (NIL / CLEARED)" : formatNaira(receipt.balanceRemaining)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Authentic Bursary Rubber Stamp & Signature */}
+              <div className="w-full md:w-auto flex flex-col items-center sm:items-end text-center sm:text-right relative">
+                {/* SVG Official Circular Rubber Stamp */}
+                <div className="relative inline-block mb-3">
+                  <svg
+                    viewBox="0 0 140 140"
+                    className="w-32 h-32 text-blue-900/85 drop-shadow-xs rotate-[-6deg] select-none"
+                    style={{ filter: "contrast(140%)" }}
+                  >
+                    {/* Outer rings */}
+                    <circle cx="70" cy="70" r="66" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                    <circle cx="70" cy="70" r="61" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="3 2" />
+                    <circle cx="70" cy="70" r="44" fill="none" stroke="currentColor" strokeWidth="1.5" />
+
+                    {/* Circular top text path */}
+                    <path id="topCurve" d="M 18,70 A 52,52 0 0,1 122,70" fill="none" />
+                    <text className="text-[8.5px] font-black tracking-wider uppercase fill-current">
+                      <textPath href="#topCurve" startOffset="50%" textAnchor="middle">
+                        AL-FURQAN INT&apos;L ACADEMY
+                      </textPath>
+                    </text>
+
+                    {/* Circular bottom text path */}
+                    <path id="bottomCurve" d="M 122,70 A 52,52 0 0,1 18,70" fill="none" />
+                    <text className="text-[8.5px] font-black tracking-wider uppercase fill-current">
+                      <textPath href="#bottomCurve" startOffset="50%" textAnchor="middle">
+                        ★ BURSARY DEPT • VERIFIED ★
+                      </textPath>
+                    </text>
+
+                    {/* Inner stamp badge */}
+                    <text x="70" y="58" textAnchor="middle" className="text-[10px] font-black fill-current">
+                      OFFICIAL
+                    </text>
+                    <text x="70" y="74" textAnchor="middle" className="text-[14px] font-black tracking-widest fill-current">
+                      PAID
+                    </text>
+                    <text x="70" y="87" textAnchor="middle" className="text-[9px] font-bold fill-current">
+                      {receiptDate}
+                    </text>
+                  </svg>
+
+                  {/* Overlapping Cursive Signature */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span
+                      className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-wider rotate-[-8deg] opacity-90 select-none"
+                      style={{ fontFamily: "'Brush Script MT', 'Dancing Script', 'Segoe Script', cursive" }}
+                    >
+                      Ibrahim Danladi
+                    </span>
+                  </div>
+                </div>
+
+                {/* Signature Line & Bursar Title */}
+                <div className="w-52 border-b-2 border-slate-900 pb-1 text-center">
+                  <span className="text-sm font-bold text-slate-950">
+                    {school?.bursarName || "Alhaji Ibrahim S. Danladi"}
                   </span>
                 </div>
-                <p className="text-xs text-emerald-800 mt-0.5">
-                  Student fees for this academic term are 100% settled. No outstanding balance.
-                </p>
+                <div className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1">
+                  Chief Bursar / Cashier
+                </div>
               </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-[11px] font-bold text-emerald-700 uppercase">Balance Remaining</div>
-              <div className="text-lg font-black text-emerald-900 font-mono">₦0.00</div>
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl bg-amber-50 border-2 border-amber-500/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                <Clock className="h-6 w-6" />
+          /* VIEW 2: FULL DETAILED STATEMENT & ITEM SCHEDULE */
+          <div className="relative z-10 py-7 space-y-7">
+            {/* Student & Payment Summary Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-100/90 p-5 rounded-2xl border border-slate-200 text-sm">
+              <div>
+                <span className="text-slate-500 block text-xs">Student Name:</span>
+                <strong className="text-slate-950 text-base">{receipt.studentName}</strong>
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-amber-950 text-sm tracking-wide">
-                    PARTIAL PAYMENT
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-600 text-white">
-                    INSTALLMENT RECORDED
-                  </span>
-                </div>
-                <p className="text-xs text-amber-800 mt-0.5">
-                  Partial payment received. Outstanding balance must be settled before mid-term examination.
-                </p>
+                <span className="text-slate-500 block text-xs">Admission No:</span>
+                <strong className="font-mono text-slate-950 text-base">{receipt.regNumber}</strong>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-xs">Class:</span>
+                <strong className="text-slate-950 text-base">{receipt.studentClass}</strong>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-xs">Payment Status:</span>
+                <span className={`inline-block font-black px-3 py-1 rounded-md text-xs mt-0.5 ${
+                  isFullPayment ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                }`}>
+                  {receipt.paymentStatus === "FULL" ? "CLEARED IN FULL" : "PARTIAL INSTALLMENT"}
+                </span>
               </div>
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-[11px] font-bold text-amber-800 uppercase">Outstanding Balance</div>
-              <div className="text-lg font-black text-amber-700 font-mono">
-                {formatNaira(receipt.balanceRemaining)}
+
+            {/* Itemized Table */}
+            <div className="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-xs">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300">
+                    <th className="py-3 px-4">#</th>
+                    <th className="py-3 px-4">Fee Item & Description</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {receipt.items && receipt.items.length > 0 ? (
+                    receipt.items.map((it, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 text-slate-400 font-mono">{idx + 1}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {it.name}
+                          {it.description && <span className="block text-xs font-normal text-slate-500 mt-0.5">{it.description}</span>}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-semibold">
+                            {it.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-950 text-base">
+                          {formatNaira(it.amount)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="py-3 px-4 text-slate-400 font-mono">1</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">Tuition & Termly School Fees</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-semibold">Tuition</span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-950 text-base">
+                        {formatNaira(receipt.amountPaid)}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Ledger Calculation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-sm space-y-1.5">
+                <span className="font-bold text-slate-900 block mb-1">Payment Particulars:</span>
+                <div>Channel: <strong className="text-slate-900">{receipt.paymentMethod}</strong></div>
+                <div>Reference No: <strong className="font-mono text-slate-900">{receipt.bankReference || "N/A"}</strong></div>
+                <div>Payer: <strong className="text-slate-900">{receipt.parentName}</strong> ({receipt.parentPhone})</div>
+                <div className="text-xs text-slate-500 pt-1">
+                  Official note: {receipt.notes || "Official electronic receipt verified by Bursary."}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-sm space-y-2.5">
+                <div className="flex justify-between text-slate-600">
+                  <span>Term Total Invoice:</span>
+                  <span className="font-mono font-bold text-slate-900">{formatNaira(receipt.totalTermBill)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Previous Payments:</span>
+                  <span className="font-mono font-bold text-slate-900">{formatNaira(receipt.previousTotalPaid)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-y border-slate-300 font-bold text-emerald-950 text-base">
+                  <span>AMOUNT PAID (THIS RECEIPT):</span>
+                  <span className="font-mono text-lg">{formatNaira(receipt.amountPaid)}</span>
+                </div>
+                <div className="flex justify-between font-black text-slate-950 text-base">
+                  <span>OUTSTANDING BALANCE:</span>
+                  <span className="font-mono">{formatNaira(receipt.balanceRemaining)}</span>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Student Profile Information Card */}
-      <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 mb-6">
-        <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-3">
-          Student & Parent Particulars
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-4 text-xs">
-          <div>
-            <span className="text-slate-500 block">Student Full Name:</span>
-            <strong className="text-slate-900 text-sm font-black">{receipt.studentName}</strong>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Admission / Reg No:</span>
-            <span className="font-mono font-black text-slate-900 text-sm">{receipt.regNumber}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Class / Arm:</span>
-            <strong className="text-slate-900">{receipt.studentClass}</strong>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Parent / Guardian:</span>
-            <strong className="text-slate-800">{receipt.parentName}</strong>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Parent Contact:</span>
-            <span className="font-mono font-bold text-slate-800">{receipt.parentPhone}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Payment Method & Channel:</span>
-            <strong className="text-[#075E54]">
-              {receipt.paymentMethod} {receipt.bankReference ? `(${receipt.bankReference})` : ""}
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Itemized Fee Breakdown Table */}
-      <div className="mb-6">
-        <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-2">
-          Itemized Payment Breakdown
-        </div>
-        <div className="border border-slate-200 rounded-2xl overflow-hidden">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                <th className="py-3 px-4">#</th>
-                <th className="py-3 px-4">Fee Item / Description</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4 text-right">Amount Paid</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {receipt.items && receipt.items.length > 0 ? (
-                receipt.items.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50">
-                    <td className="py-3 px-4 text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="py-3 px-4 font-bold text-slate-800">
-                      {item.name}
-                      {item.description && (
-                        <span className="block text-[11px] font-normal text-slate-500">
-                          {item.description}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
-                        {item.category}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                      {formatNaira(item.amount)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="py-3 px-4 text-slate-400 font-mono">1</td>
-                  <td className="py-3 px-4 font-bold text-slate-800">School Tuition Fees</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
-                      Tuition
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                    {formatNaira(receipt.amountPaid)}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Financial Settlement Ledger Breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
-        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/70 text-xs text-slate-600 space-y-1.5">
-          <div className="font-bold text-slate-900 mb-1">Official Notes & Instructions:</div>
-          <p className="leading-relaxed">
-            {receipt.notes || "This is a computer-generated, tamper-proof electronic school fees receipt issued by the Bursary Department of Al-Furqan International College."}
-          </p>
-          <p className="text-[11px] text-slate-400 pt-1">
-            Keep this digital receipt safely. It serves as your student clearance for admission into class, textbooks collection, and examination halls.
-          </p>
-        </div>
-
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs space-y-2">
-          <div className="flex justify-between items-center text-slate-600">
-            <span>Total Term Invoice:</span>
-            <span className="font-mono font-bold text-slate-900">
-              {formatNaira(receipt.totalTermBill)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-slate-600">
-            <span>Previous Payments:</span>
-            <span className="font-mono font-bold text-slate-700">
-              {formatNaira(receipt.previousTotalPaid)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-1.5 border-y border-slate-200 font-bold text-emerald-800">
-            <span className="text-sm font-black">AMOUNT PAID (THIS RECEIPT):</span>
-            <span className="font-mono text-base font-black text-emerald-900">
-              {formatNaira(receipt.amountPaid)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-slate-700">
-            <span>Cumulative Total Paid:</span>
-            <span className="font-mono font-bold text-slate-900">
-              {formatNaira(receipt.newTotalPaid)}
-            </span>
-          </div>
-          <div className={`flex justify-between items-center pt-1 font-black ${receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}`}>
-            <span>OUTSTANDING BALANCE DUE:</span>
-            <span className="font-mono text-base">
-              {formatNaira(receipt.balanceRemaining)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Official Signatures, QR Code & Security Stamp */}
-      <div className="pt-6 border-t-2 border-slate-900/10 flex flex-col sm:flex-row items-center justify-between gap-6">
-        {/* Tamper-Proof QR Code */}
-        <div className="flex items-center gap-3">
-          {receipt.qrCodeDataUrl ? (
-            <img
-              src={receipt.qrCodeDataUrl}
-              alt="Receipt Verification QR"
-              className="h-20 w-20 rounded-xl border border-slate-300 p-1 bg-white shadow-xs"
-            />
-          ) : (
-            <div className="h-20 w-20 rounded-xl border border-slate-300 bg-slate-100 flex items-center justify-center">
-              <QrIcon className="h-8 w-8 text-slate-400" />
-            </div>
-          )}
-          <div>
-            <div className="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1">
-              <span>SCAN TO VERIFY</span>
-              <ShieldCheck className="h-3.5 w-3.5 text-[#075E54]" />
-            </div>
-            <p className="text-[10px] text-slate-500 max-w-[200px] leading-tight mt-0.5">
-              Scan with any mobile camera to verify receipt authenticity and student gate pass status.
-            </p>
-            <div className="font-mono text-[9px] text-slate-400 mt-1">
-              SecHash: {receipt.securityHash}
-            </div>
-          </div>
-        </div>
-
-        {/* Bursar Signature & Official Stamp */}
-        <div className="text-center sm:text-right">
-          <div className="inline-block border-b-2 border-slate-900 pb-1 px-8 text-center">
-            <span className="font-serif italic font-bold text-slate-800 text-sm tracking-wide">
-              Ibrahim S. Danladi
-            </span>
-          </div>
-          <div className="text-xs font-bold text-slate-900 mt-1">
-            {school?.bursarName || "Alhaji Ibrahim S. Danladi"}
-          </div>
-          <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-            Authorized Bursar • Al-Furqan College
-          </div>
-          <div className="inline-flex items-center gap-1 mt-1 text-[9px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-            <ShieldCheck className="h-3 w-3" />
-            Digitally Sealed & Authorized
-          </div>
-        </div>
       </div>
     </div>
   );

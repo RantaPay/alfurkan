@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Navbar } from "@/components/layout/Navbar";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { SchoolProfile } from "@/lib/types";
 import {
   Building2,
@@ -99,10 +99,12 @@ export default function SettingsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-        <Navbar schoolName={school.name} currentTerm={`${school.currentTerm} (${school.currentSession})`} logoUrl={school.logoUrl} />
-
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <SidebarLayout
+        schoolName={school.name}
+        currentTerm={`${school.currentTerm} (${school.currentSession})`}
+        logoUrl={school.logoUrl}
+      >
+        <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             School Configuration & Bursary Settings
@@ -342,7 +344,7 @@ export default function SettingsPage() {
           </div>
         </form>
       </main>
-    </div>
+      </SidebarLayout>
     </AuthGuard>
   );
 }

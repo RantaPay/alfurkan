@@ -96,7 +96,7 @@ export default function ReceiptViewPage() {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#FCFBF7",
       });
 
       const imgData = canvas.toDataURL("image/png");

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Navbar } from "@/components/layout/Navbar";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { QuickStudentSearch } from "@/components/dashboard/QuickStudentSearch";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { Student, Receipt } from "@/lib/types";
@@ -21,6 +21,8 @@ import {
   Search,
   Sparkles,
   UserPlus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
 import { AuthGuard } from "@/components/auth/AuthGuard";
@@ -33,6 +35,22 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [receiptFilter, setReceiptFilter] = useState<"ALL" | "FULL" | "PARTIAL">("ALL");
+  const [hideSensitive, setHideSensitive] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("alfurqan_hide_sensitive_figures");
+    if (saved !== null) {
+      setHideSensitive(saved === "true");
+    }
+  }, []);
+
+  const toggleSensitive = () => {
+    setHideSensitive((prev) => {
+      const nextVal = !prev;
+      localStorage.setItem("alfurqan_hide_sensitive_figures", String(nextVal));
+      return nextVal;
+    });
+  };
 
   const loadData = async () => {
     try {
@@ -77,10 +95,8 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-        <Navbar onOpenIssueModal={() => handleOpenIssueModal()} />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <SidebarLayout onOpenIssueModal={() => handleOpenIssueModal()}>
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Hero Section & Quick Receipt Generator Launcher */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#0b6e63] to-[#043e37] p-6 sm:p-10 text-white shadow-xl shadow-emerald-950/10">
           <div className="relative z-10 max-w-3xl">
@@ -121,76 +137,115 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4 Financial Key Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {/* Total Collections */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between text-slate-500 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Collected Revenue</span>
-              <div className="h-9 w-9 rounded-xl bg-emerald-50 text-[#075E54] flex items-center justify-center">
-                <TrendingUp className="h-4 w-4" />
-              </div>
+        {/* Financial Metrics Header & Sensitive Masking Toggle */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Financial Key Metrics
+              </span>
+              <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                Active Term
+              </span>
             </div>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {stats ? formatNaira(stats.collectedRevenue) : "₦0"}
-            </div>
-            <div className="text-[11px] font-semibold text-emerald-700 mt-1 flex items-center gap-1">
-              <span>{stats?.collectionRate || 0}% collection rate</span>
-              <span className="text-slate-400">• of {formatNaira(stats?.expectedRevenue || 0)}</span>
-            </div>
+
+            {/* Privacy Eye Mask Toggle */}
+            <button
+              type="button"
+              onClick={toggleSensitive}
+              aria-label={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures"}
+              title={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures (Mask with asterisks)"}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                hideSensitive
+                  ? "bg-emerald-50 text-[#075E54] border-emerald-200 hover:bg-emerald-100"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              {hideSensitive ? (
+                <>
+                  <Eye className="h-4 w-4 text-[#075E54]" />
+                  <span>Show Figures</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4 text-slate-500" />
+                  <span>Hide Figures</span>
+                </>
+              )}
+            </button>
           </div>
 
-          {/* Full Payments (Cleared Students) */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between text-slate-500 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Paid In Full (Cleared)</span>
-              <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4" />
+          {/* 4 Financial Key Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {/* Total Collections */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider">Collected Revenue</span>
+                <div className="h-9 w-9 rounded-xl bg-emerald-50 text-[#075E54] flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+                {hideSensitive ? "₦ * * * * * *" : stats ? formatNaira(stats.collectedRevenue) : "₦0"}
+              </div>
+              <div className="text-[11px] font-semibold text-emerald-700 mt-1 flex items-center gap-1">
+                <span>{hideSensitive ? "**%" : `${stats?.collectionRate || 0}%`} collection rate</span>
+                <span className="text-slate-400">• of {hideSensitive ? "₦ * * * * * *" : formatNaira(stats?.expectedRevenue || 0)}</span>
               </div>
             </div>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              {stats?.fullPaymentCount || 0}{" "}
-              <span className="text-xs font-bold text-slate-400">Students</span>
-            </div>
-            <div className="text-[11px] font-semibold text-emerald-700 mt-1">
-              100% Cleared • Granted gate & exam pass
-            </div>
-          </div>
 
-          {/* Partial Payment Debtors */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between text-slate-500 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Part Payment Debtors</span>
-              <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Clock className="h-4 w-4" />
+            {/* Full Payments (Cleared Students) */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider">Paid In Full (Cleared)</span>
+                <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black text-slate-900 font-mono">
+                {hideSensitive ? "* *" : (stats?.fullPaymentCount || 0)}{" "}
+                <span className="text-xs font-bold text-slate-400">Students</span>
+              </div>
+              <div className="text-[11px] font-semibold text-emerald-700 mt-1">
+                100% Cleared • Granted gate & exam pass
               </div>
             </div>
-            <div className="text-2xl font-black text-amber-900 font-mono">
-              {stats?.partialPaymentCount || 0}{" "}
-              <span className="text-xs font-bold text-slate-400">Students</span>
-            </div>
-            <div className="text-[11px] font-bold text-amber-700 mt-1 truncate">
-              Outstanding Debt: {formatNaira(stats?.outstandingDebt || 0)}
-            </div>
-          </div>
 
-          {/* Unpaid / Zero Payment Defaulters */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between text-slate-500 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Zero Payment Defaulters</span>
-              <div className="h-9 w-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4" />
+            {/* Partial Payment Debtors */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider">Part Payment Debtors</span>
+                <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black text-amber-900 font-mono">
+                {hideSensitive ? "* *" : (stats?.partialPaymentCount || 0)}{" "}
+                <span className="text-xs font-bold text-slate-400">Students</span>
+              </div>
+              <div className="text-[11px] font-bold text-amber-700 mt-1 truncate">
+                Outstanding Debt: {hideSensitive ? "₦ * * * * * *" : formatNaira(stats?.outstandingDebt || 0)}
               </div>
             </div>
-            <div className="text-2xl font-black text-rose-900 font-mono">
-              {stats?.unpaidCount || 0}{" "}
-              <span className="text-xs font-bold text-slate-400">Students</span>
-            </div>
-            <div className="text-[11px] font-semibold text-rose-700 mt-1">
-              <Link href="/reports?status=UNPAID" className="hover:underline flex items-center gap-1">
-                <span>View Debtor Defaulters List</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
+
+            {/* Unpaid */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between text-slate-500 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider">Unpaid</span>
+                <div className="h-9 w-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black text-rose-900 font-mono">
+                {hideSensitive ? "* *" : (stats?.unpaidCount || 0)}{" "}
+                <span className="text-xs font-bold text-slate-400">Students</span>
+              </div>
+              <div className="text-[11px] font-semibold text-rose-700 mt-1">
+                <Link href="/reports?status=UNPAID" className="hover:underline flex items-center gap-1">
+                  <span>View Unpaid List</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -311,12 +366,12 @@ export default function DashboardPage() {
                       </td>
 
                       <td className="py-3.5 px-3 font-mono font-black text-slate-900 text-sm">
-                        {formatNaira(receipt.amountPaid)}
+                        {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.amountPaid)}
                       </td>
 
                       <td className="py-3.5 px-3 font-mono font-bold">
                         <span className={receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}>
-                          {formatNaira(receipt.balanceRemaining)}
+                          {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.balanceRemaining)}
                         </span>
                       </td>
 
@@ -373,13 +428,13 @@ export default function DashboardPage() {
         onReceiptCreated={() => loadData()}
       />
 
-      {/* Add Student / Bulk Import Modal */}
-      <AddStudentModal
-        isOpen={isAddStudentOpen}
-        onClose={() => setIsAddStudentOpen(false)}
-        onStudentAdded={() => loadData()}
-      />
-    </div>
+        {/* Add Student / Bulk Import Modal */}
+        <AddStudentModal
+          isOpen={isAddStudentOpen}
+          onClose={() => setIsAddStudentOpen(false)}
+          onStudentAdded={() => loadData()}
+        />
+      </SidebarLayout>
     </AuthGuard>
   );
 }

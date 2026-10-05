@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SchoolProfile {
+  id             String   @id @default("default")
+  name           String   @default("Al-Furqan International Academy")
+  shortName      String   @default("Al-Furqan")
+  motto          String   @default("Knowledge and Guidance")
+  address        String   @default("Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria")
+  email          String   @default("bursary@alfurqan.edu.ng")
+  phone          String   @default("+234 803 456 7890 / +234 812 345 6789")
+  currentTerm    String   @default("1st Term")
+  currentSession String   @default("2026/2027 Academic Session")
+  bankName       String   @default("Jaiz Bank")
+  accountNumber  String   @default("0012489301")
+  accountName    String   @default("Al-Furqan International College - Fees")
+  bursarName     String   @default("Alhaji Ibrahim S. Danladi")
+  bursarPin      String   @default("1234")
+  logoUrl        String   @default("/logo.png")
+  updatedAt      DateTime @updatedAt
+}
+
+model StaffUser {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      String   // "Bursar" | "Admin" | "Cashier"
+  pin       String   // 4-digit PIN
+  password  String
+  title     String
+  avatar    String?
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id               String    @id @default(uuid())
+  regNumber        String    @unique
+  fullName         String
+  class            String
+  gender           String    @default("Male")
+  parentName       String
+  parentPhone      String
+  parentEmail      String?
+  totalTermBill    Float     @default(165000)
+  totalPaid        Float     @default(0)
+  balanceRemaining Float     @default(165000)
+  status           String    @default("UNPAID") // "FULL" | "PARTIAL" | "UNPAID"
+  lastPaymentDate  String?
+  createdAt        DateTime  @default(now())
+  receipts         Receipt[]
+
+  @@index([regNumber])
+  @@index([fullName])
+  @@index([class])
+  @@index([status])
+}
+
+model Receipt {
+  id                String        @id @default(uuid())
+  receiptNumber     String        @unique
+  studentId         String
+  student           Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  regNumber         String
+  studentName       String
+  studentClass      String
+  parentName        String
+  parentPhone       String
+  parentEmail       String?
+  amountPaid        Float
+  totalTermBill     Float
+  previousTotalPaid Float
+  newTotalPaid      Float
+  balanceRemaining  Float
+  paymentStatus     String        // "FULL" | "PARTIAL"
+  paymentMethod     String        // "Bank Transfer" | "Bank Deposit" | "POS" | "Cash"
+  bankReference     String?
+  term              String
+  session           String
+  date              String
+  timestamp         DateTime      @default(now())
+  issuedBy          String
+  qrCodeDataUrl     String?       @db.Text
+  securityHash      String
+  notes             String?
+  isVoided          Boolean       @default(false)
+  voidReason        String?
+  voidedAt          DateTime?
+  voidedBy          String?
+  items             ReceiptItem[]
+
+  @@index([receiptNumber])
+  @@index([studentId])
+  @@index([regNumber])
+  @@index([date])
+  @@index([paymentStatus])
+}
+
+model ReceiptItem {
+  id          String   @id @default(uuid())
+  receiptId   String
+  receipt     Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  name        String
+  category    String
+  amount      Float
+  description String?
+
+  @@index([receiptId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String   // "RECEIPT_ISSUED" | "RECEIPT_VOIDED" | "STUDENT_ENROLLED" | "SETTINGS_UPDATED"
+  performedBy String
+  details     String   @db.Text
+  timestamp   DateTime @default(now())
+}

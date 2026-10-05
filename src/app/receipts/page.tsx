@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Navbar } from "@/components/layout/Navbar";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Receipt } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
 import {
@@ -60,10 +60,8 @@ export default function ReceiptsLedgerPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-        <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <SidebarLayout>
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -243,7 +241,7 @@ export default function ReceiptsLedgerPage() {
           </div>
         </div>
       </main>
-    </div>
+      </SidebarLayout>
     </AuthGuard>
   );
 }

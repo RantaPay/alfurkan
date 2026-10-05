@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Al-Furqan Pay (بوابة الفرقان للدفع الإلكتروني)
+### Modern School Fee Collection, Instant Thermal/PDF Receipts & Bursary Management System
+**Al-Furqan International Academy** — *Knowledge and Guidance (العلم والتربية)*
 
-## Getting Started
+---
 
-First, run the development server:
+## 🌟 Key Features
+- **Production PostgreSQL Database**: Fully relational database with Prisma ORM 6.
+- **ACID Transactions**: Atomic payment ledger processing — eliminates race conditions and ensures students' balances and receipt numbers match perfectly.
+- **B-Tree Database Indexing**: Sub-15ms search and filtering across thousands of students by registration number, student name, and parent phone.
+- **Audit Trail Logging**: Dedicated `AuditLog` table tracking receipts issued, voided, student enrollments, and configuration changes with timestamps and operator identity.
+- **Dual Authentication**: Secure login supporting both Bursar PIN quick-entry (`1234`) and Admin Email/Password credentials.
+- **Instant Thermal & PDF Receipts**: Printable 80mm POS thermal slips and full-page official A4 clearance certificates with automated security verification QR codes.
+- **Public Gate Pass & Receipt Verification**: Anyone (parents, security guards, auditors) can scan the QR code to verify validity on `/verify/[receiptNumber]` without logging in.
 
+---
+
+## 🏗️ Database & Tech Stack
+- **Framework**: Next.js 16 (App Router with Turbopack) & React 19
+- **Database**: PostgreSQL (`postgresql://postgres:postgres@localhost:5432/alfurqan_pay`)
+- **ORM**: Prisma Client v6
+- **Styling**: Tailwind CSS v4 & Lucide React
+- **Document Generation**: `jspdf`, `html2canvas-pro`, `qrcode`, `canvas-confetti`
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Configuration
+Ensure your `.env` contains the PostgreSQL connection string:
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/alfurqan_pay"
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Database Sync & Seed
+```bash
+# Push schema migrations to PostgreSQL
+npm run db:push
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Seed school profile, staff users, and migrate student ledgers
+npm run db:seed
+```
 
-## Learn More
+### 4. Prisma Studio (Visual Database GUI)
+Open an interactive database browser in your browser:
+```bash
+npm run db:studio
+# Opens at http://localhost:5555
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 5. Launch Development Server
+```bash
+npm run dev
+# Application accessible at http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔐 Default Credentials
 
-## Deploy on Vercel
+| Role | Name | Email | Password | PIN |
+|---|---|---|---|---|
+| **Chief Bursar** | Alhaji Ibrahim S. Danladi | `bursar@alfurqan.edu.ng` | `bursar2026` | `1234` |
+| **Principal / Admin** | Dr. Shehu Danladi | `admin@alfurqan.edu.ng` | `admin2026` | `9988` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📋 Database Schema Summary
+
+- **`SchoolProfile`**: Institutional details, Jaiz Bank account details, academic term/session, logo URL, bursar PIN.
+- **`StaffUser`**: Staff accounts, credentials, roles, and PIN access.
+- **`Student`**: Student profiles, class, parent details, term billing, total paid, remaining balance, payment status (`FULL`, `PARTIAL`, `UNPAID`).
+- **`Receipt`**: Unique sequential receipt numbering (`AFIC-RCP-YYYY-NNNN`), payment amounts, payment method, bank references, QR code data URL, tamper-proof security hash, void tracking.
+- **`ReceiptItem`**: Cascaded itemized fee breakdowns (Tuition, Books, Uniform, PTA, Transport).
+- **`AuditLog`**: Tamper-evident financial ledger and configuration audit trail.

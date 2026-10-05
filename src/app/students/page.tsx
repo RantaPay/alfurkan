@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Navbar } from "@/components/layout/Navbar";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { Student } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
@@ -65,10 +65,8 @@ export default function StudentsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-        <Navbar onOpenIssueModal={() => { setSelectedStudent(null); setIsModalOpen(true); }} />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <SidebarLayout onOpenIssueModal={() => { setSelectedStudent(null); setIsModalOpen(true); }}>
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -212,12 +210,12 @@ export default function StudentsPage() {
         onReceiptCreated={() => fetchStudents()}
       />
 
-      <AddStudentModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onStudentAdded={() => fetchStudents()}
-      />
-    </div>
+        <AddStudentModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onStudentAdded={() => fetchStudents()}
+        />
+      </SidebarLayout>
     </AuthGuard>
   );
 }

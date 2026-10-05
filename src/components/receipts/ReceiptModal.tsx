@@ -18,6 +18,19 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+export const PRESET_FEE_OPTIONS: { name: string; category: FeeCategory; label: string }[] = [
+  { name: "Tuition / School Fees", category: "Tuition", label: "Tuition / School Fees" },
+  { name: "Tuition Part Payment", category: "Tuition", label: "Tuition Part Payment" },
+  { name: "Textbooks & Revision Pack", category: "Books", label: "Textbooks & Revision Pack" },
+  { name: "College Uniform (2 Sets)", category: "Uniform", label: "College Uniform (2 Sets)" },
+  { name: "PTA Termly Levy", category: "PTA", label: "PTA Termly Levy" },
+  { name: "Transport / Bus Service", category: "Transport", label: "Transport / Bus Service" },
+  { name: "Laboratory & Practical Fees", category: "Development", label: "Laboratory & Practical Fees" },
+  { name: "Excursion & Field Trip", category: "Excursion", label: "Excursion & Field Trip" },
+  { name: "Development & Maintenance Levy", category: "Development", label: "Development & Maintenance Levy" },
+  { name: "CUSTOM", category: "Other", label: "Custom / Other Fee (Specify below)" },
+];
+
 interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,7 +66,7 @@ export function ReceiptModal({
   // Itemized categories breakdown
   const [items, setItems] = useState<ReceiptItem[]>([
     { name: "Tuition / School Fees", category: "Tuition", amount: 100000 },
-    { name: "Textbooks Pack", category: "Books", amount: 25000 },
+    { name: "Textbooks & Revision Pack", category: "Books", amount: 25000 },
   ]);
 
   // Sync preselected student
@@ -63,7 +76,7 @@ export function ReceiptModal({
       // Auto-populate initial suggested tuition amount based on student's remaining balance
       const remaining = preselectedStudent.balanceRemaining > 0 ? preselectedStudent.balanceRemaining : preselectedStudent.totalTermBill;
       setItems([
-        { name: "School Fees / Tuition", category: "Tuition", amount: remaining },
+        { name: "Tuition / School Fees", category: "Tuition", amount: remaining },
       ]);
     }
   }, [preselectedStudent]);
@@ -279,7 +292,7 @@ export function ReceiptModal({
                           setSearchResults([]);
                           const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
                           setItems([
-                            { name: "School Fees / Tuition", category: "Tuition", amount: rem },
+                            { name: "Tuition / School Fees", category: "Tuition", amount: rem },
                           ]);
                         }
                       }
@@ -306,7 +319,7 @@ export function ReceiptModal({
                           setSearchResults([]);
                           const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
                           setItems([
-                            { name: "School Fees / Tuition", category: "Tuition", amount: rem },
+                            { name: "Tuition / School Fees", category: "Tuition", amount: rem },
                           ]);
                         }}
                         className="p-3 hover:bg-emerald-50/60 cursor-pointer flex items-center justify-between transition-colors"
@@ -377,14 +390,14 @@ export function ReceiptModal({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Tuition", "Tuition Part Payment", 50000)}
+                  onClick={() => handleAddItem("Tuition", "Tuition / School Fees", 50000)}
                   className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Tuition
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Books", "Books & Exercise Pack", 25000)}
+                  onClick={() => handleAddItem("Books", "Textbooks & Revision Pack", 25000)}
                   className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Books
@@ -406,49 +419,126 @@ export function ReceiptModal({
               </div>
             </div>
 
-            <div className="space-y-2 border border-slate-200 rounded-2xl p-3 bg-slate-50/50">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs"
-                >
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => {
-                      const newName = e.target.value;
-                      setItems((prev) =>
-                        prev.map((it, i) => (i === idx ? { ...it, name: newName } : it))
-                      );
-                    }}
-                    placeholder="Fee item title"
-                    className="flex-1 h-9 px-3 rounded-lg border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-[#075E54]"
-                  />
+            <div className="space-y-2.5 border border-slate-200 rounded-2xl p-3 bg-slate-50/50">
+              {items.map((item, idx) => {
+                const isCustom = !PRESET_FEE_OPTIONS.some(
+                  (p) => p.name !== "CUSTOM" && p.name === item.name
+                );
 
-                  <div className="relative w-36">
-                    <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 font-mono">
-                      ₦
-                    </span>
-                    <input
-                      type="number"
-                      value={item.amount || ""}
-                      onChange={(e) => handleUpdateItemAmount(idx, Number(e.target.value))}
-                      placeholder="Amount"
-                      className="w-full h-9 pl-7 pr-3 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#075E54]"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(idx)}
-                    disabled={items.length === 1}
-                    className="p-2 text-slate-400 hover:text-rose-600 disabled:opacity-30 cursor-pointer"
-                    title="Remove item"
+                return (
+                  <div
+                    key={idx}
+                    className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2 transition-all"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2">
+                      {/* Fee Dropdown Box */}
+                      <div className="flex-1 min-w-[180px]">
+                        <select
+                          value={isCustom ? "CUSTOM" : item.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "CUSTOM") {
+                              setItems((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx
+                                    ? {
+                                        ...it,
+                                        name: PRESET_FEE_OPTIONS.some((p) => p.name === it.name) ? "" : it.name,
+                                        category: "Other",
+                                      }
+                                    : it
+                                )
+                              );
+                            } else {
+                              const found = PRESET_FEE_OPTIONS.find((p) => p.name === val);
+                              if (found) {
+                                setItems((prev) =>
+                                  prev.map((it, i) =>
+                                    i === idx
+                                      ? { ...it, name: found.name, category: found.category }
+                                      : it
+                                  )
+                                );
+                              }
+                            }
+                          }}
+                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] focus:border-[#075E54] cursor-pointer"
+                        >
+                          <option value="" disabled>-- Select Fee Purpose --</option>
+                          {PRESET_FEE_OPTIONS.map((opt) => (
+                            <option key={opt.name} value={opt.name}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Fee Amount */}
+                      <div className="relative w-36 sm:w-44 shrink-0">
+                        <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">
+                          ₦
+                        </span>
+                        <input
+                          type="number"
+                          value={item.amount || ""}
+                          onChange={(e) => handleUpdateItemAmount(idx, Number(e.target.value))}
+                          placeholder="Amount"
+                          className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 text-xs font-mono font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                        />
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(idx)}
+                        disabled={items.length === 1}
+                        className="p-2 text-slate-400 hover:text-rose-600 disabled:opacity-20 cursor-pointer transition-colors shrink-0"
+                        title="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Custom description field if 'Custom / Other Fee' is selected or non-preset name */}
+                    {isCustom && (
+                      <div className="pt-0.5">
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => {
+                            const customName = e.target.value;
+                            setItems((prev) =>
+                              prev.map((it, i) =>
+                                i === idx ? { ...it, name: customName, category: "Other" } : it
+                              )
+                            );
+                          }}
+                          placeholder="Type custom fee title (e.g. Graduation Gown, ID Card Replacement)..."
+                          className="w-full h-9 px-3 rounded-lg border border-emerald-300 bg-emerald-50/20 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Add item button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setItems((prev) => [
+                      ...prev,
+                      { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
+                    ])
+                  }
+                  className="w-full py-2.5 px-3 border border-dashed border-slate-300 hover:border-[#075E54] hover:bg-emerald-50/40 text-slate-600 hover:text-[#075E54] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>+ Add Another Fee Item</span>
+                </button>
+              </div>
 
               <div className="flex justify-between items-center pt-2 px-1 text-xs">
                 <span className="font-bold text-slate-600">Total Receipt Amount:</span>
@@ -459,36 +549,21 @@ export function ReceiptModal({
             </div>
           </div>
 
-          {/* STEP 3: Payment Channel & Bank Verification Reference */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                3. Payment Channel
-              </label>
-              <select
-                value={paymentMethod}
-                onChange={(e: any) => setPaymentMethod(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-              >
-                <option value="Bank Transfer">Direct Bank Transfer</option>
-                <option value="Bank Deposit">Bank Teller Deposit</option>
-                <option value="POS">School POS Machine</option>
-                <option value="Cash">Cash at Bursary</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                Bank Narration / Reference
-              </label>
-              <input
-                type="text"
-                value={bankReference}
-                onChange={(e) => setBankReference(e.target.value)}
-                placeholder="e.g. TRF/NIP/20260927/83921"
-                className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-              />
-            </div>
+          {/* STEP 3: Payment Channel */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
+              3. Payment Channel
+            </label>
+            <select
+              value={paymentMethod}
+              onChange={(e: any) => setPaymentMethod(e.target.value)}
+              className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+            >
+              <option value="Bank Transfer">Direct Bank Transfer</option>
+              <option value="Bank Deposit">Bank Teller Deposit</option>
+              <option value="POS">School POS Machine</option>
+              <option value="Cash">Cash at Bursary</option>
+            </select>
           </div>
 
           {/* Live Dynamic Status Forecast Stamp */}
