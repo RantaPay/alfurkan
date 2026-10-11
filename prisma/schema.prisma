@@ -8,29 +8,36 @@ datasource db {
 }
 
 model SchoolProfile {
-  id             String   @id @default("default")
-  name           String   @default("Al-Furqan International Academy")
-  shortName      String   @default("Al-Furqan")
-  motto          String   @default("Knowledge and Guidance")
-  address        String   @default("Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria")
-  email          String   @default("bursary@alfurqan.edu.ng")
-  phone          String   @default("+234 803 456 7890 / +234 812 345 6789")
-  currentTerm    String   @default("1st Term")
-  currentSession String   @default("2026/2027 Academic Session")
-  bankName       String   @default("Jaiz Bank")
-  accountNumber  String   @default("0012489301")
-  accountName    String   @default("Al-Furqan International College - Fees")
-  bursarName     String   @default("Alhaji Ibrahim S. Danladi")
-  bursarPin      String   @default("1234")
-  logoUrl        String   @default("/logo.png")
-  updatedAt      DateTime @updatedAt
+  id                   String   @id @default("default")
+  name                 String   @default("Al-Furqan International Academy")
+  shortName            String   @default("Al-Furqan")
+  motto                String   @default("Knowledge and Guidance")
+  address              String   @default("Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria")
+  email                String   @default("admin@alfurqanintlacademy.com")
+  phone                String   @default("+234 804 430 5624 / +234 806 977 0538 / +234 817 799 4444")
+  currentTerm          String   @default("1st Term")
+  currentSession       String   @default("2026/2027 Academic Session")
+  bankName             String   @default("Jaiz Bank")
+  accountNumber        String   @default("0012489301")
+  accountName          String   @default("Al-Furqan International College - Fees")
+  accountantName       String   @default("Alhaji Ibrahim S. Danladi") @map("bursarName")
+  accountantPin        String   @default("1234") @map("bursarPin")
+  logoUrl              String   @default("/logo.png")
+  bankAccountsJson     String?  @default("[]")
+  receiptPrefix        String   @default("AFIA/")
+  receiptFooterNote    String   @default("Official Receipt • Valid only with authorized Accounts Stamp • Fees paid are non-refundable • All payments subject to bank clearance")
+  defaultReceiptFormat String   @default("traditional")
+  showStamp            Boolean  @default(true)
+  feeStructureJson       String?  @default("[]")
+  feeScheduleHistoryJson String?  @default("[]")
+  updatedAt              DateTime @updatedAt
 }
 
 model StaffUser {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  role      String   // "Bursar" | "Admin" | "Cashier"
+  role      String   // "Accountant" | "Admin" | "Cashier"
   pin       String   // 4-digit PIN
   password  String
   title     String
@@ -51,6 +58,7 @@ model Student {
   totalPaid        Float     @default(0)
   balanceRemaining Float     @default(165000)
   status           String    @default("UNPAID") // "FULL" | "PARTIAL" | "UNPAID"
+  isRepeating      Boolean   @default(false)
   lastPaymentDate  String?
   createdAt        DateTime  @default(now())
   receipts         Receipt[]
@@ -80,6 +88,7 @@ model Receipt {
   paymentStatus     String        // "FULL" | "PARTIAL"
   paymentMethod     String        // "Bank Transfer" | "Bank Deposit" | "POS" | "Cash"
   bankReference     String?
+  bankName          String?       @default("Jaiz Bank")
   term              String
   session           String
   date              String

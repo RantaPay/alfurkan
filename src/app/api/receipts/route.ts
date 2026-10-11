@@ -25,7 +25,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { studentId, amountPaid, paymentMethod, bankReference, items, notes } = body;
+    const {
+      studentId,
+      amountPaid,
+      paymentMethod,
+      bankReference,
+      bankName,
+      date,
+      depositorName,
+      payerName,
+      depositorPhone,
+      payerPhone,
+      items,
+      notes,
+    } = body;
 
     if (!studentId || !amountPaid || amountPaid <= 0) {
       return NextResponse.json(
@@ -39,6 +52,10 @@ export async function POST(request: Request) {
       amountPaid: Number(amountPaid),
       paymentMethod: paymentMethod || "Bank Transfer",
       bankReference,
+      bankName: bankName || undefined,
+      date: date || undefined,
+      depositorName: depositorName || payerName || undefined,
+      depositorPhone: depositorPhone || payerPhone || undefined,
       items: items || [],
       notes,
     });

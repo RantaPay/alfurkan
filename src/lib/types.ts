@@ -30,7 +30,11 @@ export interface Student {
   totalPaid: number;
   balanceRemaining: number;
   status: PaymentStatus;
+  isRepeating?: boolean;
   lastPaymentDate?: string;
+  paymentBank?: string; // e.g. "GTBank", "Jaiz Bank"
+  paidBanks?: string[]; // All banks student has paid to
+  lastReceiptNumber?: string;
   createdAt: string;
 }
 
@@ -39,6 +43,7 @@ export interface CreateStudentInput {
   regNumber?: string;
   class: string;
   gender: "Male" | "Female";
+  isRepeating?: boolean;
   parentName: string;
   parentPhone: string;
   parentEmail?: string;
@@ -70,6 +75,7 @@ export interface Receipt {
   paymentStatus: "FULL" | "PARTIAL"; // Full payment or part payment
   paymentMethod: "Bank Transfer" | "Bank Deposit" | "POS" | "Cash";
   bankReference?: string;
+  bankName?: string; // e.g. "Jaiz Bank", "GTBank", "Zenith Bank"
   items: ReceiptItem[];
   term: string; // e.g. 1st Term
   session: string; // e.g. 2026/2027
@@ -85,6 +91,35 @@ export interface Receipt {
   voidedBy?: string;
 }
 
+export interface BankAccountConfig {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  isDefault?: boolean;
+}
+
+export interface ClassFeeConfig {
+  classLevel: string; // e.g. "JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"
+  tuitionFee: number;
+  booksFee: number;
+  uniformFee: number;
+  ptaLevy: number;
+  developmentLevy?: number;
+  totalBill: number;
+}
+
+export interface FeeScheduleHistoryEntry {
+  id: string;
+  session: string; // e.g. "2026/2027 Academic Session"
+  term: string; // e.g. "1st Term"
+  updatedAt: string; // ISO date string
+  updatedBy: string; // Accountant/Admin name
+  notes?: string;
+  schedule: ClassFeeConfig[];
+  summaryText?: string;
+}
+
 export interface SchoolProfile {
   name: string;
   shortName: string;
@@ -97,9 +132,23 @@ export interface SchoolProfile {
   bankName: string;
   accountNumber: string;
   accountName: string;
-  bursarName: string;
+  accountantName: string;
+  accountantPin?: string;
   logoUrl?: string;
-  bursarPin?: string;
+  bankAccounts?: BankAccountConfig[];
+  receiptPrefix?: string;
+  receiptFooterNote?: string;
+  defaultReceiptFormat?: "traditional" | "statement";
+  showStamp?: boolean;
+  feeStructure?: ClassFeeConfig[];
+  feeScheduleHistory?: FeeScheduleHistoryEntry[];
+}
+
+export interface BankReconciliationItem {
+  bankName: string;
+  totalAmount: number;
+  receiptCount: number;
+  percentage: number;
 }
 
 export interface ReportSummary {
@@ -112,13 +161,17 @@ export interface ReportSummary {
   fullPaymentCount: number;
   partialPaymentCount: number;
   unpaidCount: number;
+  filteredBank?: string;
+  filteredClass?: string;
+  bankReconciliation?: BankReconciliationItem[];
+  bankSpecificCollection?: number;
 }
 
 export interface StaffUser {
   id: string;
   name: string;
   email: string;
-  role: "Bursar" | "Admin" | "Cashier";
+  role: "Accountant" | "Admin" | "Cashier";
   pin: string;
   password?: string;
   title: string;

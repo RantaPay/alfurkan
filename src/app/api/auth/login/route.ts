@@ -30,7 +30,7 @@ export async function POST(request: Request) {
           success: false,
           error:
             mode === "pin"
-              ? "Invalid Bursar Passcode PIN. Default is 1234."
+              ? "Invalid Accountant / Cashier Passcode PIN. Default is 1234."
               : "Invalid email or password. Please check your credentials.",
         },
         { status: 401 }

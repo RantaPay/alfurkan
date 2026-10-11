@@ -21,6 +21,7 @@ import {
   Loader2,
   X,
   ShieldAlert,
+  ScrollText,
 } from "lucide-react";
 
 export default function ReceiptViewPage() {
@@ -34,12 +35,13 @@ export default function ReceiptViewPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [activeFormat, setActiveFormat] = useState<"thermal" | "traditional" | "statement">("thermal");
 
   // Voiding State
   const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
   const [voidReason, setVoidReason] = useState("Bank transfer bounced / invalid payment proof");
   const [customVoidReason, setCustomVoidReason] = useState("");
-  const [bursarPinInput, setBursarPinInput] = useState("");
+  const [accountantPinInput, setAccountantPinInput] = useState("");
   const [voidError, setVoidError] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [voidSuccess, setVoidSuccess] = useState(false);
@@ -80,6 +82,20 @@ export default function ReceiptViewPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handlePrintThermal = () => {
+    setActiveFormat("thermal");
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  const handlePrintStandard = () => {
+    setActiveFormat("traditional");
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   const handleDownloadPdf = async () => {
@@ -136,9 +152,9 @@ export default function ReceiptViewPage() {
       return;
     }
 
-    const expectedPin = school?.bursarPin || "1234";
-    if (bursarPinInput !== expectedPin) {
-      setVoidError("Incorrect Bursar PIN. (Default system PIN: 1234)");
+    const expectedPin = school?.accountantPin || "1234";
+    if (accountantPinInput !== expectedPin) {
+      setVoidError("Incorrect Accountant / Cashier PIN. (Default system PIN: 1234)");
       return;
     }
 
@@ -150,7 +166,7 @@ export default function ReceiptViewPage() {
         body: JSON.stringify({
           receiptId: receipt.id,
           reason: finalReason,
-          voidedBy: school?.bursarName || "Authorized Bursar",
+          voidedBy: school?.accountantName || "Authorized Accountant / Cashier",
         }),
       });
 
@@ -206,7 +222,7 @@ export default function ReceiptViewPage() {
 
   // WhatsApp Pre-composed Message for parent
   const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-    `Assalamu Alaikum ${receipt.parentName},\n\nOfficial Fee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your official clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nBursary Department\nAl-Furqan International College`
+    `Assalamu Alaikum ${receipt.parentName},\n\nOfficial Fee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your official clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAl-Furqan International College`
   )}`;
 
   return (
@@ -217,17 +233,17 @@ export default function ReceiptViewPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-bold"
+              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-sm font-bold"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4.5 w-4.5" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
             <div className="h-4 w-px bg-slate-200" />
-            <span className={`font-mono text-xs font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
+            <span className={`font-mono text-sm font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
               {receipt.receiptNumber}
             </span>
             {receipt.isVoided && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-200">
                 VOIDED
               </span>
             )}
@@ -239,11 +255,11 @@ export default function ReceiptViewPage() {
               href={parentWaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`text-white px-4 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
                 receipt.isVoided ? "bg-slate-500 hover:bg-slate-600 opacity-80" : "bg-[#25D366] hover:bg-[#1EBE5D]"
               }`}
             >
-              <MessageSquare className="h-4 w-4 fill-white" />
+              <MessageSquare className="h-4.5 w-4.5 fill-white" />
               <span>{receipt.isVoided ? "Send Notice via WA" : "Send to Parent WhatsApp"}</span>
             </a>
 
@@ -252,41 +268,52 @@ export default function ReceiptViewPage() {
               type="button"
               disabled={isDownloadingPdf}
               onClick={handleDownloadPdf}
-              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-4 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               title="Download high-resolution .pdf document"
             >
               {isDownloadingPdf ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4.5 w-4.5 animate-spin" />
                   <span>Generating PDF...</span>
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4.5 w-4.5" />
                   <span>Download PDF (.pdf)</span>
                 </>
               )}
             </button>
 
-            {/* Browser Print Button */}
+            {/* Direct Thermal POS 80mm Print Button */}
             <button
               type="button"
-              onClick={handlePrint}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Print via Thermal or Desktop Printer"
+              onClick={handlePrintThermal}
+              className="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Print directly to POS Thermal Receipt Printer (80mm Roll)"
             >
-              <Printer className="h-3.5 w-3.5" />
-              <span>Print</span>
+              <Printer className="h-4 w-4 text-emerald-400" />
+              <span>Print POS Slip (80mm)</span>
+            </button>
+
+            {/* Standard A4 Voucher Print Button */}
+            <button
+              type="button"
+              onClick={handlePrintStandard}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Print standard A4 slip on office desktop printer"
+            >
+              <ScrollText className="h-4 w-4" />
+              <span>Print A4</span>
             </button>
 
             {/* Copy Link Button */}
             <button
               type="button"
               onClick={handleCopyLink}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <Share2 className="h-3.5 w-3.5" />
-              <span>{copied ? "Link Copied!" : "Copy"}</span>
+              <Share2 className="h-4 w-4" />
+              <span>{copied ? "Link Copied!" : "Copy Link"}</span>
             </button>
 
             {/* Void / Cancel Receipt Trigger */}
@@ -295,18 +322,18 @@ export default function ReceiptViewPage() {
                 type="button"
                 onClick={() => {
                   setVoidError("");
-                  setBursarPinInput("");
+                  setAccountantPinInput("");
                   setIsVoidModalOpen(true);
                 }}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Cancel receipt and reverse student payment in ledger"
               >
-                <Ban className="h-3.5 w-3.5 text-rose-600" />
+                <Ban className="h-4 w-4 text-rose-600" />
                 <span>Void Receipt</span>
               </button>
             ) : (
-              <span className="text-rose-600 text-xs font-bold flex items-center gap-1 px-2 py-1 bg-rose-50 rounded-lg">
-                <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="text-rose-600 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 rounded-xl">
+                <AlertTriangle className="h-4 w-4" />
                 <span>Cancelled</span>
               </span>
             )}
@@ -324,7 +351,12 @@ export default function ReceiptViewPage() {
         )}
 
         {/* The Official Printable Digital Receipt Document */}
-        <ReceiptDocument receipt={receipt} school={school || undefined} />
+        <ReceiptDocument
+          receipt={receipt}
+          school={school || undefined}
+          selectedFormat={activeFormat}
+          onFormatSelect={setActiveFormat}
+        />
 
         {/* Print instructions notice (Hidden in print) */}
         <div className="print:hidden text-center text-xs text-slate-500 py-4">
@@ -411,7 +443,7 @@ export default function ReceiptViewPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Enter Bursar Passcode PIN</span>
+                  <span>Enter Accountant / Cashier Passcode PIN</span>
                   <span className="text-[10px] text-slate-400 font-normal">Default: 1234</span>
                 </label>
                 <div className="relative">
@@ -420,8 +452,8 @@ export default function ReceiptViewPage() {
                     type="password"
                     inputMode="numeric"
                     maxLength={6}
-                    value={bursarPinInput}
-                    onChange={(e) => setBursarPinInput(e.target.value.replace(/\D/g, ""))}
+                    value={accountantPinInput}
+                    onChange={(e) => setAccountantPinInput(e.target.value.replace(/\D/g, ""))}
                     placeholder="Enter 4-digit PIN"
                     className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 font-mono font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
                     required

@@ -23,16 +23,16 @@ async function main() {
     name: "Al-Furqan International Academy",
     shortName: "Al-Furqan",
     motto: "Knowledge and Guidance",
-    address: "Plot 14, Islamic Crescent, Off Airport Road, Gwarinpa, Abuja, Nigeria",
-    email: "bursary@alfurqan.edu.ng",
-    phone: "+234 803 456 7890 / +234 812 345 6789",
+    address: "Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria",
+    email: "admin@alfurqanintlacademy.com",
+    phone: "+234 804 430 5624 / +234 806 977 0538 / +234 817 799 4444",
     currentTerm: "1st Term",
     currentSession: "2026/2027 Academic Session",
     bankName: "Jaiz Bank",
     accountNumber: "0012489301",
     accountName: "Al-Furqan International College - Fees",
-    bursarName: "Alhaji Ibrahim S. Danladi",
-    bursarPin: "1234",
+    accountantName: "Alhaji Ibrahim S. Danladi",
+    accountantPin: "1234",
     logoUrl: "/logo.png",
   };
 
@@ -50,8 +50,8 @@ async function main() {
       bankName: schoolData.bankName,
       accountNumber: schoolData.accountNumber,
       accountName: schoolData.accountName,
-      bursarName: schoolData.bursarName,
-      bursarPin: schoolData.bursarPin || "1234",
+      accountantName: schoolData.accountantName,
+      accountantPin: schoolData.accountantPin || "1234",
       logoUrl: schoolData.logoUrl || "/logo.png",
     },
     create: {
@@ -67,8 +67,8 @@ async function main() {
       bankName: schoolData.bankName,
       accountNumber: schoolData.accountNumber,
       accountName: schoolData.accountName,
-      bursarName: schoolData.bursarName,
-      bursarPin: schoolData.bursarPin || "1234",
+      accountantName: schoolData.accountantName,
+      accountantPin: schoolData.accountantPin || "1234",
       logoUrl: schoolData.logoUrl || "/logo.png",
     },
   });
@@ -77,13 +77,13 @@ async function main() {
   // 2. Staff Users
   const staffUsers = [
     {
-      id: "usr_bursar",
+      id: "usr_accountant",
       name: "Alhaji Ibrahim S. Danladi",
-      email: "bursar@alfurqan.edu.ng",
-      role: "Bursar",
+      email: "accountant@alfurqan.edu.ng",
+      role: "Accountant",
       pin: "1234",
-      password: "bursar2026",
-      title: "Chief Bursar & Head of Finance",
+      password: "accountant2026",
+      title: "Chief Accountant & Head of Finance",
     },
     {
       id: "usr_admin",

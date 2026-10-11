@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Sparkles,
   ArrowRight,
+  Calendar,
 } from "lucide-react";
 
 export const PRESET_FEE_OPTIONS: { name: string; category: FeeCategory; label: string }[] = [
@@ -54,10 +55,16 @@ export function ReceiptModal({
     preselectedStudent || null
   );
 
+  // Depositor / Payer state (pre-filled with student's parent by default, but customizable)
+  const [depositorName, setDepositorName] = useState(preselectedStudent?.parentName || "");
+  const [depositorPhone, setDepositorPhone] = useState(preselectedStudent?.parentPhone || "");
+
   // Payment form state
   const [paymentMethod, setPaymentMethod] = useState<
     "Bank Transfer" | "Bank Deposit" | "POS" | "Cash"
   >("Bank Transfer");
+  const [receivingBank, setReceivingBank] = useState("Jaiz Bank");
+  const [receivingDate, setReceivingDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [bankReference, setBankReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +80,8 @@ export function ReceiptModal({
   useEffect(() => {
     if (preselectedStudent) {
       setSelectedStudent(preselectedStudent);
+      setDepositorName(preselectedStudent.parentName || "");
+      setDepositorPhone(preselectedStudent.parentPhone || "");
       // Auto-populate initial suggested tuition amount based on student's remaining balance
       const remaining = preselectedStudent.balanceRemaining > 0 ? preselectedStudent.balanceRemaining : preselectedStudent.totalTermBill;
       setItems([
@@ -80,6 +89,30 @@ export function ReceiptModal({
       ]);
     }
   }, [preselectedStudent]);
+
+  // Configured bank accounts from settings
+  const [configuredBanks, setConfiguredBanks] = useState<
+    { id: string; bankName: string; accountNumber: string; isDefault?: boolean }[]
+  >([]);
+
+  // Reset receiving date to today and load bank accounts whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setReceivingDate(new Date().toISOString().split("T")[0]);
+      fetch("/api/settings")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.school?.bankAccounts && d.school.bankAccounts.length > 0) {
+            setConfiguredBanks(d.school.bankAccounts);
+            const def = d.school.bankAccounts.find((b: any) => b.isDefault);
+            if (def && paymentMethod !== "Cash") {
+              setReceivingBank(def.bankName);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   // Live search for students
   useEffect(() => {
@@ -158,7 +191,11 @@ export function ReceiptModal({
           studentId: selectedStudent.id,
           amountPaid: totalAmount,
           paymentMethod,
+          bankName: receivingBank,
+          date: receivingDate,
           bankReference,
+          depositorName: depositorName.trim() || selectedStudent.parentName,
+          depositorPhone: depositorPhone.trim() || selectedStudent.parentPhone,
           items,
           notes,
         }),
@@ -215,7 +252,7 @@ export function ReceiptModal({
                 <Sparkles className="h-4 w-4 text-[#FFB21D]" />
               </div>
               <p className="text-[11px] text-emerald-100 font-medium">
-                Al-Furqan International Academy • Verified Bursary Clearance
+                Al-Furqan International Academy • Cashier & Accounts Clearance Desk
               </p>
             </div>
           </div>
@@ -240,7 +277,7 @@ export function ReceiptModal({
 
           {/* STEP 1: Select Student */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
+            <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-2">
               1. Student Selection
             </label>
 
@@ -254,7 +291,7 @@ export function ReceiptModal({
                     <div className="font-black text-slate-900 text-sm sm:text-base">
                       {selectedStudent.fullName}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-500 mt-0.5">
                       <span className="font-mono font-bold text-slate-700">
                         {selectedStudent.regNumber}
                       </span>
@@ -269,7 +306,7 @@ export function ReceiptModal({
                 <button
                   type="button"
                   onClick={() => setSelectedStudent(null)}
-                  className="text-xs font-bold text-slate-500 hover:text-rose-600 underline shrink-0 cursor-pointer"
+                  className="text-xs sm:text-sm font-bold text-slate-500 hover:text-rose-600 underline shrink-0 cursor-pointer"
                 >
                   Change Student
                 </button>
@@ -277,7 +314,7 @@ export function ReceiptModal({
             ) : (
               <div className="relative">
                 <div className="relative">
-                  <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3.5 top-3.5 h-4.5 w-4.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
@@ -288,6 +325,8 @@ export function ReceiptModal({
                         if (searchResults.length > 0) {
                           const std = searchResults[0];
                           setSelectedStudent(std);
+                          setDepositorName(std.parentName || "");
+                          setDepositorPhone(std.parentPhone || "");
                           setSearchQuery("");
                           setSearchResults([]);
                           const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
@@ -298,7 +337,7 @@ export function ReceiptModal({
                       }
                     }}
                     placeholder="Search by student registration number (e.g. AFIC/2026/0101) or name..."
-                    className="w-full h-11 pl-10 pr-4 rounded-2xl border border-slate-300 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] placeholder:text-slate-400 shadow-inner bg-slate-50/50"
+                    className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] placeholder:text-slate-400 shadow-inner bg-slate-50/50"
                   />
                 </div>
 
@@ -315,6 +354,8 @@ export function ReceiptModal({
                         key={std.id}
                         onClick={() => {
                           setSelectedStudent(std);
+                          setDepositorName(std.parentName || "");
+                          setDepositorPhone(std.parentPhone || "");
                           setSearchQuery("");
                           setSearchResults([]);
                           const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
@@ -322,11 +363,11 @@ export function ReceiptModal({
                             { name: "Tuition / School Fees", category: "Tuition", amount: rem },
                           ]);
                         }}
-                        className="p-3 hover:bg-emerald-50/60 cursor-pointer flex items-center justify-between transition-colors"
+                        className="p-3.5 hover:bg-emerald-50/60 cursor-pointer flex items-center justify-between transition-colors"
                       >
                         <div>
-                          <div className="font-bold text-xs text-slate-900">{std.fullName}</div>
-                          <div className="text-[11px] text-slate-500">
+                          <div className="font-bold text-sm text-slate-900">{std.fullName}</div>
+                          <div className="text-xs text-slate-500">
                             <span className="font-mono font-bold text-emerald-800">
                               {std.regNumber}
                             </span>{" "}
@@ -334,11 +375,11 @@ export function ReceiptModal({
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-[11px] font-bold text-slate-500 block">
+                          <span className="text-xs font-bold text-slate-500 block">
                             Bal: {formatNaira(std.balanceRemaining)}
                           </span>
                           <span
-                            className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                            className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
                               std.status === "FULL"
                                 ? "bg-emerald-100 text-emerald-800"
                                 : std.status === "PARTIAL"
@@ -359,16 +400,16 @@ export function ReceiptModal({
 
           {/* Student Debt & Invoice Overview Card */}
           {selectedStudent && (
-            <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex items-center justify-between text-xs">
+            <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex items-center justify-between text-xs sm:text-sm">
               <div>
                 <span className="text-slate-500">Total Term Bill:</span>
-                <strong className="text-slate-900 font-mono ml-1.5">
+                <strong className="text-slate-900 font-mono ml-1.5 font-bold">
                   {formatNaira(selectedStudent.totalTermBill)}
                 </strong>
               </div>
               <div>
                 <span className="text-slate-500">Paid So Far:</span>
-                <strong className="text-slate-900 font-mono ml-1.5">
+                <strong className="text-slate-900 font-mono ml-1.5 font-bold">
                   {formatNaira(selectedStudent.totalPaid)}
                 </strong>
               </div>
@@ -384,35 +425,35 @@ export function ReceiptModal({
           {/* STEP 2: Itemized Fee Categories */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+              <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
                 2. Fee Items Breakdown
               </label>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleAddItem("Tuition", "Tuition / School Fees", 50000)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Tuition
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddItem("Books", "Textbooks & Revision Pack", 25000)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Books
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddItem("Uniform", "College Uniform (2 Sets)", 15000)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Uniform
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddItem("PTA", "PTA Termly Levy", 5000)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + PTA
                 </button>
@@ -462,7 +503,7 @@ export function ReceiptModal({
                               }
                             }
                           }}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] focus:border-[#075E54] cursor-pointer"
+                          className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] focus:border-[#075E54] cursor-pointer"
                         >
                           <option value="" disabled>-- Select Fee Purpose --</option>
                           {PRESET_FEE_OPTIONS.map((opt) => (
@@ -475,7 +516,7 @@ export function ReceiptModal({
 
                       {/* Fee Amount */}
                       <div className="relative w-36 sm:w-44 shrink-0">
-                        <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">
+                        <span className="absolute left-3 top-2.5 text-sm text-slate-400 font-mono font-bold">
                           ₦
                         </span>
                         <input
@@ -483,7 +524,7 @@ export function ReceiptModal({
                           value={item.amount || ""}
                           onChange={(e) => handleUpdateItemAmount(idx, Number(e.target.value))}
                           placeholder="Amount"
-                          className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 text-xs font-mono font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                          className="w-full h-11 pl-7 pr-3 rounded-xl border border-slate-200 text-sm font-mono font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                         />
                       </div>
 
@@ -495,7 +536,7 @@ export function ReceiptModal({
                         className="p-2 text-slate-400 hover:text-rose-600 disabled:opacity-20 cursor-pointer transition-colors shrink-0"
                         title="Remove item"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4.5 w-4.5" />
                       </button>
                     </div>
 
@@ -514,7 +555,7 @@ export function ReceiptModal({
                             );
                           }}
                           placeholder="Type custom fee title (e.g. Graduation Gown, ID Card Replacement)..."
-                          className="w-full h-9 px-3 rounded-lg border border-emerald-300 bg-emerald-50/20 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                          className="w-full h-10 px-3.5 rounded-lg border border-emerald-300 bg-emerald-50/20 text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                           autoFocus
                         />
                       </div>
@@ -533,37 +574,138 @@ export function ReceiptModal({
                       { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
                     ])
                   }
-                  className="w-full py-2.5 px-3 border border-dashed border-slate-300 hover:border-[#075E54] hover:bg-emerald-50/40 text-slate-600 hover:text-[#075E54] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 px-3 border border-dashed border-slate-300 hover:border-[#075E54] hover:bg-emerald-50/40 text-slate-600 hover:text-[#075E54] rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-4 w-4" />
                   <span>+ Add Another Fee Item</span>
                 </button>
               </div>
 
-              <div className="flex justify-between items-center pt-2 px-1 text-xs">
+              <div className="flex justify-between items-center pt-2 px-1 text-sm">
                 <span className="font-bold text-slate-600">Total Receipt Amount:</span>
-                <span className="font-mono text-base font-black text-[#075E54]">
+                <span className="font-mono text-lg font-black text-[#075E54]">
                   {formatNaira(totalAmount)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* STEP 3: Payment Channel */}
-          <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5">
-              3. Payment Channel
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e: any) => setPaymentMethod(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-            >
-              <option value="Bank Transfer">Direct Bank Transfer</option>
-              <option value="Bank Deposit">Bank Teller Deposit</option>
-              <option value="POS">School POS Machine</option>
-              <option value="Cash">Cash at Bursary</option>
-            </select>
+          {/* STEP 3: Payment Channel, Receiving Bank & Receiving Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
+                3. Payment Channel
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e: any) => {
+                  const val = e.target.value;
+                  setPaymentMethod(val);
+                  if (val === "Cash") {
+                    setReceivingBank("Cash");
+                  } else if (receivingBank === "Cash") {
+                    setReceivingBank("Jaiz Bank");
+                  }
+                }}
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
+              >
+                <option value="Bank Transfer">Direct Bank Transfer</option>
+                <option value="Bank Deposit">Bank Teller Deposit</option>
+                <option value="POS">School POS Machine</option>
+                <option value="Cash">Cash</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
+                Receiving Bank / Account
+              </label>
+              <select
+                value={receivingBank}
+                onChange={(e) => setReceivingBank(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
+              >
+                {configuredBanks.length > 0 ? (
+                  <>
+                    {configuredBanks.map((b) => (
+                      <option key={b.id} value={b.bankName}>
+                        {b.bankName} ({b.accountNumber}){b.isDefault ? " • Default" : ""}
+                      </option>
+                    ))}
+                    <option value="Cash">Cash</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Jaiz Bank">Jaiz Bank (School Fees Account)</option>
+                    <option value="GTBank">GTBank (Guaranty Trust Bank)</option>
+                    <option value="Zenith Bank">Zenith Bank</option>
+                    <option value="Taj Bank">Taj Bank (Non-Interest)</option>
+                    <option value="First Bank">First Bank of Nigeria</option>
+                    <option value="Stanbic IBTC">Stanbic IBTC Bank</option>
+                    <option value="Cash">Cash</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
+                Receiving Date
+              </label>
+              <input
+                type="date"
+                value={receivingDate}
+                onChange={(e) => setReceivingDate(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* STEP 4: Depositor / Payer Particulars */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
+                4. Depositor / Payer Particulars
+              </label>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Printed on Receipt
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Name of Depositor / Payer
+                </label>
+                <input
+                  type="text"
+                  value={depositorName}
+                  onChange={(e) => setDepositorName(e.target.value)}
+                  placeholder="e.g. Alhaji Musa Garba (Name on Transfer/Teller)"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Defaults to parent name; edit if someone else made the payment.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Depositor / Payer Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={depositorPhone}
+                  onChange={(e) => setDepositorPhone(e.target.value)}
+                  placeholder="e.g. 0803 123 4567"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Payer phone for verification and SMS clearance.
+                </span>
+              </div>
+            </div>
+
           </div>
 
           {/* Live Dynamic Status Forecast Stamp */}
@@ -574,7 +716,7 @@ export function ReceiptModal({
                   className={`h-5 w-5 ${willBeFull ? "text-emerald-600" : "text-amber-600"}`}
                 />
                 <div>
-                  <div className="text-xs font-black">
+                  <div className="text-sm font-black">
                     {willBeFull ? (
                       <span className="text-emerald-900 uppercase">
                         RECEIPT BADGE: 🟢 FULL PAYMENT (CLEARED)
@@ -585,7 +727,7 @@ export function ReceiptModal({
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-xs text-slate-500 mt-0.5">
                     {willBeFull
                       ? "Outstanding balance will become ₦0.00. Student is granted full clearance."
                       : `Outstanding balance remaining will be ${formatNaira(
@@ -602,21 +744,21 @@ export function ReceiptModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !selectedStudent || totalAmount <= 0}
-              className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-40 text-white text-xs sm:text-sm font-black px-6 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
+              className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-40 text-white text-sm sm:text-base font-black px-6 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>Generating Receipt...</span>
               ) : (
                 <>
-                  <span>Issue & View Official Receipt</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <span>Issue Official Receipt (Cashier Desk)</span>
+                  <ArrowRight className="h-4.5 w-4.5" />
                 </>
               )}
             </button>

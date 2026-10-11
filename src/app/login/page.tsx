@@ -51,7 +51,7 @@ function LoginForm() {
       let result;
       if (mode === "pin") {
         if (!pin || pin.length < 4) {
-          setError("Please enter the complete 4-digit Bursar PIN.");
+          setError("Please enter the complete 4-digit Accountant / Cashier PIN.");
           setLoading(false);
           return;
         }
@@ -88,11 +88,11 @@ function LoginForm() {
     }
   };
 
-  const handleQuickFill = (role: "bursar" | "admin") => {
+  const handleQuickFill = (role: "accountant" | "admin") => {
     setError("");
-    if (role === "bursar") {
-      setEmail("bursar@alfurqan.edu.ng");
-      setPassword("bursar2026");
+    if (role === "accountant") {
+      setEmail("accountant@alfurqan.edu.ng");
+      setPassword("accountant2026");
       setPin("1234");
     } else {
       setEmail("admin@alfurqan.edu.ng");
@@ -122,7 +122,7 @@ function LoginForm() {
               Al-Furqan International Academy
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
-              Official Bursary & Finance Clearance Portal
+              Official Cashier & Accountant Finance Clearance Portal
             </p>
           </div>
         </div>
@@ -160,7 +160,7 @@ function LoginForm() {
               }`}
             >
               <KeyRound className="h-3.5 w-3.5" />
-              <span>Bursar PIN (Fast)</span>
+              <span>Cashier & Accountant PIN</span>
             </button>
           </div>
 
@@ -184,7 +184,7 @@ function LoginForm() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="bursar@alfurqan.edu.ng"
+                      placeholder="accountant@alfurqan.edu.ng"
                       className="w-full h-11 pl-10 pr-3 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#075E54] focus:border-transparent transition-all"
                       required
                     />
@@ -218,7 +218,7 @@ function LoginForm() {
             ) : (
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 text-center">
-                  Enter 4-Digit Bursar Security Passcode
+                  Enter 4-Digit Accountant / Cashier Security Passcode
                 </label>
                 <div className="relative">
                   <input
@@ -233,7 +233,7 @@ function LoginForm() {
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 text-center mt-2">
-                  Fast login for authorized cashiers & bursary desk staff
+                  Fast login for authorized Cashiers, Accountants & Finance Desk Staff
                 </p>
               </div>
             )}
@@ -252,16 +252,16 @@ function LoginForm() {
           {/* Quick Demo Fill Buttons */}
           <div className="pt-3 border-t border-slate-100">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">
-              Quick 1-Click Staff Login (Preset Accounts)
+              Quick 1-Click Cashier & Staff Login (Preset Accounts)
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickFill("bursar")}
+                onClick={() => handleQuickFill("accountant")}
                 className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 text-left transition-colors cursor-pointer group"
               >
                 <div className="text-[11px] font-black text-slate-800 group-hover:text-emerald-800">
-                  🔑 Bursar Danladi
+                  🔑 Chief Accountant Danladi
                 </div>
                 <div className="text-[9px] text-slate-400 font-mono">PIN: 1234</div>
               </button>
@@ -290,7 +290,7 @@ function LoginForm() {
           </p>
           <div className="inline-flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
             <Lock className="h-3 w-3" />
-            <span>256-bit Encrypted Bursary Terminal • Al-Furqan College</span>
+            <span>256-bit Encrypted Cashier & Accounts Terminal • Al-Furqan College</span>
           </div>
         </div>
       </div>

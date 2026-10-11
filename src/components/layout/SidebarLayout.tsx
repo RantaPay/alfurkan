@@ -149,7 +149,7 @@ export function SidebarLayout({
             {/* School Crest Logo */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="h-10 w-10 rounded-2xl border border-slate-200 p-0.5 bg-white shadow-xs group-hover:scale-105 transition-all overflow-hidden flex items-center justify-center shrink-0">
-                <img src={logoUrl} alt={schoolName} className="h-full w-full object-contain" />
+                <img src={logoUrl || "/logo.png"} alt={schoolName} className="h-full w-full object-contain" />
               </div>
 
               <div>
@@ -159,7 +159,7 @@ export function SidebarLayout({
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs font-medium text-slate-500 hidden sm:inline">
-                    Bursary & Payments OS
+                    Cashier & Accounts OS
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -249,10 +249,10 @@ export function SidebarLayout({
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl border border-slate-200 p-0.5 bg-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
-                <img src={logoUrl} alt={schoolName} className="h-full w-full object-contain" />
+                <img src={logoUrl || "/logo.png"} alt={schoolName} className="h-full w-full object-contain" />
               </div>
               <span className="font-black text-slate-900 text-xs uppercase tracking-wide">
-                Bursary Menu
+                Cashier & Accounts Menu
               </span>
             </div>
 
@@ -306,8 +306,8 @@ export function SidebarLayout({
 
           {/* Mobile Drawer Footer */}
           <div className="p-3 border-t border-slate-100 bg-slate-50/70 text-center">
-            <div className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1.5">
-              <Database className="h-3 w-3 text-emerald-600" />
+            <div className="text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5">
+              <Database className="h-3.5 w-3.5 text-emerald-600" />
               <span>PostgreSQL Production Database</span>
             </div>
           </div>
@@ -340,7 +340,7 @@ export function SidebarLayout({
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold transition-all ${
                         isActive
                           ? "bg-[#075E54] text-white shadow-xs"
                           : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
@@ -360,13 +360,13 @@ export function SidebarLayout({
 
           {/* Desktop Sidebar Footer */}
           <div className="p-3 border-t border-slate-100 bg-slate-50/60">
-            <div className="px-2 py-1 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+            <div className="px-2 py-1 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span className="flex items-center gap-1.5">
-                <Database className="h-3 w-3 text-emerald-600" />
+                <Database className="h-3.5 w-3.5 text-emerald-600" />
                 <span>PostgreSQL DB</span>
               </span>
               <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 Connected
               </span>
             </div>

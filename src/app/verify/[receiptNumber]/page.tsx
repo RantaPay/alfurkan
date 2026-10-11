@@ -93,7 +93,7 @@ export default function VerifyReceiptPage() {
                       Reason: &quot;{receipt.voidReason || "Payment Revoked / Cancelled"}&quot;
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      Voided by {receipt.voidedBy || "Bursar"} on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : ""}
+                      Voided by {receipt.voidedBy || "Accountant"} on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : ""}
                     </p>
                   </div>
 
@@ -103,7 +103,7 @@ export default function VerifyReceiptPage() {
                       <span>NO CLEARANCE • REVOKED PASS</span>
                     </div>
                     <p className="text-[11px] text-rose-400 mt-2 font-semibold">
-                      Security Alert: This receipt was cancelled by Bursary. Direct student to the Bursar.
+                      Security Alert: This receipt was cancelled by Accounts. Direct student to the Cashier or Accountant.
                     </p>
                   </div>
                 </>
@@ -174,7 +174,7 @@ export default function VerifyReceiptPage() {
                   Audit Hash: {receipt.securityHash}
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">
-                  Authorized Bursar: <strong>{receipt.issuedBy}</strong>
+                  Authorized Cashier / Accountant: <strong>{receipt.issuedBy}</strong>
                 </div>
               </div>
             </>

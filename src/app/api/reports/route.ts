@@ -8,8 +8,9 @@ export async function GET(request: Request) {
     const month = searchParams.get("month") || undefined;
     const classFilter = searchParams.get("class") || undefined;
     const statusFilter = searchParams.get("status") || undefined;
+    const bankFilter = searchParams.get("bank") || undefined;
 
-    const data = await getReportData(term, month, classFilter, statusFilter);
+    const data = await getReportData(term, month, classFilter, statusFilter, bankFilter);
     return NextResponse.json({ success: true, ...data });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

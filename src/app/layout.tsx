@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Al-Furqan Pay • Official Digital School Receipts & Bursary OS",
+  title: "Al-Furqan Pay • Official Digital School Receipts, Cashier & Accounts OS",
   description:
     "Official school fees receipt generation, gate clearance verification, and debtor management system for Al-Furqan International College.",
   icons: {

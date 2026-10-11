@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Lock, X, AlertCircle, ShieldCheck } from "lucide-react";
 
-interface BursarPinModalProps {
+interface AccountantPinModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -11,13 +11,13 @@ interface BursarPinModalProps {
   description?: string;
 }
 
-export function BursarPinModal({
+export function AccountantPinModal({
   isOpen,
   onClose,
   onSuccess,
-  title = "Bursar Authorization Required",
-  description = "Enter the 4-digit Bursar Security PIN to authorize this sensitive action.",
-}: BursarPinModalProps) {
+  title = "Accountant & Cashier Authorization Required",
+  description = "Enter the 4-digit Accountant / Cashier Security PIN to authorize this sensitive action.",
+}: AccountantPinModalProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,18 +35,18 @@ export function BursarPinModal({
 
     try {
       setLoading(true);
-      // Fetch current bursar pin from settings
+      // Fetch current accountant pin from settings
       const res = await fetch("/api/settings");
       const data = await res.json();
-      const expectedPin = data.school?.bursarPin || "1234";
+      const expectedPin = data.school?.accountantPin || "1234";
 
       if (pin === expectedPin) {
         setPin("");
         onSuccess();
       } else {
-        setError("Incorrect Bursar PIN. Default is 1234 (changeable in Settings).");
+        setError("Incorrect Accountant / Cashier PIN. Default is 1234 (changeable in Settings).");
       }
-    } catch (err: any) {
+    } catch {
       setError("Authorization verification failed. Try again.");
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ export function BursarPinModal({
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div>
             <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              Bursar 4-Digit Passcode
+              Accountant / Cashier 4-Digit Passcode
             </label>
             <input
               type="password"
@@ -114,8 +114,8 @@ export function BursarPinModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#075E54] hover:bg-[#128C7E] text-white text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              disabled={loading || pin.length < 4}
+              className="flex-1 py-2.5 rounded-xl bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="h-4 w-4" />
               <span>{loading ? "Verifying..." : "Authorize"}</span>

@@ -1,5 +1,5 @@
 # Al-Furqan Pay (بوابة الفرقان للدفع الإلكتروني)
-### Modern School Fee Collection, Instant Thermal/PDF Receipts & Bursary Management System
+### Modern School Fee Collection, Instant Thermal/PDF Receipts, Cashier & Accounts Management System
 **Al-Furqan International Academy** — *Knowledge and Guidance (العلم والتربية)*
 
 ---
@@ -9,7 +9,7 @@
 - **ACID Transactions**: Atomic payment ledger processing — eliminates race conditions and ensures students' balances and receipt numbers match perfectly.
 - **B-Tree Database Indexing**: Sub-15ms search and filtering across thousands of students by registration number, student name, and parent phone.
 - **Audit Trail Logging**: Dedicated `AuditLog` table tracking receipts issued, voided, student enrollments, and configuration changes with timestamps and operator identity.
-- **Dual Authentication**: Secure login supporting both Bursar PIN quick-entry (`1234`) and Admin Email/Password credentials.
+- **Dual Authentication**: Secure login supporting both Cashier & Accountant PIN quick-entry (`1234`) and Admin Email/Password credentials.
 - **Instant Thermal & PDF Receipts**: Printable 80mm POS thermal slips and full-page official A4 clearance certificates with automated security verification QR codes.
 - **Public Gate Pass & Receipt Verification**: Anyone (parents, security guards, auditors) can scan the QR code to verify validity on `/verify/[receiptNumber]` without logging in.
 
@@ -65,14 +65,14 @@ npm run dev
 
 | Role | Name | Email | Password | PIN |
 |---|---|---|---|---|
-| **Chief Bursar** | Alhaji Ibrahim S. Danladi | `bursar@alfurqan.edu.ng` | `bursar2026` | `1234` |
+| **Chief Accountant** | Alhaji Ibrahim S. Danladi | `accountant@alfurqan.edu.ng` | `accountant2026` | `1234` |
 | **Principal / Admin** | Dr. Shehu Danladi | `admin@alfurqan.edu.ng` | `admin2026` | `9988` |
 
 ---
 
 ## 📋 Database Schema Summary
 
-- **`SchoolProfile`**: Institutional details, Jaiz Bank account details, academic term/session, logo URL, bursar PIN.
+- **`SchoolProfile`**: Institutional details, Jaiz Bank account details, academic term/session, logo URL, accountant PIN.
 - **`StaffUser`**: Staff accounts, credentials, roles, and PIN access.
 - **`Student`**: Student profiles, class, parent details, term billing, total paid, remaining balance, payment status (`FULL`, `PARTIAL`, `UNPAID`).
 - **`Receipt`**: Unique sequential receipt numbering (`AFIC-RCP-YYYY-NNNN`), payment amounts, payment method, bank references, QR code data URL, tamper-proof security hash, void tracking.

@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { getStudents, getStudentByRegNumber, createStudent, importStudentsBulk } from "@/lib/data-store";
+import {
+  getStudents,
+  getStudentByRegNumber,
+  createStudent,
+  importStudentsBulk,
+  updateStudent,
+  promoteStudentsSession,
+  autoPromoteAllStudents,
+} from "@/lib/data-store";
 
 export async function GET(request: Request) {
   try {
@@ -32,7 +40,7 @@ export async function POST(request: Request) {
     }
 
     // Single student creation
-    const { fullName, class: studentClass, parentName, parentPhone, parentEmail, totalTermBill, gender, regNumber } = body;
+    const { fullName, class: studentClass, parentName, parentPhone, parentEmail, totalTermBill, gender, regNumber, isRepeating } = body;
     if (!fullName || !studentClass) {
       return NextResponse.json({ success: false, error: "Student Name and Class are required." }, { status: 400 });
     }
@@ -46,6 +54,7 @@ export async function POST(request: Request) {
       parentEmail,
       totalTermBill: Number(totalTermBill) || 165000,
       regNumber,
+      isRepeating: !!isRepeating,
     });
 
     return NextResponse.json({ success: true, student }, { status: 201 });
@@ -53,3 +62,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+
+    if (body.action === "auto_promote_all") {
+      const operator = body.operator || "Chief Accountant & Admin";
+      const result = await autoPromoteAllStudents(operator);
+      return NextResponse.json({ ...result });
+    }
+
+    if (body.action === "promote_session") {
+      const { promotions, operator } = body;
+      if (!Array.isArray(promotions) || promotions.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Promotions array is required." },
+          { status: 400 }
+        );
+      }
+      const result = await promoteStudentsSession(promotions, operator);
+      return NextResponse.json({ ...result });
+    }
+
+    const { id, ...updates } = body;
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Student ID is required for update." },
+        { status: 400 }
+      );
+    }
+
+    const updated = await updateStudent(id, updates);
+    return NextResponse.json({ success: true, student: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
