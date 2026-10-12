@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { DEFAULT_USERS } from "@/lib/data-store";
 
 export async function GET() {
   try {

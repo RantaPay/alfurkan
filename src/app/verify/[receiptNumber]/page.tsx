@@ -58,7 +58,7 @@ export default function VerifyReceiptPage() {
             Al-Furqan International Academy
           </h1>
           <p className="text-[11px] text-emerald-100 font-medium mt-0.5">
-            Gate Clearance & Receipt Verification Portal
+            Receipt Verification Portal
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export default function VerifyReceiptPage() {
               <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto" />
               <h2 className="text-base font-bold text-white">Verification Failed</h2>
               <p className="text-xs text-slate-400">
-                This receipt code was not issued by Al-Furqan International College or is invalid.
+                This receipt code was not issued by Al-Furqan International Academy or is invalid.
               </p>
             </div>
           ) : (
@@ -100,10 +100,10 @@ export default function VerifyReceiptPage() {
                   <div className="text-center">
                     <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-rose-600 text-white font-black text-sm shadow-lg shadow-rose-600/30">
                       <AlertTriangle className="h-5 w-5" />
-                      <span>NO CLEARANCE • REVOKED PASS</span>
+                      <span>RECEIPT REVOKED</span>
                     </div>
                     <p className="text-[11px] text-rose-400 mt-2 font-semibold">
-                      Security Alert: This receipt was cancelled by Accounts. Direct student to the Cashier or Accountant.
+                      This receipt was cancelled by Accounts. Direct inquiries to the Accounts Office.
                     </p>
                   </div>
                 </>
@@ -113,7 +113,7 @@ export default function VerifyReceiptPage() {
                   <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
                     <div className="inline-flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-wider">
                       <ShieldCheck className="h-4 w-4" />
-                      <span>OFFICIALLY VERIFIED RECEIPT</span>
+                      <span>VERIFIED RECEIPT</span>
                     </div>
                     <div className="text-lg font-black text-white font-mono">
                       {receipt.receiptNumber}
@@ -174,7 +174,7 @@ export default function VerifyReceiptPage() {
                   Audit Hash: {receipt.securityHash}
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">
-                  Authorized Cashier / Accountant: <strong>{receipt.issuedBy}</strong>
+                  Issued by: <strong>{receipt.issuedBy}</strong>
                 </div>
               </div>
             </>

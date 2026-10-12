@@ -4,34 +4,22 @@ import { authenticateStaff } from "@/lib/data-store";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { mode, email, password, pin } = body;
+    const { email, password } = body;
 
-    if (mode === "pin") {
-      if (!pin || pin.length < 4) {
-        return NextResponse.json(
-          { success: false, error: "Please enter a valid 4-digit PIN." },
-          { status: 400 }
-        );
-      }
-    } else {
-      if (!email || !password) {
-        return NextResponse.json(
-          { success: false, error: "Email and password are required." },
-          { status: 400 }
-        );
-      }
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, error: "Email and password are required." },
+        { status: 400 }
+      );
     }
 
-    const user = await authenticateStaff({ mode, email, password, pin });
+    const user = await authenticateStaff({ email, password });
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            mode === "pin"
-              ? "Invalid Accountant / Cashier Passcode PIN. Default is 1234."
-              : "Invalid email or password. Please check your credentials.",
+          error: "Invalid email or password. Please check your credentials.",
         },
         { status: 401 }
       );

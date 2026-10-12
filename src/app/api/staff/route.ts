@@ -21,13 +21,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, user: updated });
     } else {
       // Create new user
-      if (!data.name || !data.email || !data.pin || !data.role) {
+      if (!data.name || !data.email || !data.password) {
         return NextResponse.json(
-          { success: false, error: "Name, email, role, and 4-digit PIN are required." },
+          { success: false, error: "Full Name, Email Address, and Password are required." },
           { status: 400 }
         );
       }
-      const created = await createStaffUser(data);
+      const created = await createStaffUser({
+        ...data,
+        role: data.role || "Admin",
+        title: data.title || "School Administrator",
+      });
       return NextResponse.json({ success: true, user: created });
     }
   } catch (error: any) {

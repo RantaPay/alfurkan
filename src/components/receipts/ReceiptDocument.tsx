@@ -38,7 +38,16 @@ export function ReceiptDocument({
 
   const isFullPayment = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
   const writtenAmount = amountInWords(receipt.amountPaid);
-  const serialNo = receipt.receiptNumber.replace(/^AFIC-RCP-/, "AFIA/ ");
+  const serialNo = receipt.receiptNumber.startsWith("AIA-RCP-")
+    ? receipt.receiptNumber.replace(/^AIA-RCP-(\d{4})-/, "$1-27/")
+    : receipt.receiptNumber.startsWith("AFIC-RCP-")
+    ? receipt.receiptNumber.replace(/^AFIC-RCP-(\d{4})-/, "$1-27/")
+    : receipt.receiptNumber;
+
+  const primaryPhone = (school?.phone || "+234 806 977 0538").split("/")[0].trim();
+  const displaySession = (receipt.session || "2026/2027")
+    .replace(/\bAcademic\s*/gi, "")
+    .trim();
 
   // Formatted date
   const receiptDate =
@@ -51,15 +60,8 @@ export function ReceiptDocument({
 
   const bankDisplayName =
     receipt.bankName ||
-    (receipt.bankReference?.includes("GTB")
-      ? "GTBank"
-      : receipt.bankReference?.includes("TAJ")
-      ? "Taj Bank"
-      : receipt.bankReference?.includes("ZEB")
-      ? "Zenith Bank"
-      : receipt.bankReference?.includes("FBN")
-      ? "First Bank"
-      : school?.bankName || "Jaiz Bank");
+    school?.bankName ||
+    "";
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto font-sans">
@@ -202,16 +204,16 @@ export function ReceiptDocument({
                 {school?.motto || "Knowledge & Guidance"}
               </p>
               <p className="text-[10px] text-slate-600 leading-tight">
-                {school?.address || "Along Dass Road, New GRA, Bauchi"}
+                {school?.address || "Along Dass Road, Bauchi State"}
               </p>
               <p className="text-[10px] text-slate-600 font-mono">
-                Tel: {school?.phone || "+234 804 430 5624"}
+                Tel: {primaryPhone}
               </p>
               <div className="pt-1.5 font-mono text-slate-400 select-none text-[11px]">
                 ================================
               </div>
               <div className="text-xs font-black tracking-widest uppercase">
-                OFFICIAL CASHIER / ACCOUNTS RECEIPT
+                RECEIPT
               </div>
               <div className="font-mono text-slate-400 select-none text-[11px]">
                 ================================
@@ -229,14 +231,12 @@ export function ReceiptDocument({
                 <span className="font-bold">{receiptDate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">ACADEMIC TERM:</span>
-                <span>{receipt.term} ({receipt.session || "2026/2027"})</span>
+                <span className="text-slate-600">TERM:</span>
+                <span className="font-bold">{receipt.term}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">CASHIER / ACCOUNTANT:</span>
-                <span className="truncate max-w-[170px] text-right font-medium">
-                  {receipt.issuedBy || school?.accountantName || "Alhaji Ibrahim S. Danladi"}
-                </span>
+                <span className="text-slate-600">SESSION:</span>
+                <span className="font-bold">{displaySession}</span>
               </div>
             </div>
 
@@ -260,10 +260,6 @@ export function ReceiptDocument({
                 <span className="text-slate-600">DEPOSITOR / PAYER:</span>
                 <span className="text-right truncate max-w-[180px] font-bold">{receipt.parentName}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">PHONE:</span>
-                <span>{receipt.parentPhone}</span>
-              </div>
             </div>
 
             {/* Payment Channel / Bank */}
@@ -278,7 +274,10 @@ export function ReceiptDocument({
                   <strong className="font-bold">{bankDisplayName}</strong>
                 </div>
               )}
-
+              <div className="flex justify-between">
+                <span className="text-slate-600">PAYMENT DATE:</span>
+                <strong className="font-bold">{receiptDate}</strong>
+              </div>
             </div>
 
             {/* Itemized Fee Breakdown */}
@@ -350,9 +349,8 @@ export function ReceiptDocument({
 
             {/* Footer Notes */}
             <div className="pt-2 text-center text-[9px] text-slate-600 space-y-0.5">
-              <p>Official Receipt • Fees paid are non-refundable.</p>
-              <p>Keep this slip safe for student gate clearance.</p>
-              <p className="font-bold text-slate-900">*** AL-FURQAN INTERNATIONAL COLLEGE ***</p>
+              <p>Receipt • Fees paid are non-refundable.</p>
+              <p className="font-bold text-slate-900">*** AL-FURQAN INTERNATIONAL ACADEMY ***</p>
               <div className="pt-2 text-slate-400 select-none tracking-widest text-[10px]">
                 ✂ - - - - - - - - - - - - - - - - - - - -
               </div>
@@ -418,10 +416,10 @@ export function ReceiptDocument({
                   {school?.motto || "Knowledge and Guidance"} • العلم والتربية
                 </p>
                 <p className="text-[10px] text-slate-600 mt-0.5 font-medium leading-tight">
-                  {school?.address || "Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria"}
+                  {school?.address || "Along Dass Road, Bauchi State"}
                 </p>
                 <p className="text-[9.5px] text-slate-500 font-medium mt-0.5">
-                  Tel: <strong className="text-slate-700">{school?.phone || "+234 804 430 5624 / +234 806 977 0538"}</strong> • Email: <strong className="text-slate-700">{school?.email || "admin@alfurqanintlacademy.com"}</strong>
+                  Tel: <strong className="text-slate-700">{primaryPhone}</strong> • Email: <strong className="text-slate-700">{school?.email || "admin@alfurqanintlacademy.com"}</strong>
                 </p>
               </div>
 
@@ -440,7 +438,7 @@ export function ReceiptDocument({
                   Date: <strong className="text-slate-900 underline font-mono text-xs sm:text-sm">{receiptDate}</strong>
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium">
-                  Term: <strong className="text-slate-800">{receipt.term}</strong> • Sess: <strong className="text-slate-800">{receipt.session || "2026/2027"}</strong>
+                  Term: <strong className="text-slate-800">{receipt.term}</strong> • Session: <strong className="text-slate-800">{displaySession}</strong>
                 </div>
               </div>
             </div>
@@ -449,7 +447,7 @@ export function ReceiptDocument({
             <div className="text-center mt-2.5 pt-2 border-t border-slate-300 flex items-center justify-center gap-3">
               <span className="h-px bg-slate-400 flex-1 max-w-[80px]" />
               <span className="text-xs sm:text-sm font-black tracking-widest text-slate-900 uppercase px-2">
-                Official Cashier & Accounts Receipt
+                RECEIPT
               </span>
               <span className="h-px bg-slate-400 flex-1 max-w-[80px]" />
             </div>
@@ -495,7 +493,7 @@ export function ReceiptDocument({
                 <div className="flex-1 border-b border-dotted border-slate-400 pb-0.5 flex flex-wrap items-baseline justify-between gap-1.5">
                   <span className="text-xs sm:text-[12.5px] font-semibold text-slate-900">
                     {receipt.paymentStatus === "FULL" ? "Full Settlement of" : "Part-Payment installment towards"}{" "}
-                    <strong>{receipt.term}, {receipt.session}</strong> fees &amp; educational package
+                    <strong>{receipt.term}, {displaySession}</strong> fees &amp; educational package
                     {receipt.items && receipt.items.length > 0
                       ? ` (${receipt.items.map((i) => i.name).join(", ")})`
                       : ""}
@@ -509,12 +507,13 @@ export function ReceiptDocument({
                   Depositor / Payer:
                 </span>
                 <div className="flex-1 border-b border-dotted border-slate-300 pb-0.5 flex flex-wrap items-center justify-between gap-1.5">
-                  <span><strong>{receipt.parentName}</strong> (Tel: <strong className="font-mono text-slate-900">{receipt.parentPhone}</strong>)</span>
+                  <span><strong>{receipt.parentName}</strong></span>
                   <span className="text-[10.5px] text-slate-600 font-medium">
                     Method: <strong className="text-slate-900">{receipt.paymentMethod}</strong>
                     {receipt.paymentMethod !== "Cash" && bankDisplayName !== "Cash" ? (
                       <> • Bank: <strong className="text-slate-900">{bankDisplayName}</strong></>
                     ) : null}
+                    <> • Payment Date: <strong className="text-slate-900">{receiptDate}</strong></>
                     {receipt.bankReference ? <> • Ref: <strong className="font-mono">{receipt.bankReference}</strong></> : null}
                   </span>
                 </div>
@@ -691,10 +690,11 @@ export function ReceiptDocument({
                   {receipt.paymentMethod !== "Cash" && bankDisplayName !== "Cash" && (
                     <div>Bank: <strong className="text-slate-900">{bankDisplayName}</strong></div>
                   )}
+                  <div>Payment Date: <strong className="text-slate-900">{receiptDate}</strong></div>
                   {receipt.bankReference && (
                     <div>Transaction Ref: <strong className="font-mono text-slate-900">{receipt.bankReference}</strong></div>
                   )}
-                  <div>Payer: <strong className="text-slate-900">{receipt.parentName}</strong> ({receipt.parentPhone})</div>
+                  <div>Payer: <strong className="text-slate-900">{receipt.parentName}</strong></div>
                   <div className="text-xs text-slate-500 pt-1">
                     Official note: {receipt.notes || "Official electronic receipt verified by Accounts."}
                   </div>

@@ -50,9 +50,9 @@ export async function POST(request: Request) {
       class: studentClass,
       gender: gender || "Male",
       parentName: parentName || "Parent/Guardian",
-      parentPhone: parentPhone || "08000000000",
+      parentPhone: parentPhone || "",
       parentEmail,
-      totalTermBill: Number(totalTermBill) || 165000,
+      totalTermBill: Number(totalTermBill) || 0,
       regNumber,
       isRepeating: !!isRepeating,
     });

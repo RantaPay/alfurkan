@@ -75,6 +75,6 @@ npm run dev
 - **`SchoolProfile`**: Institutional details, Jaiz Bank account details, academic term/session, logo URL, accountant PIN.
 - **`StaffUser`**: Staff accounts, credentials, roles, and PIN access.
 - **`Student`**: Student profiles, class, parent details, term billing, total paid, remaining balance, payment status (`FULL`, `PARTIAL`, `UNPAID`).
-- **`Receipt`**: Unique sequential receipt numbering (`AFIC-RCP-YYYY-NNNN`), payment amounts, payment method, bank references, QR code data URL, tamper-proof security hash, void tracking.
+- **`Receipt`**: Unique sequential receipt numbering (`AIA-RCP-YYYY-NNNN`), payment amounts, payment method, bank references, QR code data URL, tamper-proof security hash, void tracking.
 - **`ReceiptItem`**: Cascaded itemized fee breakdowns (Tuition, Books, Uniform, PTA, Transport).
 - **`AuditLog`**: Tamper-evident financial ledger and configuration audit trail.

@@ -43,6 +43,10 @@ export default function ReceiptsLedgerPage() {
     fetchReceipts();
   }, []);
 
+  const uniqueBanks = Array.from(
+    new Set(receipts.map((r) => r.bankName?.trim()).filter(Boolean))
+  ) as string[];
+
   const filtered = receipts.filter((r) => {
     let matchesStatus = true;
     if (statusFilter === "FULL") matchesStatus = !r.isVoided && (r.paymentStatus === "FULL" || r.balanceRemaining === 0);
@@ -76,10 +80,10 @@ export default function ReceiptsLedgerPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Official Cashier & Accountant Receipts Ledger
+              Receipts Ledger
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Search, audit, and manage all receipts issued by Cashiers and the Accounting Department
+              Search, view, and print fee payment receipts
             </p>
           </div>
         </div>
@@ -104,15 +108,17 @@ export default function ReceiptsLedgerPage() {
               <select
                 value={bankFilter}
                 onChange={(e) => setBankFilter(e.target.value)}
-                className="h-full px-1 text-xs sm:text-sm font-black text-emerald-900 bg-transparent focus:outline-none cursor-pointer"
+                disabled={loading}
+                className="h-full px-1 text-xs sm:text-sm font-black text-emerald-900 bg-transparent focus:outline-none cursor-pointer disabled:opacity-60"
               >
                 <option value="ALL">All Payment Banks</option>
-                <option value="Jaiz Bank">Jaiz Bank</option>
-                <option value="GTBank">GTBank</option>
-                <option value="Zenith Bank">Zenith Bank</option>
-                <option value="Taj Bank">Taj Bank</option>
-                <option value="First Bank">First Bank</option>
-                <option value="Cash">Cash</option>
+                {!loading &&
+                  uniqueBanks.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                {!loading && <option value="Cash">Cash</option>}
               </select>
             </div>
           </div>
@@ -182,96 +188,120 @@ export default function ReceiptsLedgerPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((receipt) => {
-                  const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="py-28 text-center">
+                      <div className="flex items-center justify-center py-8">
+                        <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length > 0 ? (
+                  filtered.map((receipt) => {
+                    const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
 
-                  return (
-                    <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-3">
-                        <Link
-                          href={`/receipts/${receipt.id}`}
-                          className="font-mono font-black text-[#075E54] hover:underline text-sm"
-                        >
-                          {receipt.receiptNumber}
-                        </Link>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                            {receipt.bankName || receipt.paymentMethod}
-                          </span>
-                          <span className="text-[10px] text-emerald-800 font-semibold truncate max-w-[140px]" title={`Issued by: ${receipt.issuedBy}`}>
-                            • Cashier: {receipt.issuedBy?.split(" ")[0] || "Desk"}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <div className="font-bold text-slate-900 text-sm sm:text-base">{receipt.studentName}</div>
-                        <div className="font-mono text-xs text-slate-500">{receipt.regNumber}</div>
-                      </td>
-
-                      <td className="py-3.5 px-3 font-medium text-slate-700 text-sm">
-                        {receipt.studentClass}
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        {receipt.isVoided ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                            <span>VOIDED</span>
-                          </span>
-                        ) : isFull ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            <span>FULL</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200">
-                            <Clock className="h-3.5 w-3.5 text-amber-600" />
-                            <span>PARTIAL</span>
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900 text-sm sm:text-base">
-                        {formatNaira(receipt.amountPaid)}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-right font-mono font-bold text-sm sm:text-base">
-                        <span className={receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}>
-                          {formatNaira(receipt.balanceRemaining)}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-3 text-slate-500 text-xs font-medium">
-                        {receipt.date}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    return (
+                      <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-3">
                           <Link
                             href={`/receipts/${receipt.id}`}
-                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="View / Print Receipt"
+                            className="font-mono font-black text-[#075E54] hover:underline text-sm"
                           >
-                            <ExternalLink className="h-4.5 w-4.5" />
+                            {receipt.receiptNumber}
                           </Link>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                              {receipt.bankName || receipt.paymentMethod}
+                            </span>
+                            <span className="text-[10px] text-emerald-800 font-semibold truncate max-w-[140px]" title={`Issued by: ${receipt.issuedBy}`}>
+                              • Issued by: {receipt.issuedBy?.split(" ")[0] || "Accounts"}
+                            </span>
+                          </div>
+                        </td>
 
-                          <a
-                            href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                              `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} at Al-Furqan International College.\nReceipt: ${receipt.receiptNumber}\nAmount Paid: ${formatNaira(receipt.amountPaid)}\nStatus: ${isFull ? "PAID IN FULL" : `PARTIAL PAYMENT (Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n\nView digital receipt: https://alfurqan.edu.ng/receipts/${receipt.id}`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Send WhatsApp to Parent"
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td className="py-3.5 px-3">
+                          <div className="font-bold text-slate-900 text-sm sm:text-base">{receipt.studentName}</div>
+                          <div className="font-mono text-xs text-slate-500">{receipt.regNumber}</div>
+                        </td>
+
+                        <td className="py-3.5 px-3 font-medium text-slate-700 text-sm">
+                          {receipt.studentClass}
+                        </td>
+
+                        <td className="py-3.5 px-3">
+                          {receipt.isVoided ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                              <span>VOIDED</span>
+                            </span>
+                          ) : isFull ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>FULL</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200">
+                              <Clock className="h-3.5 w-3.5 text-amber-600" />
+                              <span>PARTIAL</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900 text-sm sm:text-base">
+                          {formatNaira(receipt.amountPaid)}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right font-mono font-bold text-sm sm:text-base">
+                          <span className={receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}>
+                            {formatNaira(receipt.balanceRemaining)}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-3 text-slate-500 text-xs font-medium">
+                          {receipt.date}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/receipts/${receipt.id}`}
+                              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                              title="View / Print Receipt"
+                            >
+                              <ExternalLink className="h-4.5 w-4.5" />
+                            </Link>
+
+                            <a
+                              href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
+                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} at Al-Furqan International Academy.\nReceipt: ${receipt.receiptNumber}\nAmount Paid: ${formatNaira(receipt.amountPaid)}\nStatus: ${isFull ? "PAID IN FULL" : `PARTIAL PAYMENT (Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n\nView digital receipt: https://alfurqan.edu.ng/receipts/${receipt.id}`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Send WhatsApp to Parent"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-500 text-sm">
+                      <div className="max-w-md mx-auto space-y-1.5">
+                        <ReceiptIcon className="h-8 w-8 text-slate-300 mx-auto" />
+                        <p className="font-bold text-slate-700">No receipts found</p>
+                        <p className="text-xs text-slate-400">
+                          {query || statusFilter !== "ALL" || bankFilter !== "ALL"
+                            ? "Try adjusting your search query or filter options."
+                            : "No fee payment receipts have been recorded in the ledger yet."}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

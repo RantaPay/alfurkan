@@ -29,9 +29,18 @@ import {
   Clock,
   ArrowRight,
   Check,
+  Database,
+  UserPlus,
+  FileSpreadsheet,
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { SchoolProfile, BankAccountConfig, ClassFeeConfig, StaffUser, FeeScheduleHistoryEntry } from "@/lib/types";
+import {
+  SchoolProfile,
+  BankAccountConfig,
+  ClassFeeConfig,
+  StaffUser,
+  FeeScheduleHistoryEntry,
+} from "@/lib/types";
 
 type SettingsTab = "identity" | "banks" | "fees" | "staff";
 
@@ -43,20 +52,20 @@ export default function SettingsPage() {
     name: "Al-Furqan International Academy",
     shortName: "Al-Furqan",
     motto: "Knowledge and Guidance",
-    address: "Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria",
+    address: "Along Dass Road, Bauchi State",
     email: "admin@alfurqanintlacademy.com",
-    phone: "+234 804 430 5624 / +234 806 977 0538 / +234 817 799 4444",
+    phone: "+234 806 977 0538",
     currentTerm: "1st Term",
-    currentSession: "2026/2027 Academic Session",
-    bankName: "Jaiz Bank",
-    accountNumber: "0012489301",
-    accountName: "Al-Furqan International College - Fees",
-    accountantName: "Alhaji Ibrahim S. Danladi",
+    currentSession: "2026/2027 Session",
+    bankName: "",
+    accountNumber: "",
+    accountName: "",
+    accountantName: "Administrator",
     logoUrl: "",
-    accountantPin: "1234",
+    accountantPin: "",
     receiptPrefix: "AFIA/",
     receiptFooterNote:
-      "Official Receipt • Valid only with authorized Accounts Stamp • Fees paid are non-refundable after term commencement • All payments subject to bank clearance",
+      "Receipt • Valid only with authorized Stamp • Fees paid are non-refundable after term commencement • All payments subject to bank clearance",
     defaultReceiptFormat: "traditional",
     showStamp: true,
     bankAccounts: [],
@@ -89,16 +98,22 @@ export default function SettingsPage() {
     id?: string;
     name: string;
     email: string;
-    role: "Accountant" | "Admin" | "Cashier";
-    pin: string;
+    role: "Admin" | "Cashier" | "Accountant";
+    password: string;
     title: string;
   }>({
     name: "",
     email: "",
-    role: "Cashier",
-    pin: "",
-    title: "Accounts Desk Cashier",
+    role: "Admin",
+    password: "",
+    title: "School Administrator",
   });
+
+  // Reset Password State
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetTargetUser, setResetTargetUser] = useState<StaffUser | null>(null);
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   // Fee schedule revision & history state
   const [feeRevisionNote, setFeeRevisionNote] = useState("");
@@ -144,6 +159,27 @@ export default function SettingsPage() {
     }, 4000);
   };
 
+  const syncSchoolToDb = async (updated: SchoolProfile, successMsg?: string) => {
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      const data = await res.json();
+      if (data.success && data.school) {
+        setSchool(data.school);
+        if (successMsg) showNotification(successMsg);
+        return data.school;
+      } else if (data.error) {
+        console.error("Settings sync error:", data.error);
+      }
+    } catch (err) {
+      console.error("Failed to sync settings to database:", err);
+    }
+    return updated;
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -154,9 +190,12 @@ export default function SettingsPage() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       if (typeof reader.result === "string") {
-        setSchool((prev) => ({ ...prev, logoUrl: reader.result as string }));
+        const newLogo = reader.result as string;
+        const updated = { ...school, logoUrl: newLogo };
+        setSchool(updated);
+        await syncSchoolToDb(updated, "School crest updated successfully.");
       }
     };
     reader.readAsDataURL(file);
@@ -175,7 +214,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setSchool(data.school);
-        showNotification("School settings & policies saved successfully.");
+        showNotification("Saved successfully.");
       } else {
         alert("Failed to save: " + (data.error || "Unknown error"));
       }
@@ -208,7 +247,7 @@ export default function SettingsPage() {
     setIsBankModalOpen(true);
   };
 
-  const handleSaveBankModal = () => {
+  const handleSaveBankModal = async () => {
     if (!bankModalData.bankName.trim() || !bankModalData.accountNumber.trim()) {
       alert("Please provide bank name and account number.");
       return;
@@ -233,25 +272,34 @@ export default function SettingsPage() {
       accounts[0].isDefault = true;
     }
 
-    setSchool({ ...school, bankAccounts: accounts });
+    const updated = { ...school, bankAccounts: accounts };
+    setSchool(updated);
     setIsBankModalOpen(false);
+    await syncSchoolToDb(updated, "Bank account saved successfully.");
   };
 
-  const handleDeleteBank = (index: number) => {
+  const handleDeleteBank = async (index: number) => {
     const accounts = [...(school.bankAccounts || [])];
     const removed = accounts.splice(index, 1)[0];
-    if (removed.isDefault && accounts.length > 0) {
+    if (removed && removed.isDefault && accounts.length > 0) {
       accounts[0].isDefault = true;
     }
-    setSchool({ ...school, bankAccounts: accounts });
+    const updated = { ...school, bankAccounts: accounts };
+    setSchool(updated);
+    await syncSchoolToDb(
+      updated,
+      `Bank account ${removed?.bankName || ""} removed successfully.`
+    );
   };
 
-  const handleSetDefaultBank = (id: string) => {
+  const handleSetDefaultBank = async (id: string) => {
     const accounts = (school.bankAccounts || []).map((b) => ({
       ...b,
       isDefault: b.id === id,
     }));
-    setSchool({ ...school, bankAccounts: accounts });
+    const updated = { ...school, bankAccounts: accounts };
+    setSchool(updated);
+    await syncSchoolToDb(updated, "Default receiving bank updated successfully.");
   };
 
   // Fee Schedule Handlers
@@ -271,6 +319,37 @@ export default function SettingsPage() {
     setSchool({ ...school, feeStructure: list });
   };
 
+  const handleAddClassLevel = async (levelName: string) => {
+    const list = [...(school.feeStructure || [])];
+    if (list.some((item) => item.classLevel.toLowerCase() === levelName.toLowerCase())) {
+      alert(`Class level ${levelName} is already configured in the fee schedule.`);
+      return;
+    }
+
+    list.push({
+      classLevel: levelName,
+      tuitionFee: 0,
+      booksFee: 0,
+      uniformFee: 0,
+      ptaLevy: 0,
+      totalBill: 0,
+    });
+    const updated = { ...school, feeStructure: list };
+    setSchool(updated);
+    await syncSchoolToDb(updated, `Added ${levelName} to Fee Schedule successfully.`);
+  };
+
+  const handleRemoveClassLevel = async (index: number) => {
+    const list = [...(school.feeStructure || [])];
+    const removed = list.splice(index, 1);
+    const updated = { ...school, feeStructure: list };
+    setSchool(updated);
+    await syncSchoolToDb(
+      updated,
+      `Removed ${removed[0]?.classLevel || "class"} from Fee Schedule successfully.`
+    );
+  };
+
   const handleSaveFeeSchedule = async () => {
     setSavingFees(true);
     try {
@@ -287,7 +366,7 @@ export default function SettingsPage() {
         setSchool(data.school);
         setFeeRevisionNote("");
         showNotification(
-          `Class Fee Schedule for ${school.currentTerm} (${school.currentSession}) saved & recorded in revision history.`
+          `Class Fee Schedule for ${school.currentTerm} (${school.currentSession}) saved successfully.`
         );
       } else {
         alert("Failed to save fee schedule: " + (data.error || "Unknown error"));
@@ -300,44 +379,44 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRestoreSnapshot = (entry: FeeScheduleHistoryEntry) => {
+  const handleRestoreSnapshot = async (entry: FeeScheduleHistoryEntry) => {
     if (
       confirm(
         `Load historical fee rates from "${entry.term} • ${entry.session}" into the editor? You can review or adjust them before saving.`
       )
     ) {
-      setSchool((prev) => ({
-        ...prev,
+      const updated = {
+        ...school,
         feeStructure: entry.schedule.map((f) => ({ ...f })),
-      }));
+      };
+      setSchool(updated);
       setFeeRevisionNote(
         `Restored from historical revision dated ${new Date(entry.updatedAt).toLocaleDateString("en-GB")}`
       );
       setIsSnapshotModalOpen(false);
-      showNotification(`Loaded rates from ${entry.term} (${entry.session}) into editor.`);
+      await syncSchoolToDb(
+        updated,
+        `Restored fee rates from ${entry.term} (${entry.session}) successfully.`
+      );
     }
   };
 
-  // Staff Management Handlers
+  // Staff & Admin Management Handlers
   const handleOpenAddStaff = () => {
     setStaffModalData({
       name: "",
       email: "",
-      role: "Cashier",
-      pin: "",
-      title: "Accounts Counter Cashier",
+      role: "Admin",
+      password: "",
+      title: "School Administrator",
     });
     setIsStaffModalOpen(true);
   };
 
   const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!staffModalData.name || !staffModalData.email || !staffModalData.pin) {
-      alert("All fields are required.");
-      return;
-    }
-    if (staffModalData.pin.length !== 4) {
-      alert("PIN must be exactly 4 digits.");
+    if (!staffModalData.name.trim() || !staffModalData.email.trim() || !staffModalData.password.trim()) {
+      alert("Name, email address, and password are required.");
       return;
     }
 
@@ -345,7 +424,13 @@ export default function SettingsPage() {
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(staffModalData),
+        body: JSON.stringify({
+          name: staffModalData.name.trim(),
+          email: staffModalData.email.trim().toLowerCase(),
+          role: staffModalData.role,
+          password: staffModalData.password.trim(),
+          title: staffModalData.title.trim() || "School Administrator",
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -353,21 +438,58 @@ export default function SettingsPage() {
         // Refresh staff list
         const refreshed = await fetch("/api/staff").then((r) => r.json());
         if (refreshed.success) setStaffUsers(refreshed.users);
-        showNotification("Staff member access configured successfully.");
+        showNotification("Administrator account created successfully.");
       } else {
-        alert("Failed to save staff: " + (data.error || "Unknown error"));
+        alert("Failed to save: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      alert("Network error saving staff account");
+      alert("Network error saving administrator account");
+    }
+  };
+
+  const handleOpenResetPassword = (targetUser: StaffUser) => {
+    setResetTargetUser(targetUser);
+    setNewPasswordInput("");
+    setIsResetPasswordModalOpen(true);
+  };
+
+  const handleSaveResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTargetUser || !newPasswordInput.trim()) {
+      alert("Please enter a new password.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: resetTargetUser.id,
+          password: newPasswordInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsResetPasswordModalOpen(false);
+        showNotification(`Password updated successfully for ${resetTargetUser.name}.`);
+      } else {
+        alert(data.error || "Failed to update password");
+      }
+    } catch (err) {
+      alert("Network error updating password");
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
   const handleDeleteStaff = async (userId: string, userName: string) => {
-    if (userId === "usr_accountant" || userId === "usr_bursar") {
-      alert("The primary Chief Accountant account cannot be removed.");
+    if (staffUsers.length <= 1) {
+      alert("Cannot delete the only remaining administrator account.");
       return;
     }
-    if (!confirm(`Are you sure you want to revoke access for ${userName}?`)) {
+    if (!confirm(`Are you sure you want to remove administrator access for ${userName}?`)) {
       return;
     }
 
@@ -378,12 +500,12 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setStaffUsers((prev) => prev.filter((u) => u.id !== userId));
-        showNotification(`Revoked access for ${userName}.`);
+        showNotification(`Removed access for ${userName}.`);
       } else {
         alert(data.error || "Failed to remove staff");
       }
     } catch {
-      alert("Network error removing staff");
+      alert("Network error removing administrator");
     }
   };
 
@@ -404,10 +526,10 @@ export default function SettingsPage() {
                 </span>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                    Accountant & Cashier System Settings
+                    School &amp; Bursary Settings
                   </h1>
                   <p className="text-sm font-medium text-slate-500 mt-0.5">
-                    Configure institutional identity, receiving bank accounts, receipts, fee schedules, and cashier privileges
+                    Manage school profile, fee schedules, bank accounts, and staff access
                   </p>
                 </div>
               </div>
@@ -430,7 +552,7 @@ export default function SettingsPage() {
           {savedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-bold flex items-center gap-2.5 animate-in fade-in duration-200 shadow-xs">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-              <span>{statusMessage || "Settings updated and synchronized across all cashier and accounts terminals."}</span>
+              <span>{statusMessage || "Settings saved successfully."}</span>
             </div>
           )}
 
@@ -446,7 +568,7 @@ export default function SettingsPage() {
               }`}
             >
               <Building2 className="h-4.5 w-4.5" />
-              <span>School Identity & Crest</span>
+              <span>School Profile</span>
             </button>
 
             <button
@@ -486,14 +608,23 @@ export default function SettingsPage() {
               }`}
             >
               <Users className="h-4.5 w-4.5" />
-              <span>Cashiers & Accountants ({staffUsers.length})</span>
+              <span>Administrators ({staffUsers.length})</span>
             </button>
           </div>
 
-          {/* TAB 1: School Identity & Crest */}
-          {activeTab === "identity" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
+          {/* TAB CONTENT */}
+          {loading ? (
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-24 text-center">
+              <div className="flex items-center justify-center py-12">
+                <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* TAB 1: School Identity & Crest */}
+              {activeTab === "identity" && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                   <div>
                     <h2 className="text-lg font-black text-slate-900">Official Institution Profile</h2>
@@ -506,7 +637,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
                   <div className="sm:col-span-2">
                     <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                      Full School Name (Official Receipt Header)
+                      Full School Name (Receipt Header)
                     </label>
                     <input
                       type="text"
@@ -604,9 +735,9 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                      Chief Accountant Name
+                      Chief Accountant / Bursar Name
                     </label>
                     <input
                       type="text"
@@ -614,20 +745,6 @@ export default function SettingsPage() {
                       onChange={(e) => setSchool({ ...school, accountantName: e.target.value })}
                       placeholder="e.g. Alhaji Ibrahim S. Danladi"
                       className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                      Accountant 4-Digit Passcode (PIN)
-                    </label>
-                    <input
-                      type="password"
-                      maxLength={4}
-                      value={school.accountantPin || ""}
-                      onChange={(e) => setSchool({ ...school, accountantPin: e.target.value.replace(/\D/g, "") })}
-                      placeholder="1234"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                     />
                   </div>
                 </div>
@@ -669,7 +786,11 @@ export default function SettingsPage() {
                         {school.logoUrl && (
                           <button
                             type="button"
-                            onClick={() => setSchool({ ...school, logoUrl: "" })}
+                            onClick={async () => {
+                              const updated = { ...school, logoUrl: "" };
+                              setSchool(updated);
+                              await syncSchoolToDb(updated, "School crest reset successfully.");
+                            }}
                             className="text-rose-600 hover:text-rose-800 text-xs sm:text-sm font-bold hover:underline cursor-pointer"
                           >
                             Reset to Default Badge
@@ -883,6 +1004,31 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Table for Class Fee Schedule */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <span>Configured Class Levels</span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                      {(school.feeStructure || []).length}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = prompt("Enter Class Level name (e.g. Basic 1, JSS 1, SS 1, Creche):");
+                        if (name && name.trim()) {
+                          handleAddClassLevel(name.trim());
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Class Level</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
                   <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
@@ -895,6 +1041,7 @@ export default function SettingsPage() {
                         <th className="py-3 px-3.5 text-right font-black text-emerald-900 bg-emerald-50/70">
                           Total Bill (₦)
                         </th>
+                        <th className="py-3 px-3 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
@@ -948,6 +1095,16 @@ export default function SettingsPage() {
                           </td>
                           <td className="py-3 px-3.5 text-right font-black text-slate-900 bg-emerald-50/70 font-mono text-sm">
                             ₦{fee.totalBill.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveClassLevel(idx)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title={`Remove ${fee.classLevel}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1124,31 +1281,31 @@ export default function SettingsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div>
                     <h2 className="text-lg font-black text-slate-900">
-                      Accountant & Cashier Privilege Control
+                      Administrators &amp; Access Management
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                      Manage authorized desk cashiers, accountants, role privileges, and quick 4-digit PIN authentication
+                      Create and manage administrators who can log in to the portal and issue receipts. All administrators sign in with their email and password.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleOpenAddStaff}
-                    className="bg-[#075E54] hover:bg-[#128C7E] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+                    className="bg-[#075E54] hover:bg-[#128C7E] text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Add Cashier / Staff Member</span>
+                    <span>Add Administrator</span>
                   </button>
                 </div>
 
-                {/* Staff Table */}
+                {/* Administrators Table */}
                 <div className="overflow-x-auto rounded-2xl border border-slate-200">
                   <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 font-black border-b border-slate-200">
-                        <th className="py-3 px-4">Staff Member</th>
-                        <th className="py-3 px-4">Role Badge</th>
-                        <th className="py-3 px-4">Official Designation</th>
-                        <th className="py-3 px-4">Quick PIN</th>
+                        <th className="py-3 px-4">Administrator</th>
+                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4">Designation</th>
+                        <th className="py-3 px-4 text-center">Password</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1160,48 +1317,42 @@ export default function SettingsPage() {
                               <span className="font-black text-slate-900 block text-sm">
                                 {user.name}
                               </span>
-                              <span className="text-xs text-slate-500 block">{user.email}</span>
+                              <span className="text-xs text-slate-500 block font-mono">{user.email}</span>
                             </div>
                           </td>
 
                           <td className="py-3 px-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block ${
-                                user.role === "Accountant"
-                                  ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                                  : user.role === "Admin"
-                                  ? "bg-purple-100 text-purple-900 border border-purple-300"
-                                  : "bg-blue-100 text-blue-900 border border-blue-300"
-                              }`}
-                            >
+                            <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block bg-purple-100 text-purple-900 border border-purple-200">
                               {user.role}
                             </span>
                           </td>
 
                           <td className="py-3 px-4 font-bold text-slate-700">{user.title}</td>
 
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5 font-mono font-black text-slate-800">
-                              <KeyRound className="h-3.5 w-3.5 text-slate-400" />
-                              <span>••••</span>
-                              <span className="text-[11px] text-slate-400 font-sans ml-1">
-                                (PIN set)
-                              </span>
-                            </div>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenResetPassword(user)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-[#075E54] hover:bg-emerald-50 text-slate-700 hover:text-[#075E54] font-bold text-xs transition-colors cursor-pointer"
+                              title="Reset or change password for this administrator"
+                            >
+                              <KeyRound className="h-3.5 w-3.5 text-[#075E54]" />
+                              <span>Reset Password</span>
+                            </button>
                           </td>
 
                           <td className="py-3 px-4 text-right">
-                            {user.id !== "usr_accountant" && user.id !== "usr_bursar" ? (
+                            {staffUsers.length > 1 ? (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteStaff(user.id, user.name)}
                                 className="text-rose-600 hover:text-rose-800 text-xs font-bold hover:underline cursor-pointer"
                               >
-                                Revoke Access
+                                Remove Access
                               </button>
                             ) : (
                               <span className="text-xs text-slate-400 font-bold italic">
-                                Primary Accountant
+                                Primary Admin
                               </span>
                             )}
                           </td>
@@ -1214,21 +1365,23 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Bottom Save Bar */}
-          <div className="flex items-center justify-between pt-4 pb-12 border-t border-slate-200">
-            <span className="text-xs font-medium text-slate-500">
-              Last synchronized with database. Changes persist immediately to receipts & statements.
-            </span>
-            <button
-              type="button"
-              onClick={() => handleSaveSettings()}
-              disabled={saving}
-              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-8 py-3 rounded-2xl text-sm sm:text-base font-black shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Save className="h-4.5 w-4.5" />
-              <span>{saving ? "Saving Changes..." : "Save Settings"}</span>
-            </button>
-          </div>
+              {/* Bottom Save Bar */}
+              <div className="flex items-center justify-between pt-4 pb-12 border-t border-slate-200">
+                <span className="text-xs font-medium text-slate-500">
+                  Last synchronized with database. Changes persist immediately to receipts & statements.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSaveSettings()}
+                  disabled={saving}
+                  className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-8 py-3 rounded-2xl text-sm sm:text-base font-black shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="h-4.5 w-4.5" />
+                  <span>{saving ? "Saving Changes..." : "Save Settings"}</span>
+                </button>
+              </div>
+            </>
+          )}
         </main>
       </SidebarLayout>
 
@@ -1293,7 +1446,7 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Al-Furqan International College"
+                  placeholder="e.g. Al-Furqan International Academy"
                   value={bankModalData.accountName}
                   onChange={(e) =>
                     setBankModalData({ ...bankModalData, accountName: e.target.value })
@@ -1339,7 +1492,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Modal 2: Add Staff / Cashier Account */}
+      {/* Modal 2: Add Administrator Account */}
       {isStaffModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
@@ -1347,7 +1500,7 @@ export default function SettingsPage() {
               <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-[#075E54]" />
-                  <h3 className="text-base font-black text-slate-900">Add Staff / Cashier</h3>
+                  <h3 className="text-base font-black text-slate-900">Add Administrator</h3>
                 </div>
                 <button
                   type="button"
@@ -1361,7 +1514,7 @@ export default function SettingsPage() {
               <div className="p-6 space-y-4 text-sm">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                    Staff Full Name
+                    Full Name
                   </label>
                   <input
                     type="text"
@@ -1377,15 +1530,31 @@ export default function SettingsPage() {
 
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                    Official Email
+                    Login Email Address
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="e.g. cashier@alfurqan.edu.ng"
+                    placeholder="e.g. admin2@alfurqan.edu.ng"
                     value={staffModalData.email}
                     onChange={(e) =>
                       setStaffModalData({ ...staffModalData, email: e.target.value })
+                    }
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+                    Login Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter login password"
+                    value={staffModalData.password}
+                    onChange={(e) =>
+                      setStaffModalData({ ...staffModalData, password: e.target.value })
                     }
                     className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                   />
@@ -1406,47 +1575,27 @@ export default function SettingsPage() {
                       }
                       className="w-full h-11 px-3 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
                     >
-                      <option value="Cashier">Cashier</option>
-                      <option value="Accountant">Accountant</option>
                       <option value="Admin">Admin</option>
+                      <option value="Accountant">Accountant</option>
+                      <option value="Cashier">Cashier</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                      4-Digit Access PIN
+                      Designation Title
                     </label>
                     <input
-                      type="password"
-                      maxLength={4}
+                      type="text"
                       required
-                      placeholder="e.g. 5566"
-                      value={staffModalData.pin}
+                      placeholder="e.g. School Administrator"
+                      value={staffModalData.title}
                       onChange={(e) =>
-                        setStaffModalData({
-                          ...staffModalData,
-                          pin: e.target.value.replace(/\D/g, ""),
-                        })
+                        setStaffModalData({ ...staffModalData, title: e.target.value })
                       }
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-medium text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                    Job Designation Title
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Accounts Desk Officer"
-                    value={staffModalData.title}
-                    onChange={(e) =>
-                      setStaffModalData({ ...staffModalData, title: e.target.value })
-                    }
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-                  />
                 </div>
               </div>
 
@@ -1462,7 +1611,70 @@ export default function SettingsPage() {
                   type="submit"
                   className="bg-[#075E54] hover:bg-[#128C7E] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-sm cursor-pointer"
                 >
-                  Create Staff Account
+                  Create Administrator
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2B: Reset Password Modal */}
+      {isResetPasswordModalOpen && resetTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <form onSubmit={handleSaveResetPassword}>
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-[#075E54]" />
+                  <h3 className="text-base font-black text-slate-900">
+                    Reset Password
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsResetPasswordModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 text-sm">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-700">
+                  Changing password for: <strong className="text-slate-900">{resetTargetUser.name}</strong> ({resetTargetUser.email})
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new password"
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsResetPasswordModalOpen(false)}
+                  className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPassword || !newPasswordInput.trim()}
+                  className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-sm cursor-pointer"
+                >
+                  {isSavingPassword ? "Updating..." : "Update Password"}
                 </button>
               </div>
             </form>
@@ -1575,6 +1787,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
     </AuthGuard>
   );
 }

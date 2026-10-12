@@ -23,7 +23,7 @@ export const PRESET_FEE_OPTIONS: { name: string; category: FeeCategory; label: s
   { name: "Tuition / School Fees", category: "Tuition", label: "Tuition / School Fees" },
   { name: "Tuition Part Payment", category: "Tuition", label: "Tuition Part Payment" },
   { name: "Textbooks & Revision Pack", category: "Books", label: "Textbooks & Revision Pack" },
-  { name: "College Uniform (2 Sets)", category: "Uniform", label: "College Uniform (2 Sets)" },
+  { name: "School Uniform (2 Sets)", category: "Uniform", label: "School Uniform (2 Sets)" },
   { name: "PTA Termly Levy", category: "PTA", label: "PTA Termly Levy" },
   { name: "Transport / Bus Service", category: "Transport", label: "Transport / Bus Service" },
   { name: "Laboratory & Practical Fees", category: "Development", label: "Laboratory & Practical Fees" },
@@ -63,17 +63,16 @@ export function ReceiptModal({
   const [paymentMethod, setPaymentMethod] = useState<
     "Bank Transfer" | "Bank Deposit" | "POS" | "Cash"
   >("Bank Transfer");
-  const [receivingBank, setReceivingBank] = useState("Jaiz Bank");
+  const [receivingBank, setReceivingBank] = useState("");
   const [receivingDate, setReceivingDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [bankReference, setBankReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Itemized categories breakdown
+  // Itemized categories breakdown (default to 0)
   const [items, setItems] = useState<ReceiptItem[]>([
-    { name: "Tuition / School Fees", category: "Tuition", amount: 100000 },
-    { name: "Textbooks & Revision Pack", category: "Books", amount: 25000 },
+    { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
   ]);
 
   // Sync preselected student
@@ -82,10 +81,10 @@ export function ReceiptModal({
       setSelectedStudent(preselectedStudent);
       setDepositorName(preselectedStudent.parentName || "");
       setDepositorPhone(preselectedStudent.parentPhone || "");
-      // Auto-populate initial suggested tuition amount based on student's remaining balance
+      // Auto-populate initial suggested tuition amount based on student's remaining balance if set
       const remaining = preselectedStudent.balanceRemaining > 0 ? preselectedStudent.balanceRemaining : preselectedStudent.totalTermBill;
       setItems([
-        { name: "Tuition / School Fees", category: "Tuition", amount: remaining },
+        { name: "Tuition / School Fees", category: "Tuition", amount: remaining || 0 },
       ]);
     }
   }, [preselectedStudent]);
@@ -104,10 +103,12 @@ export function ReceiptModal({
         .then((d) => {
           if (d.success && d.school?.bankAccounts && d.school.bankAccounts.length > 0) {
             setConfiguredBanks(d.school.bankAccounts);
-            const def = d.school.bankAccounts.find((b: any) => b.isDefault);
+            const def = d.school.bankAccounts.find((b: any) => b.isDefault) || d.school.bankAccounts[0];
             if (def && paymentMethod !== "Cash") {
               setReceivingBank(def.bankName);
             }
+          } else {
+            setConfiguredBanks([]);
           }
         })
         .catch(() => {});
@@ -248,7 +249,7 @@ export function ReceiptModal({
             </div>
             <div>
               <div className="flex items-center gap-1.5 font-black text-sm sm:text-base leading-tight">
-                <span>Issue Official School Receipt</span>
+                <span>Issue Receipt</span>
                 <Sparkles className="h-4 w-4 text-[#FFB21D]" />
               </div>
               <p className="text-[11px] text-emerald-100 font-medium">
@@ -336,7 +337,7 @@ export function ReceiptModal({
                         }
                       }
                     }}
-                    placeholder="Search by student registration number (e.g. AFIC/2026/0101) or name..."
+                    placeholder="Search by student registration number (e.g. P453, N1636, JS201) or name..."
                     className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] placeholder:text-slate-400 shadow-inner bg-slate-50/50"
                   />
                 </div>
@@ -431,28 +432,28 @@ export function ReceiptModal({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Tuition", "Tuition / School Fees", 50000)}
+                  onClick={() => handleAddItem("Tuition", "Tuition / School Fees", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Tuition
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Books", "Textbooks & Revision Pack", 25000)}
+                  onClick={() => handleAddItem("Books", "Textbooks & Revision Pack", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Books
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Uniform", "College Uniform (2 Sets)", 15000)}
+                  onClick={() => handleAddItem("Uniform", "School Uniform (2 Sets)", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Uniform
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("PTA", "PTA Termly Levy", 5000)}
+                  onClick={() => handleAddItem("PTA", "PTA Termly Levy", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + PTA
@@ -604,7 +605,7 @@ export function ReceiptModal({
                   if (val === "Cash") {
                     setReceivingBank("Cash");
                   } else if (receivingBank === "Cash") {
-                    setReceivingBank("Jaiz Bank");
+                    setReceivingBank(configuredBanks[0]?.bankName || "");
                   }
                 }}
                 className="w-full h-11 px-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
@@ -636,12 +637,7 @@ export function ReceiptModal({
                   </>
                 ) : (
                   <>
-                    <option value="Jaiz Bank">Jaiz Bank (School Fees Account)</option>
-                    <option value="GTBank">GTBank (Guaranty Trust Bank)</option>
-                    <option value="Zenith Bank">Zenith Bank</option>
-                    <option value="Taj Bank">Taj Bank (Non-Interest)</option>
-                    <option value="First Bank">First Bank of Nigeria</option>
-                    <option value="Stanbic IBTC">Stanbic IBTC Bank</option>
+                    <option value="">No bank configured in settings</option>
                     <option value="Cash">Cash</option>
                   </>
                 )}
@@ -650,7 +646,7 @@ export function ReceiptModal({
 
             <div>
               <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                Receiving Date
+                Payment Date (Paid to Bank)
               </label>
               <input
                 type="date"
@@ -667,45 +663,26 @@ export function ReceiptModal({
               <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
                 4. Depositor / Payer Particulars
               </label>
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                Printed on Receipt
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                Optional
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Name of Depositor / Payer
-                </label>
-                <input
-                  type="text"
-                  value={depositorName}
-                  onChange={(e) => setDepositorName(e.target.value)}
-                  placeholder="e.g. Alhaji Musa Garba (Name on Transfer/Teller)"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-                />
-                <span className="text-[11px] text-slate-500 mt-1 block">
-                  Defaults to parent name; edit if someone else made the payment.
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Depositor / Payer Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={depositorPhone}
-                  onChange={(e) => setDepositorPhone(e.target.value)}
-                  placeholder="e.g. 0803 123 4567"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-                />
-                <span className="text-[11px] text-slate-500 mt-1 block">
-                  Payer phone for verification and SMS clearance.
-                </span>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Name of Depositor / Payer <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={depositorName}
+                onChange={(e) => setDepositorName(e.target.value)}
+                placeholder="e.g. Alhaji Musa Garba (Optional — defaults to parent name if blank)"
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+              />
+              <span className="text-[11px] text-slate-500 mt-1 block">
+                Optional: leave blank if not applicable. If omitted, the receipt will be issued directly with the registered parent name.
+              </span>
             </div>
-
           </div>
 
           {/* Live Dynamic Status Forecast Stamp */}
@@ -757,7 +734,7 @@ export function ReceiptModal({
                 <span>Generating Receipt...</span>
               ) : (
                 <>
-                  <span>Issue Official Receipt (Cashier Desk)</span>
+                  <span>Issue Receipt</span>
                   <ArrowRight className="h-4.5 w-4.5" />
                 </>
               )}

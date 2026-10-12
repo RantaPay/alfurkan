@@ -41,7 +41,6 @@ export default function ReceiptViewPage() {
   const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
   const [voidReason, setVoidReason] = useState("Bank transfer bounced / invalid payment proof");
   const [customVoidReason, setCustomVoidReason] = useState("");
-  const [accountantPinInput, setAccountantPinInput] = useState("");
   const [voidError, setVoidError] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [voidSuccess, setVoidSuccess] = useState(false);
@@ -152,12 +151,6 @@ export default function ReceiptViewPage() {
       return;
     }
 
-    const expectedPin = school?.accountantPin || "1234";
-    if (accountantPinInput !== expectedPin) {
-      setVoidError("Incorrect Accountant / Cashier PIN. (Default system PIN: 1234)");
-      return;
-    }
-
     try {
       setIsVoiding(true);
       const res = await fetch("/api/receipts/void", {
@@ -166,7 +159,7 @@ export default function ReceiptViewPage() {
         body: JSON.stringify({
           receiptId: receipt.id,
           reason: finalReason,
-          voidedBy: school?.accountantName || "Authorized Accountant / Cashier",
+          voidedBy: school?.accountantName || "Authorized Administrator",
         }),
       });
 
@@ -189,10 +182,7 @@ export default function ReceiptViewPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-600">Loading official digital receipt...</p>
-        </div>
+        <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -222,7 +212,7 @@ export default function ReceiptViewPage() {
 
   // WhatsApp Pre-composed Message for parent
   const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-    `Assalamu Alaikum ${receipt.parentName},\n\nOfficial Fee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your official clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAl-Furqan International College`
+    `Assalamu Alaikum ${receipt.parentName},\n\nFee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAl-Furqan International Academy`
   )}`;
 
   return (
@@ -322,7 +312,6 @@ export default function ReceiptViewPage() {
                 type="button"
                 onClick={() => {
                   setVoidError("");
-                  setAccountantPinInput("");
                   setIsVoidModalOpen(true);
                 }}
                 className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer"
@@ -371,7 +360,7 @@ export default function ReceiptViewPage() {
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2 text-rose-700">
                 <ShieldAlert className="h-5 w-5" />
-                <h3 className="text-base font-black">Void Official Receipt</h3>
+                <h3 className="text-base font-black">Void Receipt</h3>
               </div>
               <button
                 type="button"
@@ -441,24 +430,8 @@ export default function ReceiptViewPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Enter Accountant / Cashier Passcode PIN</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Default: 1234</span>
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={accountantPinInput}
-                    onChange={(e) => setAccountantPinInput(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Enter 4-digit PIN"
-                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 font-mono font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    required
-                  />
-                </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                Authorized action: Voiding will flag this receipt as cancelled and return the payment amount to the student&apos;s pending balance.
               </div>
 
               <div className="flex items-center gap-2 pt-2">

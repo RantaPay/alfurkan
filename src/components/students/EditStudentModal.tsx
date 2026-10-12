@@ -34,7 +34,7 @@ export function EditStudentModal({
   const [classLevel, setClassLevel] = useState("JSS 1");
   const [classArm, setClassArm] = useState("Diamond");
   const [isRepeating, setIsRepeating] = useState(false);
-  const [totalTermBill, setTotalTermBill] = useState(165000);
+  const [totalTermBill, setTotalTermBill] = useState(0);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");

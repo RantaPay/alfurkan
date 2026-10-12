@@ -13,138 +13,49 @@ import {
 } from "./types";
 import { Prisma } from "@prisma/client";
 
-export const DEFAULT_USERS: StaffUser[] = [
-  {
-    id: "usr_accountant",
-    name: "Alhaji Ibrahim S. Danladi",
-    email: "accountant@alfurqan.edu.ng",
-    role: "Accountant",
-    pin: "1234",
-    password: "accountant2026",
-    title: "Chief Accountant & Head of Finance",
-  },
-  {
-    id: "usr_admin",
-    name: "Dr. Shehu Danladi",
-    email: "admin@alfurqan.edu.ng",
-    role: "Admin",
-    pin: "9988",
-    password: "admin2026",
-    title: "Principal & College Director",
-  },
-];
+export const DEFAULT_USERS: StaffUser[] = [];
 
-export const DEFAULT_BANK_ACCOUNTS: BankAccountConfig[] = [
-  {
-    id: "bank_jaiz",
-    bankName: "Jaiz Bank",
-    accountNumber: "0012489301",
-    accountName: "Al-Furqan International College - Fees",
-    isDefault: true,
-  },
-  {
-    id: "bank_gtb",
-    bankName: "GTBank",
-    accountNumber: "0239104820",
-    accountName: "Al-Furqan Operational Collections",
-    isDefault: false,
-  },
-  {
-    id: "bank_zenith",
-    bankName: "Zenith Bank",
-    accountNumber: "1014892019",
-    accountName: "Al-Furqan Academy Tuition",
-    isDefault: false,
-  },
-  {
-    id: "bank_taj",
-    bankName: "Taj Bank",
-    accountNumber: "0004928172",
-    accountName: "Al-Furqan Non-Interest Accounts",
-    isDefault: false,
-  },
-  {
-    id: "bank_first",
-    bankName: "First Bank",
-    accountNumber: "2039182740",
-    accountName: "Al-Furqan Secondary Collections",
-    isDefault: false,
-  },
-];
+export const DEFAULT_BANK_ACCOUNTS: BankAccountConfig[] = [];
 
-export const DEFAULT_FEE_STRUCTURE: ClassFeeConfig[] = [
-  {
-    classLevel: "JSS 1",
-    tuitionFee: 120000,
-    booksFee: 25000,
-    uniformFee: 20000,
-    ptaLevy: 10000,
-    totalBill: 175000,
-  },
-  {
-    classLevel: "JSS 2",
-    tuitionFee: 120000,
-    booksFee: 20000,
-    uniformFee: 10000,
-    ptaLevy: 10000,
-    totalBill: 160000,
-  },
-  {
-    classLevel: "JSS 3",
-    tuitionFee: 130000,
-    booksFee: 22000,
-    uniformFee: 10000,
-    ptaLevy: 10000,
-    totalBill: 172000,
-  },
-  {
-    classLevel: "SS 1",
-    tuitionFee: 140000,
-    booksFee: 30000,
-    uniformFee: 20000,
-    ptaLevy: 10000,
-    totalBill: 200000,
-  },
-  {
-    classLevel: "SS 2",
-    tuitionFee: 140000,
-    booksFee: 25000,
-    uniformFee: 10000,
-    ptaLevy: 10000,
-    totalBill: 185000,
-  },
-  {
-    classLevel: "SS 3",
-    tuitionFee: 150000,
-    booksFee: 25000,
-    uniformFee: 10000,
-    ptaLevy: 10000,
-    totalBill: 195000,
-  },
-];
+export const DEFAULT_FEE_STRUCTURE: ClassFeeConfig[] = [];
+
+export function formatSessionCode(sessionStr?: string): string {
+  if (!sessionStr) {
+    const curYear = new Date().getFullYear();
+    const nextYear = (curYear + 1).toString().slice(-2);
+    return `${curYear}-${nextYear}`;
+  }
+  const match = sessionStr.match(/(\d{4})[/-](\d{2,4})/);
+  if (match) {
+    const startYear = match[1];
+    const endYear = match[2].length === 4 ? match[2].slice(-2) : match[2];
+    return `${startYear}-${endYear}`;
+  }
+  return sessionStr.replace(/\s*Academic\s*Session/i, "").trim();
+}
 
 export const DEFAULT_SCHOOL: SchoolProfile = {
   name: "Al-Furqan International Academy",
   shortName: "Al-Furqan",
   motto: "Knowledge and Guidance",
-  address: "Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria",
+  address: "Along Dass Road, Bauchi State",
   email: "admin@alfurqanintlacademy.com",
-  phone: "+234 804 430 5624 / +234 806 977 0538 / +234 817 799 4444",
+  phone: "+234 806 977 0538",
   currentTerm: "1st Term",
-  currentSession: "2026/2027 Academic Session",
-  bankName: "Jaiz Bank",
-  accountNumber: "0012489301",
-  accountName: "Al-Furqan International College - Fees",
-  accountantName: "Alhaji Ibrahim S. Danladi",
-  accountantPin: "1234",
+  currentSession: "2026/2027 Session",
+  bankName: "",
+  accountNumber: "",
+  accountName: "",
+  accountantName: "Administrator",
+  accountantPin: "",
   logoUrl: "/logo.png",
   receiptPrefix: "AFIA/",
   receiptFooterNote:
-    "Official Receipt • Valid only with authorized Accounts Stamp • Fees paid are non-refundable • All payments subject to bank clearance",
+    "Receipt • Valid only with authorized Stamp • Fees paid are non-refundable • All payments subject to bank clearance",
   defaultReceiptFormat: "traditional",
   showStamp: true,
-  bankAccounts: DEFAULT_BANK_ACCOUNTS,
-  feeStructure: DEFAULT_FEE_STRUCTURE,
+  bankAccounts: [],
+  feeStructure: [],
 };
 
 // Formatter Helpers to map Prisma database models to frontend types
@@ -152,7 +63,7 @@ function formatStudent(s: any): Student {
   const receipts = s.receipts || [];
   const validReceipts = receipts.filter((r: any) => !r.isVoided);
   const paidBanks = Array.from(new Set(validReceipts.map((r: any) => r.bankName).filter(Boolean))) as string[];
-  const paymentBank = paidBanks.length > 0 ? paidBanks.join(", ") : (s.status === "UNPAID" ? "Unpaid / None" : "Jaiz Bank");
+  const paymentBank = paidBanks.length > 0 ? paidBanks.join(", ") : "—";
   const lastReceiptNumber = validReceipts[0]?.receiptNumber;
 
   return {
@@ -196,7 +107,7 @@ function formatReceipt(r: any): Receipt {
     paymentStatus: r.paymentStatus as any,
     paymentMethod: r.paymentMethod as any,
     bankReference: r.bankReference || undefined,
-    bankName: r.bankName || "Jaiz Bank",
+    bankName: r.bankName || "",
     items: (r.items || []).map((it: any) => ({
       name: it.name,
       category: it.category,
@@ -219,7 +130,7 @@ function formatReceipt(r: any): Receipt {
 }
 
 function formatSchool(s: any): SchoolProfile {
-  let bankAccounts: BankAccountConfig[] = DEFAULT_BANK_ACCOUNTS;
+  let bankAccounts: BankAccountConfig[] = [];
   if (s.bankAccountsJson) {
     try {
       const parsed = JSON.parse(s.bankAccountsJson);
@@ -231,7 +142,7 @@ function formatSchool(s: any): SchoolProfile {
     }
   }
 
-  let feeStructure: ClassFeeConfig[] = DEFAULT_FEE_STRUCTURE;
+  let feeStructure: ClassFeeConfig[] = [];
   if (s.feeStructureJson) {
     try {
       const parsed = JSON.parse(s.feeStructureJson);
@@ -266,24 +177,8 @@ function formatSchool(s: any): SchoolProfile {
     }
   }
 
-  // Provide initial baseline entry if empty so history is immediately viewable
-  if (feeScheduleHistory.length === 0 && feeStructure.length > 0) {
-    feeScheduleHistory = [
-      {
-        id: "fee_rev_baseline_1",
-        session: s.currentSession || "2026/2027 Academic Session",
-        term: s.currentTerm || "1st Term",
-        updatedAt: s.updatedAt ? (s.updatedAt instanceof Date ? s.updatedAt.toISOString() : String(s.updatedAt)) : new Date().toISOString(),
-        updatedBy: s.accountantName || "Alhaji Ibrahim S. Danladi",
-        notes: "Approved session schedule by School Governing Council",
-        schedule: feeStructure,
-        summaryText: `Standard fee schedule initialized across ${feeStructure.length} class levels`,
-      },
-    ];
-  }
-
-  const accountantName = s.accountantName || "Alhaji Ibrahim S. Danladi";
-  const accountantPin = s.accountantPin || "1234";
+  const accountantName = s.accountantName || "Administrator";
+  const accountantPin = s.accountantPin || "";
 
   return {
     name: s.name,
@@ -303,7 +198,7 @@ function formatSchool(s: any): SchoolProfile {
     receiptPrefix: s.receiptPrefix || "AFIA/",
     receiptFooterNote:
       (s.receiptFooterNote || "").replace(/Bursary/gi, "Accounts") ||
-      "Official Receipt • Valid only with authorized Accounts Stamp • Fees paid are non-refundable • All payments subject to bank clearance",
+      "Receipt • Valid only with authorized Stamp • Fees paid are non-refundable • All payments subject to bank clearance",
     defaultReceiptFormat: (s.defaultReceiptFormat as any) || "traditional",
     showStamp: s.showStamp !== undefined ? s.showStamp : true,
     bankAccounts,
@@ -448,14 +343,21 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     });
 
     const currentTerm = school?.currentTerm || "1st Term";
-    const currentSession = school?.currentSession || "2026/2027 Academic Session";
+    const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
     const accountantName = school?.accountantName || "Alhaji Ibrahim S. Danladi";
 
-    // 3. Generate sequential receipt number
-    const count = await tx.receipt.count();
-    const padded = String(count + 1).padStart(4, "0");
-    const year = new Date().getFullYear();
-    const receiptNumber = `AFIC-RCP-${year}-${padded}`;
+    // 3. Generate sequential receipt number in format session/counter (e.g. 2026-27/0001)
+    const sessionCode = formatSessionCode(currentSession);
+    const count = await tx.receipt.count({
+      where: { session: currentSession },
+    });
+    let nextNum = count + 1;
+    let candidate = `${sessionCode}/${String(nextNum).padStart(4, "0")}`;
+    while (await tx.receipt.findUnique({ where: { receiptNumber: candidate } })) {
+      nextNum++;
+      candidate = `${sessionCode}/${String(nextNum).padStart(4, "0")}`;
+    }
+    const receiptNumber = candidate;
 
     const now = new Date();
     let receiptDateObj = now;
@@ -491,7 +393,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       console.error("QR generation failed", err);
     }
 
-    const securityHash = `AFIC-HASH-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const securityHash = `AIA-HASH-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const defaultNotes = `${paymentStatus === "FULL" ? "Full payment cleared" : "Partial payment recorded"}. Verified by Accounts.`;
 
     const receiptItemsData =
@@ -530,7 +432,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         paymentStatus,
         paymentMethod: input.paymentMethod,
         bankReference: input.bankReference?.trim() || `TRF/NIP/${Date.now().toString().slice(-6)}`,
-        bankName: (input as any).bankName || school?.bankName || "Jaiz Bank",
+        bankName: (input as any).bankName || school?.bankName || "",
         term: currentTerm,
         session: currentSession,
         date: formattedDate,
@@ -569,7 +471,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
           studentRegNumber: student.regNumber,
           amountPaid: input.amountPaid,
           paymentMethod: input.paymentMethod,
-          bankName: (input as any).bankName || school?.bankName || "Jaiz Bank",
+          bankName: (input as any).bankName || school?.bankName || "",
           timestamp: now.toISOString(),
         }),
       },
@@ -644,14 +546,9 @@ export async function getReportData(
   let totalAllBanksAmount = 0;
 
   for (const r of activeReceipts) {
-    const rawBank = (r.bankName || "Jaiz Bank").trim();
-    let bName = rawBank;
-    if (/gtb/i.test(bName)) bName = "GTBank";
-    else if (/jaiz/i.test(bName)) bName = "Jaiz Bank";
-    else if (/zenith/i.test(bName)) bName = "Zenith Bank";
-    else if (/taj/i.test(bName)) bName = "Taj Bank";
-    else if (/first/i.test(bName)) bName = "First Bank";
-    else if (/cash/i.test(bName)) bName = "Cash";
+    const rawBank = (r.bankName || "").trim();
+    if (!rawBank) continue;
+    const bName = rawBank;
 
     const prev = bankTotalsMap.get(bName) || { totalAmount: 0, receiptCount: 0 };
     prev.totalAmount += r.amountPaid;
@@ -689,7 +586,7 @@ export async function getReportData(
 
   const fullPaymentCount = students.filter((s) => s.status === "FULL").length;
   const partialPaymentCount = students.filter((s) => s.status === "PARTIAL").length;
-  const unpaidCount = students.filter((s) => s.status === "UNPAID").length;
+  const unpaidCount = students.filter((s) => s.totalTermBill > 0 && s.status === "UNPAID").length;
 
   const summary: ReportSummary = {
     period: term || school.currentTerm,
@@ -821,10 +718,10 @@ export async function createStudent(input: any): Promise<Student> {
   if (!regNumber) {
     const count = await prisma.student.count();
     const year = new Date().getFullYear();
-    regNumber = `AFIC/${year}/${String(count + 101).padStart(4, "0")}`;
+    regNumber = `AIA/${year}/${String(count + 101).padStart(4, "0")}`;
   }
 
-  const totalBill = Number(input.totalTermBill) || 165000;
+  const totalBill = Number(input.totalTermBill) || 0;
 
   const student = await prisma.student.create({
     data: {
@@ -833,7 +730,7 @@ export async function createStudent(input: any): Promise<Student> {
       class: input.class.trim(),
       gender: input.gender || "Male",
       parentName: input.parentName.trim(),
-      parentPhone: input.parentPhone.trim(),
+      parentPhone: input.parentPhone?.trim() || "",
       parentEmail: input.parentEmail?.trim() || null,
       totalTermBill: totalBill,
       totalPaid: 0,
@@ -868,27 +765,27 @@ export async function importStudentsBulk(studentsList: any[]): Promise<Student[]
     if (!s.fullName?.trim()) continue;
 
     const regNumber =
-      s.regNumber?.trim() || `AFIC/${year}/${String(currentCount + i + 101).padStart(4, "0")}`;
-    const totalBill = Number(s.totalTermBill) || 165000;
+      s.regNumber?.trim() || `AIA/${year}/${String(currentCount + i + 101).padStart(4, "0")}`;
+    const totalBill = Number(s.totalTermBill) || 0;
 
     const student = await prisma.student.upsert({
       where: { regNumber },
       update: {
         fullName: s.fullName.trim(),
-        class: s.class?.trim() || "JSS 1",
+        class: s.class?.trim() || "",
         gender: s.gender || "Male",
         parentName: s.parentName?.trim() || "Parent/Guardian",
-        parentPhone: s.parentPhone?.trim() || "08000000000",
+        parentPhone: s.parentPhone?.trim() || "",
         parentEmail: s.parentEmail?.trim() || null,
         totalTermBill: totalBill,
       },
       create: {
         regNumber,
         fullName: s.fullName.trim(),
-        class: s.class?.trim() || "JSS 1",
+        class: s.class?.trim() || "",
         gender: s.gender || "Male",
         parentName: s.parentName?.trim() || "Parent/Guardian",
-        parentPhone: s.parentPhone?.trim() || "08000000000",
+        parentPhone: s.parentPhone?.trim() || "",
         parentEmail: s.parentEmail?.trim() || null,
         totalTermBill: totalBill,
         totalPaid: 0,
@@ -1025,8 +922,34 @@ export async function promoteStudentsSession(
   });
 }
 
-const PROMOTION_LEVEL_ORDER = ["JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"];
+const PROMOTION_LEVEL_ORDER = [
+  "Pre-Nursery",
+  "Nursery 1",
+  "Nursery 2",
+  "Basic 1",
+  "Basic 2",
+  "Basic 3",
+  "Basic 4",
+  "Basic 5",
+  "Basic 6",
+  "JSS 1",
+  "JSS 2",
+  "JSS 3",
+  "SS 1",
+  "SS 2",
+  "SS 3",
+];
+
 const PROMOTION_NEXT_LEVEL_MAP: Record<string, string> = {
+  "Pre-Nursery": "Nursery 1",
+  "Nursery 1": "Nursery 2",
+  "Nursery 2": "Basic 1",
+  "Basic 1": "Basic 2",
+  "Basic 2": "Basic 3",
+  "Basic 3": "Basic 4",
+  "Basic 4": "Basic 5",
+  "Basic 5": "Basic 6",
+  "Basic 6": "JSS 1",
   "JSS 1": "JSS 2",
   "JSS 2": "JSS 3",
   "JSS 3": "SS 1",
@@ -1053,14 +976,7 @@ export async function autoPromoteAllStudents(
   operator: string = "Chief Accountant & Admin"
 ): Promise<{ success: boolean; updatedCount: number; breakdown: Record<string, number> }> {
   const allStudents = await prisma.student.findMany();
-  const breakdown: Record<string, number> = {
-    "JSS 1 → JSS 2": 0,
-    "JSS 2 → JSS 3": 0,
-    "JSS 3 → SS 1": 0,
-    "SS 1 → SS 2": 0,
-    "SS 2 → SS 3": 0,
-    "SS 3 → Graduated Alumni": 0,
-  };
+  const breakdown: Record<string, number> = {};
 
   const updates: Array<{ id: string; newClass: string }> = [];
 
@@ -1068,12 +984,8 @@ export async function autoPromoteAllStudents(
     const nextClass = getAutoPromotedClassName(s.class);
     if (nextClass !== s.class) {
       updates.push({ id: s.id, newClass: nextClass });
-      if (s.class.startsWith("JSS 1")) breakdown["JSS 1 → JSS 2"] = (breakdown["JSS 1 → JSS 2"] || 0) + 1;
-      else if (s.class.startsWith("JSS 2")) breakdown["JSS 2 → JSS 3"] = (breakdown["JSS 2 → JSS 3"] || 0) + 1;
-      else if (s.class.startsWith("JSS 3")) breakdown["JSS 3 → SS 1"] = (breakdown["JSS 3 → SS 1"] || 0) + 1;
-      else if (s.class.startsWith("SS 1")) breakdown["SS 1 → SS 2"] = (breakdown["SS 1 → SS 2"] || 0) + 1;
-      else if (s.class.startsWith("SS 2")) breakdown["SS 2 → SS 3"] = (breakdown["SS 2 → SS 3"] || 0) + 1;
-      else if (s.class.startsWith("SS 3")) breakdown["SS 3 → Graduated Alumni"] = (breakdown["SS 3 → Graduated Alumni"] || 0) + 1;
+      const transitionKey = `${s.class.split(" ")[0]} → ${nextClass.split(" ")[0]}`;
+      breakdown[transitionKey] = (breakdown[transitionKey] || 0) + 1;
     }
   }
 
@@ -1188,47 +1100,21 @@ export async function voidReceipt(
 
 // Staff Authentication Queries
 export async function authenticateStaff(input: {
-  mode: "password" | "pin";
   email?: string;
   password?: string;
+  mode?: string;
   pin?: string;
 }): Promise<StaffUser | null> {
-  if (input.mode === "pin") {
-    const cleanPin = input.pin?.trim();
-    const school = await getSchoolProfile();
-    const validPin = school.accountantPin || "1234";
+  const searchEmail = input.email?.toLowerCase().trim() || "";
+  if (!searchEmail || !input.password) return null;
 
-    if (cleanPin && cleanPin === validPin) {
-      const accountantUser = await prisma.staffUser.findFirst({
-        where: {
-          OR: [
-            { id: "usr_accountant" },
-            { id: "usr_bursar" },
-            { role: "Accountant" },
-          ],
-        },
-      });
-      if (accountantUser) return formatStaff(accountantUser);
-    }
-
-    const user = await prisma.staffUser.findFirst({
-      where: { pin: cleanPin },
-    });
-    return user ? formatStaff(user) : null;
-  } else {
-    const searchEmail = input.email?.toLowerCase().trim() || "";
-    const user = await prisma.staffUser.findFirst({
-      where: {
-        OR: [
-          { email: { equals: searchEmail, mode: "insensitive" } },
-          ...(searchEmail === "accountant@alfurqan.edu.ng" ? [{ email: { equals: "bursar@alfurqan.edu.ng", mode: "insensitive" as const } }] : []),
-          ...(searchEmail === "bursar@alfurqan.edu.ng" ? [{ email: { equals: "accountant@alfurqan.edu.ng", mode: "insensitive" as const } }] : []),
-        ],
-        password: input.password,
-      },
-    });
-    return user ? formatStaff(user) : null;
-  }
+  const user = await prisma.staffUser.findFirst({
+    where: {
+      email: { equals: searchEmail, mode: "insensitive" },
+      password: input.password,
+    },
+  });
+  return user ? formatStaff(user) : null;
 }
 
 export async function getStaffUsers(): Promise<StaffUser[]> {
@@ -1242,7 +1128,7 @@ export async function createStaffUser(input: {
   name: string;
   email: string;
   role: "Accountant" | "Admin" | "Cashier";
-  pin: string;
+  pin?: string;
   password?: string;
   title: string;
   avatar?: string;
@@ -1251,10 +1137,10 @@ export async function createStaffUser(input: {
     data: {
       name: input.name.trim(),
       email: input.email.toLowerCase().trim(),
-      role: input.role,
-      pin: input.pin.trim(),
-      password: input.password || `${input.role.toLowerCase()}2026`,
-      title: input.title.trim().replace(/Bursar/gi, "Accountant"),
+      role: input.role || "Admin",
+      pin: input.pin ? input.pin.trim() : "0000",
+      password: input.password || "admin",
+      title: input.title.trim(),
       avatar: input.avatar,
     },
   });
@@ -1276,7 +1162,7 @@ export async function updateStaffUser(
   const data: any = { ...updates };
   if (data.email) data.email = data.email.toLowerCase().trim();
   if (data.pin) data.pin = data.pin.trim();
-  if (data.title) data.title = data.title.replace(/Bursar/gi, "Accountant");
+  if (data.title) data.title = data.title.trim();
 
   const user = await prisma.staffUser.update({
     where: { id },
@@ -1286,8 +1172,9 @@ export async function updateStaffUser(
 }
 
 export async function deleteStaffUser(id: string): Promise<boolean> {
-  if (id === "usr_accountant" || id === "usr_bursar") {
-    throw new Error("Primary Chief Accountant account cannot be deleted.");
+  const count = await prisma.staffUser.count();
+  if (count <= 1) {
+    throw new Error("Cannot delete the only remaining administrator account.");
   }
   await prisma.staffUser.delete({
     where: { id },

@@ -6,11 +6,7 @@ import { Student, ReportSummary, SchoolProfile } from "@/lib/types";
 import { formatNaira, formatNumber } from "@/lib/utils";
 import {
   Download,
-  Printer,
   Filter,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
   Users,
   TrendingUp,
   FileSpreadsheet,
@@ -18,7 +14,6 @@ import {
   Calendar,
   Landmark,
   RotateCcw,
-  Sparkles,
   Search,
   Eye,
   EyeOff,
@@ -96,9 +91,13 @@ export default function ReportsPage() {
 
     const banks = student.paidBanks && student.paidBanks.length > 0 
       ? student.paidBanks 
-      : student.paymentBank 
+      : student.paymentBank && student.paymentBank !== "—"
         ? student.paymentBank.split(", ").filter(Boolean) 
-        : ["Jaiz Bank"];
+        : [];
+
+    if (banks.length === 0) {
+      return <span className="text-slate-400 font-mono text-xs">—</span>;
+    }
 
     return (
       <div className="flex flex-wrap gap-1 items-center">
@@ -185,42 +184,181 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!students.length) return;
+    setIsDownloadingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const formatPdfCurrency = (amount: number) => {
+        return "NGN " + (Number(amount) || 0).toLocaleString();
+      };
+
+      // Header: School Name & Motto
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(7, 94, 84);
+      doc.text(school?.name || "AL-FURQAN INTERNATIONAL ACADEMY", 14, 15);
+
+      doc.setFontSize(9);
+      doc.setTextColor(70, 70, 70);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `${school?.motto || "Knowledge & Guidance"} • ${school?.address || "Along Dass Road, Bauchi State"}`,
+        14,
+        21
+      );
+
+      // Title & Generation Metadata
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(20, 20, 20);
+      const activeSession = school?.currentSession || "2026/2027";
+      doc.text(`Fee Collection & Debtor Report — ${term} (${activeSession})`, 14, 29);
+
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      const dateStr = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      const statusLabel =
+        statusFilter === "ALL"
+          ? "All Students"
+          : statusFilter === "FULL"
+          ? "Full Payment (Cleared)"
+          : statusFilter === "PARTIAL"
+          ? "Part Payment Debtors"
+          : "Unpaid Defaulters";
+      doc.text(
+        `Generated on: ${dateStr} • Filters: Class [${classFilter === "ALL" ? "All Classes" : classFilter}], Bank [${bankFilter === "ALL" ? "All Banks" : bankFilter}], Status [${statusLabel}]`,
+        14,
+        34
+      );
+
+      // Summary Box Banner
+      doc.setFillColor(245, 247, 248);
+      doc.roundedRect(14, 37, 269, 13, 2, 2, "F");
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+
+      const billedStr = formatPdfCurrency(summary?.expectedRevenue || 0);
+      const paidStr = formatPdfCurrency(summary?.collectedRevenue || 0);
+      const debtStr = formatPdfCurrency(summary?.outstandingDebt || 0);
+      const countStr = `${students.length} Students`;
+
+      doc.text(`Total Billed: ${billedStr}`, 18, 45);
+      doc.text(`Total Collected: ${paidStr}`, 80, 45);
+      doc.setTextColor(180, 40, 40);
+      doc.text(`Outstanding Debt: ${debtStr}`, 155, 45);
+      doc.setTextColor(30, 30, 30);
+      doc.text(`Total Records: ${countStr}`, 235, 45);
+
+      // Prepare table rows
+      const tableBody = students.map((s, idx) => [
+        String(idx + 1),
+        s.fullName,
+        s.regNumber,
+        s.class,
+        s.parentName ? `${s.parentName} (${s.parentPhone || ""})` : s.parentPhone || "—",
+        s.totalTermBill > 0 ? formatPdfCurrency(s.totalTermBill) : "—",
+        s.totalPaid > 0 ? formatPdfCurrency(s.totalPaid) : "—",
+        s.totalTermBill === 0 ? "—" : s.balanceRemaining > 0 ? formatPdfCurrency(s.balanceRemaining) : "₦0",
+        s.totalTermBill === 0 ? "Nil" : s.status === "FULL" ? "CLEARED" : s.status === "PARTIAL" ? "PARTIAL" : "UNPAID",
+        s.paymentBank || "—",
+      ]);
+
+      autoTable(doc, {
+        startY: 53,
+        head: [
+          [
+            "#",
+            "Student Name",
+            "Admission No",
+            "Class",
+            "Parent & Phone",
+            "Term Bill",
+            "Paid to Date",
+            "Balance Due",
+            "Status",
+            "Bank",
+          ],
+        ],
+        body: tableBody,
+        headStyles: {
+          fillColor: [7, 94, 84],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 8,
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          valign: "middle",
+        },
+        columnStyles: {
+          0: { cellWidth: 8, halign: "center" },
+          1: { cellWidth: 45, fontStyle: "bold" },
+          2: { cellWidth: 24, fontStyle: "bold" },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 50 },
+          5: { cellWidth: 26, halign: "right" },
+          6: { cellWidth: 26, halign: "right" },
+          7: { cellWidth: 26, halign: "right", fontStyle: "bold" },
+          8: { cellWidth: 22, halign: "center" },
+          9: { cellWidth: 22 },
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        didDrawPage: (data) => {
+          const pageCount = doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(130, 130, 130);
+          doc.text(
+            `Al-Furqan International Academy • Debtor Ledger Report • Page ${data.pageNumber} of ${pageCount} • Bursary & Accounts`,
+            14,
+            202
+          );
+        },
+      });
+
+      const safeClass = classFilter.replace(/\s+/g, "_");
+      const safeTerm = term.replace(/\s+/g, "_");
+      doc.save(
+        `AlFurqan_${safeClass}_Debtor_Report_${safeTerm}_${new Date().toISOString().split("T")[0]}.pdf`
+      );
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
     <AuthGuard>
       <SidebarLayout>
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Printable Official Report Header (Shown only during print) */}
-        <div className="hidden print:block text-center pb-6 border-b-2 border-slate-900 mb-6">
-          <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight">
-            {school?.name || "AL-FURQAN INTERNATIONAL COLLEGE"}
-          </h1>
-          <p className="text-xs font-semibold text-slate-600">
-            Official Accountant & Cashier Fee Collection & Debtor Ledger Report • {term} (2026/2027)
-          </p>
-          <div className="flex justify-center gap-4 text-[11px] font-bold text-slate-700 mt-1">
-            <span>Class Filter: {classFilter === "ALL" ? "All Classes" : classFilter}</span>
-            <span>•</span>
-            <span>Receiving Bank: {bankFilter === "ALL" ? "All Bank Accounts" : bankFilter}</span>
-            <span>•</span>
-            <span>Payment Status: {statusFilter}</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Generated on {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} • Total Records: {students.length} • Certified by Chief Accountant & Authorized Cashier
-          </p>
-        </div>
-
         {/* Page Title & Export Toolbar */}
-        <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Accountant & Cashier Debtor Reports
+              School Fee &amp; Debtor Reports
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Reconcile fee collections, audit cashier intake, identify debtors, and filter collections across specific classes and receiving bank accounts
+              Track fee collections, identify outstanding balances, and filter reports by class or bank account
             </p>
           </div>
 
@@ -262,79 +400,45 @@ export default function ReportsPage() {
 
             <button
               type="button"
-              onClick={handlePrint}
-              className="bg-[#075E54] hover:bg-[#128C7E] text-white px-4.5 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+              onClick={handleDownloadPDF}
+              disabled={isDownloadingPdf || students.length === 0}
+              className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4.5 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer"
             >
-              <Printer className="h-4.5 w-4.5" />
-              <span>Print Executive Report</span>
+              <Download className="h-4.5 w-4.5" />
+              <span>{isDownloadingPdf ? "Preparing PDF..." : "Download PDF Report"}</span>
             </button>
           </div>
         </div>
 
-        {/* Filters Container (Hidden during print) */}
-        <div className="print:hidden bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+        {/* Filters Container */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
           {/* Main Filter Controls Row */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Status Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
-              <button
-                type="button"
-                onClick={() => setStatusFilter("ALL")}
-                className={`px-3.5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                  statusFilter === "ALL"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                All Students
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("FULL")}
-                className={`px-3.5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  statusFilter === "FULL"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Full Payment (Cleared)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("PARTIAL")}
-                className={`px-3.5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  statusFilter === "PARTIAL"
-                    ? "bg-amber-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Clock className="h-4 w-4" />
-                <span>Part Payment Debtors</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("UNPAID")}
-                className={`px-3.5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  statusFilter === "UNPAID"
-                    ? "bg-rose-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <AlertTriangle className="h-4 w-4" />
-                <span>Unpaid Defaulters</span>
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Payment Status Dropdown (Screenshot 2 converted to dropdown) */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl">
+                <Filter className="h-4 w-4 text-slate-500 ml-1" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status:</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as "ALL" | "FULL" | "PARTIAL" | "UNPAID")}
+                  className="h-9 px-1 text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Students</option>
+                  <option value="FULL">Full Payment (Cleared)</option>
+                  <option value="PARTIAL">Part Payment Debtors</option>
+                  <option value="UNPAID">Unpaid Defaulters</option>
+                </select>
+              </div>
 
-            {/* Dropdown Filters: Term, Class, and Bank */}
-            <div className="flex flex-wrap items-center gap-2.5">
               {/* Term Selector */}
-              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-                <Calendar className="h-4 w-4 text-slate-400 ml-1" />
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl">
+                <Calendar className="h-4 w-4 text-slate-500 ml-1" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Term:</span>
                 <select
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
-                  className="h-9 px-1 text-sm font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                  className="h-9 px-1 text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
                 >
                   <option value="1st Term">1st Term 2026/2027</option>
                   <option value="2nd Term">2nd Term 2026/2027</option>
@@ -343,14 +447,24 @@ export default function ReportsPage() {
               </div>
 
               {/* Class Selector */}
-              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-                <Users className="h-4 w-4 text-slate-400 ml-1" />
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl">
+                <Users className="h-4 w-4 text-slate-500 ml-1" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class:</span>
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="h-9 px-1 text-sm font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                  className="h-9 px-1 text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
                 >
                   <option value="ALL">All Classes</option>
+                  <option value="Pre-Nursery">Pre-Nursery</option>
+                  <option value="Nursery 1">Nursery 1</option>
+                  <option value="Nursery 2">Nursery 2</option>
+                  <option value="Basic 1">Basic 1</option>
+                  <option value="Basic 2">Basic 2</option>
+                  <option value="Basic 3">Basic 3</option>
+                  <option value="Basic 4">Basic 4</option>
+                  <option value="Basic 5">Basic 5</option>
+                  <option value="Basic 6">Basic 6</option>
                   <option value="JSS 1">JSS 1</option>
                   <option value="JSS 2">JSS 2</option>
                   <option value="JSS 3">JSS 3</option>
@@ -360,95 +474,34 @@ export default function ReportsPage() {
                 </select>
               </div>
 
-              {/* Bank Selector (Requested Feature) */}
-              <div className="flex items-center gap-1 bg-emerald-50/70 border border-emerald-200 px-2.5 py-1 rounded-xl">
+              {/* Bank Selector */}
+              <div className="flex items-center gap-1.5 bg-emerald-50/70 border border-emerald-200 px-3 py-1 rounded-xl">
                 <Landmark className="h-4 w-4 text-emerald-700 ml-1" />
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Bank:</span>
                 <select
                   value={bankFilter}
                   onChange={(e) => setBankFilter(e.target.value)}
                   className="h-9 px-1 text-sm font-black text-emerald-900 bg-transparent focus:outline-none cursor-pointer"
                 >
                   <option value="ALL">All Payment Banks</option>
-                  <option value="GTBank">GTBank</option>
-                  <option value="Jaiz Bank">Jaiz Bank</option>
-                  <option value="Zenith Bank">Zenith Bank</option>
-                  <option value="Taj Bank">Taj Bank</option>
-                  <option value="First Bank">First Bank</option>
+                  {school?.bankAccounts && school.bankAccounts.length > 0
+                    ? school.bankAccounts.map((b) => (
+                        <option key={b.id} value={b.bankName}>
+                          {b.bankName}
+                        </option>
+                      ))
+                    : null}
                   <option value="Cash">Cash</option>
                 </select>
               </div>
             </div>
-          </div>
 
-          {/* Quick Presets Bar (Specific Examples requested by User) */}
-          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 mr-1">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                Quick Presets:
-              </span>
-
-              {/* Preset 1: JSS 1 paid to GTBank */}
-              <button
-                type="button"
-                onClick={() => {
-                  setClassFilter("JSS 1");
-                  setBankFilter("GTBank");
-                  setStatusFilter("ALL");
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                  classFilter === "JSS 1" && bankFilter === "GTBank"
-                    ? "bg-orange-100 text-orange-900 border-orange-300 ring-2 ring-orange-400/30"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-orange-600" />
-                <span>JSS 1 • GTBank Collections</span>
-              </button>
-
-              {/* Preset 2: SS 2 paid to Jaiz Bank */}
-              <button
-                type="button"
-                onClick={() => {
-                  setClassFilter("SS 2");
-                  setBankFilter("Jaiz Bank");
-                  setStatusFilter("ALL");
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                  classFilter === "SS 2" && bankFilter === "Jaiz Bank"
-                    ? "bg-emerald-100 text-emerald-900 border-emerald-300 ring-2 ring-emerald-400/30"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                <span>SS 2 • Jaiz Bank Collections</span>
-              </button>
-
-              {/* Preset 3: All Part-Payment Debtors */}
-              <button
-                type="button"
-                onClick={() => {
-                  setClassFilter("ALL");
-                  setBankFilter("ALL");
-                  setStatusFilter("PARTIAL");
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                  statusFilter === "PARTIAL" && classFilter === "ALL" && bankFilter === "ALL"
-                    ? "bg-amber-100 text-amber-900 border-amber-300 ring-2 ring-amber-400/30"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>All Part Debtors</span>
-              </button>
-            </div>
-
-            {/* Clear / Reset Filter Button */}
+            {/* Reset Filters Button */}
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="text-xs sm:text-sm font-bold text-slate-500 hover:text-rose-600 flex items-center gap-1.5 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-rose-50"
+                className="text-xs sm:text-sm font-bold text-slate-500 hover:text-rose-600 flex items-center gap-1.5 transition-colors cursor-pointer px-3 py-2 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-200"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Reset Filters</span>
@@ -461,6 +514,11 @@ export default function ReportsPage() {
             <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-sm">
               <div className="flex flex-wrap items-center gap-2.5 text-slate-700 font-medium">
                 <span className="font-black text-emerald-900">Active Criteria:</span>
+                {statusFilter !== "ALL" && (
+                  <span className="bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 text-emerald-800 font-black">
+                    Status: {statusFilter === "FULL" ? "Full Payment" : statusFilter === "PARTIAL" ? "Part Payment Debtors" : "Unpaid Defaulters"}
+                  </span>
+                )}
                 {classFilter !== "ALL" && (
                   <span className="bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 text-emerald-800 font-black">
                     Class: {classFilter}
@@ -469,11 +527,6 @@ export default function ReportsPage() {
                 {bankFilter !== "ALL" && (
                   <span className="bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 text-emerald-800 font-black">
                     Bank: {bankFilter}
-                  </span>
-                )}
-                {statusFilter !== "ALL" && (
-                  <span className="bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 text-emerald-800 font-black">
-                    Status: {statusFilter}
                   </span>
                 )}
                 <span className="text-slate-600">
@@ -644,9 +697,10 @@ export default function ReportsPage() {
 
           <div className="mt-4 overflow-x-auto">
             {loading ? (
-              <div className="py-16 text-center text-slate-400">
-                <div className="animate-spin h-6 w-6 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto mb-2" />
-                <p className="text-sm font-bold">Loading report data...</p>
+              <div className="py-24 text-center">
+                <div className="flex items-center justify-center">
+                  <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
+                </div>
               </div>
             ) : students.length === 0 ? (
               <div className="py-16 text-center">
@@ -709,21 +763,39 @@ export default function ReportsPage() {
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-800 text-sm sm:text-base">
-                        {hideSensitive ? "₦ * * * * * *" : formatNaira(student.totalTermBill)}
+                        {hideSensitive
+                          ? "₦ * * * * * *"
+                          : student.totalTermBill > 0
+                          ? formatNaira(student.totalTermBill)
+                          : "—"}
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800 text-sm sm:text-base">
-                        {hideSensitive ? "₦ * * * * * *" : formatNaira(student.totalPaid)}
+                        {hideSensitive
+                          ? "₦ * * * * * *"
+                          : student.totalPaid > 0
+                          ? formatNaira(student.totalPaid)
+                          : "—"}
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-sm sm:text-base">
-                        <span className={student.balanceRemaining > 0 ? "text-amber-700 font-black" : "text-emerald-700 font-normal"}>
-                          {hideSensitive ? "₦ * * * * * *" : formatNaira(student.balanceRemaining)}
+                        <span className={student.balanceRemaining > 0 ? "text-amber-700 font-black" : "text-slate-400 font-normal"}>
+                          {hideSensitive
+                            ? "₦ * * * * * *"
+                            : student.totalTermBill === 0
+                            ? "—"
+                            : student.balanceRemaining > 0
+                            ? formatNaira(student.balanceRemaining)
+                            : "₦0"}
                         </span>
                       </td>
 
                       <td className="py-3 px-3 text-center">
-                        {student.status === "FULL" ? (
+                        {student.totalTermBill === 0 ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                            Nil
+                          </span>
+                        ) : student.status === "FULL" ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
                             CLEARED
                           </span>

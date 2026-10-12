@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Student } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
-import { Search, PlusCircle, CheckCircle2, Clock, AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
+import { Search, PlusCircle, CheckCircle2, Clock, AlertTriangle, ArrowRight } from "lucide-react";
 
 interface QuickStudentSearchProps {
   onSelectStudent: (student: Student) => void;
@@ -82,7 +82,7 @@ export function QuickStudentSearch({ onSelectStudent }: QuickStudentSearchProps)
             if (query.trim() && results.length > 0) setIsOpen(true);
           }}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by student registration number (e.g. AFIC/2026/0101) or name to issue receipt..."
+          placeholder="Search by student registration number (e.g. P453, N1636, JS201) or name to issue receipt..."
           className="w-full h-13 pl-12 pr-28 rounded-2xl border-2 border-slate-200 bg-white text-sm text-slate-900 font-medium shadow-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/15 focus:border-[#075E54] placeholder:text-slate-400 transition-all"
         />
 
@@ -111,34 +111,6 @@ export function QuickStudentSearch({ onSelectStudent }: QuickStudentSearchProps)
         </div>
       </form>
 
-      {/* Quick Test Demo Chips for testing */}
-      <div className="flex flex-wrap items-center gap-1.5 mt-2.5 px-1 text-xs">
-        <span className="text-emerald-100 font-bold text-[11px] flex items-center gap-1">
-          <Sparkles className="h-3 w-3 text-[#FFB21D]" />
-          <span>Quick Test:</span>
-        </span>
-        <button
-          type="button"
-          onClick={() => setQuery("AFIC/2026/0101")}
-          className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold backdrop-blur-md transition-all cursor-pointer border border-white/20"
-        >
-          AFIC/2026/0101 (Fatima - Full Cleared)
-        </button>
-        <button
-          type="button"
-          onClick={() => setQuery("AFIC/2026/0102")}
-          className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold backdrop-blur-md transition-all cursor-pointer border border-white/20"
-        >
-          AFIC/2026/0102 (Yusuf - Part Debt)
-        </button>
-        <button
-          type="button"
-          onClick={() => setQuery("AFIC/2026/0105")}
-          className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold backdrop-blur-md transition-all cursor-pointer border border-white/20"
-        >
-          AFIC/2026/0105 (Zainab - Unpaid)
-        </button>
-      </div>
 
       {/* Dropdown Suggestions */}
       {isOpen && (
@@ -176,25 +148,33 @@ export function QuickStudentSearch({ onSelectStudent }: QuickStudentSearchProps)
                       <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-slate-700">{student.class}</span>
                         <span>•</span>
-                        <span>Parent: {student.parentPhone}</span>
+                        <span>{student.parentPhone ? `Parent: ${student.parentPhone}` : student.parentName}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                     <div className="text-right">
-                      <div className="text-xs font-mono font-bold text-slate-900">
-                        Paid: {formatNaira(student.totalPaid)}
-                      </div>
-                      <div
-                        className={`text-[11px] font-bold ${
-                          student.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"
-                        }`}
-                      >
-                        {student.balanceRemaining > 0
-                          ? `Debt: ${formatNaira(student.balanceRemaining)}`
-                          : "Fully Cleared"}
-                      </div>
+                      {student.totalTermBill > 0 ? (
+                        <>
+                          <div className="text-xs font-mono font-bold text-slate-900">
+                            Paid: {formatNaira(student.totalPaid)}
+                          </div>
+                          <div
+                            className={`text-[11px] font-bold ${
+                              student.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"
+                            }`}
+                          >
+                            {student.balanceRemaining > 0
+                              ? `Debt: ${formatNaira(student.balanceRemaining)}`
+                              : "Fully Cleared"}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-xs font-semibold text-slate-400">
+                          Fee: —
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -212,11 +192,15 @@ export function QuickStudentSearch({ onSelectStudent }: QuickStudentSearchProps)
                 </div>
               ))}
             </div>
-          ) : !loading ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              No students found matching &quot;{query}&quot;. Try typing the registration number (e.g. AFIC/2026/0101).
+          ) : loading ? (
+            <div className="p-8 flex items-center justify-center">
+              <div className="h-6 w-6 border-2 border-[#075E54] border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : null}
+          ) : (
+            <div className="p-8 text-center text-xs text-slate-500">
+              No students found matching &quot;{query}&quot;. Try typing the school registration number (e.g. P453, N1636, JS201).
+            </div>
+          )}
         </div>
       )}
     </div>

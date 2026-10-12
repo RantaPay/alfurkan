@@ -26,6 +26,15 @@ interface SessionPromotionModalProps {
 }
 
 const LEVEL_FLOW = [
+  { from: "Pre-Nursery", to: "Nursery 1", color: "from-pink-500/10 to-rose-500/10 border-pink-200" },
+  { from: "Nursery 1", to: "Nursery 2", color: "from-rose-500/10 to-orange-500/10 border-rose-200" },
+  { from: "Nursery 2", to: "Basic 1", color: "from-orange-500/10 to-amber-500/10 border-orange-200" },
+  { from: "Basic 1", to: "Basic 2", color: "from-amber-500/10 to-yellow-500/10 border-amber-200" },
+  { from: "Basic 2", to: "Basic 3", color: "from-yellow-500/10 to-lime-500/10 border-yellow-200" },
+  { from: "Basic 3", to: "Basic 4", color: "from-lime-500/10 to-emerald-500/10 border-lime-200" },
+  { from: "Basic 4", to: "Basic 5", color: "from-emerald-500/10 to-teal-500/10 border-emerald-200" },
+  { from: "Basic 5", to: "Basic 6", color: "from-teal-500/10 to-cyan-500/10 border-teal-200" },
+  { from: "Basic 6", to: "JSS 1", color: "from-cyan-500/10 to-blue-500/10 border-cyan-200" },
   { from: "JSS 1", to: "JSS 2", color: "from-blue-500/10 to-indigo-500/10 border-blue-200" },
   { from: "JSS 2", to: "JSS 3", color: "from-indigo-500/10 to-purple-500/10 border-indigo-200" },
   { from: "JSS 3", to: "SS 1", color: "from-purple-500/10 to-emerald-500/10 border-purple-200" },
@@ -50,9 +59,17 @@ export function SessionPromotionModal({
     breakdown?: Record<string, number>;
   } | null>(null);
 
+  // Complete list of levels ordered from earliest to graduating
+  const ALL_LEVELS = [
+    "Pre-Nursery", "Nursery 1", "Nursery 2",
+    "Basic 1", "Basic 2", "Basic 3", "Basic 4", "Basic 5", "Basic 6",
+    "JSS 1", "JSS 2", "JSS 3",
+    "SS 1", "SS 2", "SS 3",
+  ];
+
   // Helper to extract level
   const extractLevel = (className: string) => {
-    for (const lvl of ["JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"]) {
+    for (const lvl of ALL_LEVELS) {
       if (className.startsWith(lvl)) return lvl;
     }
     return className.split(" ")[0] || "Other";
@@ -62,6 +79,15 @@ export function SessionPromotionModal({
   const getNextClassName = (current: string) => {
     const lvl = extractLevel(current);
     const map: Record<string, string> = {
+      "Pre-Nursery": "Nursery 1",
+      "Nursery 1": "Nursery 2",
+      "Nursery 2": "Basic 1",
+      "Basic 1": "Basic 2",
+      "Basic 2": "Basic 3",
+      "Basic 3": "Basic 4",
+      "Basic 4": "Basic 5",
+      "Basic 5": "Basic 6",
+      "Basic 6": "JSS 1",
       "JSS 1": "JSS 2",
       "JSS 2": "JSS 3",
       "JSS 3": "SS 1",

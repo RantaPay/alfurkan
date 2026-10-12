@@ -21,15 +21,19 @@ import {
   Search,
   Sparkles,
   UserPlus,
+  Upload,
+  Database,
   Eye,
   EyeOff,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
+import { DatabaseImportModal } from "@/components/students/DatabaseImportModal";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<Student | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -103,24 +107,37 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-bold border border-white/20 backdrop-blur-md">
                 <Sparkles className="h-3.5 w-3.5 text-[#FFB21D]" />
-                <span>Official Cashier & Accountant Platform</span>
+                <span>Official Bursary &amp; Accounts Portal</span>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsAddStudentOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold border border-white/25 transition-all cursor-pointer shadow-xs"
-              >
-                <UserPlus className="h-3.5 w-3.5 text-[#FFB21D]" />
-                <span>Enroll Student / CSV Import</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold border border-white/25 transition-all cursor-pointer shadow-xs"
+                  title="Upload student list spreadsheet"
+                >
+                  <Upload className="h-3.5 w-3.5 text-[#FFB21D]" />
+                  <span>Upload Students</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddStudentOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 text-xs font-semibold border border-white/15 transition-all cursor-pointer"
+                  title="Enroll a single student"
+                >
+                  <UserPlus className="h-3.5 w-3.5 text-emerald-200" />
+                  <span>Enroll Student</span>
+                </button>
+              </div>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-              Al-Furqan Digital Receipts • Cashier & Accounts OS
+              Al-Furqan Digital Receipts &amp; Bursary Portal
             </h1>
             <p className="text-emerald-100/90 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
-              Instantly search students by registration number, record cash or bank transfers, and issue verifiable digital receipts with full vs. part-payment badges.
+              Search students by admission number, record school fee payments, and issue receipts.
             </p>
 
             {/* Prominent Quick Student Search Bar */}
@@ -133,7 +150,7 @@ export default function DashboardPage() {
 
           {/* Decorative ambient badge */}
           <div className="absolute right-6 -bottom-10 opacity-10 pointer-events-none select-none text-9xl font-black">
-            AFIC
+            AIA
           </div>
         </div>
 
@@ -207,7 +224,7 @@ export default function DashboardPage() {
                 <span className="text-sm font-bold text-slate-400">Students</span>
               </div>
               <div className="text-xs font-semibold text-emerald-700 mt-1.5">
-                100% Cleared • Granted gate & exam pass
+                100% Cleared
               </div>
             </div>
 
@@ -261,7 +278,7 @@ export default function DashboardPage() {
                 </span>
               </h2>
               <p className="text-sm text-slate-500 mt-1">
-                Official receipts recorded by desk cashiers and verified by the accountant
+                Receipts recorded in the system
               </p>
             </div>
 
@@ -320,92 +337,114 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredReceipts.map((receipt) => {
-                  const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-20 text-center">
+                      <div className="flex items-center justify-center py-6">
+                        <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredReceipts.length > 0 ? (
+                  filteredReceipts.map((receipt) => {
+                    const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
 
-                  return (
-                    <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-3">
-                        <Link
-                          href={`/receipts/${receipt.id}`}
-                          className="font-mono font-black text-[#075E54] hover:underline text-sm"
-                        >
-                          {receipt.receiptNumber}
-                        </Link>
-                        <div className="text-xs text-slate-400 font-sans">
-                          {receipt.paymentMethod}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <div className="font-bold text-slate-900 text-sm sm:text-base">
-                          {receipt.studentName}
-                        </div>
-                        <div className="text-xs text-slate-500 font-mono">
-                          {receipt.regNumber} • <span className="font-sans font-semibold text-slate-700">{receipt.studentClass}</span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        {receipt.isVoided ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                            <span>VOIDED</span>
-                          </span>
-                        ) : isFull ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            <span>PAID IN FULL</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200">
-                            <Clock className="h-3.5 w-3.5 text-amber-600" />
-                            <span>PART PAYMENT</span>
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 font-mono font-black text-slate-900 text-sm sm:text-base">
-                        {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.amountPaid)}
-                      </td>
-
-                      <td className="py-3.5 px-3 font-mono font-bold text-sm sm:text-base">
-                        <span className={receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}>
-                          {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.balanceRemaining)}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-3 text-slate-500 text-xs font-medium">
-                        {receipt.date}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                    return (
+                      <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-3">
                           <Link
                             href={`/receipts/${receipt.id}`}
-                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="View / Print Receipt"
+                            className="font-mono font-black text-[#075E54] hover:underline text-sm"
                           >
-                            <ExternalLink className="h-4.5 w-4.5" />
+                            {receipt.receiptNumber}
                           </Link>
+                          <div className="text-xs text-slate-400 font-sans">
+                            {receipt.paymentMethod}
+                          </div>
+                        </td>
 
-                          {/* 1-Click WhatsApp Share */}
-                          <a
-                            href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                              `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International College.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download official digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nCashier & Accounts Department, Al-Furqan International College`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Share to Parent WhatsApp"
-                          >
-                            <MessageSquare className="h-4.5 w-4.5" />
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td className="py-3.5 px-3">
+                          <div className="font-bold text-slate-900 text-sm sm:text-base">
+                            {receipt.studentName}
+                          </div>
+                          <div className="text-xs text-slate-500 font-mono">
+                            {receipt.regNumber} • <span className="font-sans font-semibold text-slate-700">{receipt.studentClass}</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-3">
+                          {receipt.isVoided ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                              <span>VOIDED</span>
+                            </span>
+                          ) : isFull ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>PAID IN FULL</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200">
+                              <Clock className="h-3.5 w-3.5 text-amber-600" />
+                              <span>PART PAYMENT</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-3 font-mono font-black text-slate-900 text-sm sm:text-base">
+                          {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.amountPaid)}
+                        </td>
+
+                        <td className="py-3.5 px-3 font-mono font-bold text-sm sm:text-base">
+                          <span className={receipt.balanceRemaining > 0 ? "text-amber-700" : "text-emerald-700"}>
+                            {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.balanceRemaining)}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-3 text-slate-500 text-xs font-medium">
+                          {receipt.date}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              href={`/receipts/${receipt.id}`}
+                              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                              title="View / Print Receipt"
+                            >
+                              <ExternalLink className="h-4.5 w-4.5" />
+                            </Link>
+
+                            {/* 1-Click WhatsApp Share */}
+                            <a
+                              href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
+                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nAccounts Department, Al-Furqan International Academy`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Share to Parent WhatsApp"
+                            >
+                              <MessageSquare className="h-4.5 w-4.5" />
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
+                      <div className="max-w-md mx-auto space-y-1.5">
+                        <ReceiptIcon className="h-8 w-8 text-slate-300 mx-auto" />
+                        <p className="font-bold text-slate-700">No receipts issued yet</p>
+                        <p className="text-xs text-slate-400">
+                          Search for a student above or click "Issue Receipt" to record a fee payment.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -428,7 +467,14 @@ export default function DashboardPage() {
         onReceiptCreated={() => loadData()}
       />
 
-        {/* Add Student / Bulk Import Modal */}
+        {/* Upload Excel / CSV Database Import Modal */}
+        <DatabaseImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImportSuccess={() => loadData()}
+        />
+
+        {/* Add Student Single Enrollment Modal */}
         <AddStudentModal
           isOpen={isAddStudentOpen}
           onClose={() => setIsAddStudentOpen(false)}

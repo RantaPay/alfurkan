@@ -12,20 +12,20 @@ model SchoolProfile {
   name                 String   @default("Al-Furqan International Academy")
   shortName            String   @default("Al-Furqan")
   motto                String   @default("Knowledge and Guidance")
-  address              String   @default("Along Dass Road / 10 Dukku Close, New GRA, Bauchi, Bauchi State, Nigeria")
+  address              String   @default("Along Dass Road, Bauchi State")
   email                String   @default("admin@alfurqanintlacademy.com")
-  phone                String   @default("+234 804 430 5624 / +234 806 977 0538 / +234 817 799 4444")
+  phone                String   @default("+234 806 977 0538")
   currentTerm          String   @default("1st Term")
-  currentSession       String   @default("2026/2027 Academic Session")
-  bankName             String   @default("Jaiz Bank")
-  accountNumber        String   @default("0012489301")
-  accountName          String   @default("Al-Furqan International College - Fees")
-  accountantName       String   @default("Alhaji Ibrahim S. Danladi") @map("bursarName")
-  accountantPin        String   @default("1234") @map("bursarPin")
+  currentSession       String   @default("2026/2027 Session")
+  bankName             String   @default("")
+  accountNumber        String   @default("")
+  accountName          String   @default("")
+  accountantName       String   @default("Administrator") @map("bursarName")
+  accountantPin        String   @default("") @map("bursarPin")
   logoUrl              String   @default("/logo.png")
   bankAccountsJson     String?  @default("[]")
   receiptPrefix        String   @default("AFIA/")
-  receiptFooterNote    String   @default("Official Receipt • Valid only with authorized Accounts Stamp • Fees paid are non-refundable • All payments subject to bank clearance")
+  receiptFooterNote    String   @default("Receipt • Valid only with authorized Stamp • Fees paid are non-refundable • All payments subject to bank clearance")
   defaultReceiptFormat String   @default("traditional")
   showStamp            Boolean  @default(true)
   feeStructureJson       String?  @default("[]")
@@ -37,8 +37,8 @@ model StaffUser {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  role      String   // "Accountant" | "Admin" | "Cashier"
-  pin       String   // 4-digit PIN
+  role      String   // "Admin"
+  pin       String   @default("")
   password  String
   title     String
   avatar    String?
@@ -54,9 +54,9 @@ model Student {
   parentName       String
   parentPhone      String
   parentEmail      String?
-  totalTermBill    Float     @default(165000)
+  totalTermBill    Float     @default(0)
   totalPaid        Float     @default(0)
-  balanceRemaining Float     @default(165000)
+  balanceRemaining Float     @default(0)
   status           String    @default("UNPAID") // "FULL" | "PARTIAL" | "UNPAID"
   isRepeating      Boolean   @default(false)
   lastPaymentDate  String?

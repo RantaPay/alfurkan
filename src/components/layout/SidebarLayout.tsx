@@ -50,7 +50,7 @@ export function SidebarLayout({
   // Navigation Items (Vertical in Sidebar)
   const navGroups = [
     {
-      group: "FINANCIAL LEDGER & CORE",
+      group: "BURSARY & ACCOUNTS",
       items: [
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
         { name: "Receipts Ledger", href: "/receipts", icon: Receipt },
@@ -59,7 +59,7 @@ export function SidebarLayout({
       ],
     },
     {
-      group: "SYSTEM CONFIGURATION",
+      group: "ADMINISTRATION",
       items: [
         { name: "School Settings", href: "/settings", icon: Settings },
       ],
@@ -159,7 +159,7 @@ export function SidebarLayout({
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs font-medium text-slate-500 hidden sm:inline">
-                    Cashier & Accounts OS
+                    Bursary &amp; Accounts
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -303,14 +303,6 @@ export function SidebarLayout({
               </div>
             ))}
           </nav>
-
-          {/* Mobile Drawer Footer */}
-          <div className="p-3 border-t border-slate-100 bg-slate-50/70 text-center">
-            <div className="text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5">
-              <Database className="h-3.5 w-3.5 text-emerald-600" />
-              <span>PostgreSQL Production Database</span>
-            </div>
-          </div>
         </aside>
 
         {/* ------------------------------------------------------- */}
@@ -357,20 +349,6 @@ export function SidebarLayout({
               </div>
             ))}
           </nav>
-
-          {/* Desktop Sidebar Footer */}
-          <div className="p-3 border-t border-slate-100 bg-slate-50/60">
-            <div className="px-2 py-1 flex items-center justify-between text-xs text-slate-500 font-medium">
-              <span className="flex items-center gap-1.5">
-                <Database className="h-3.5 w-3.5 text-emerald-600" />
-                <span>PostgreSQL DB</span>
-              </span>
-              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                Connected
-              </span>
-            </div>
-          </div>
         </aside>
 
         {/* ------------------------------------------------------- */}

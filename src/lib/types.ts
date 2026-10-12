@@ -19,7 +19,7 @@ export interface FeeItem {
 
 export interface Student {
   id: string;
-  regNumber: string; // e.g. AFIC/2026/001
+  regNumber: string; // e.g. P453, N1636, JS201
   fullName: string;
   class: string; // e.g. JSS 1 Diamond, SS 2 Science
   gender: "Male" | "Female";
@@ -59,7 +59,7 @@ export interface ReceiptItem {
 
 export interface Receipt {
   id: string;
-  receiptNumber: string; // e.g. AFIC-RCP-2026-0041
+  receiptNumber: string; // e.g. AIA-RCP-2026-0041
   studentId: string;
   regNumber: string;
   studentName: string;
