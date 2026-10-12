@@ -944,15 +944,10 @@ export default function SettingsPage() {
 
                 {/* Term & Session Configuration Bar */}
                 <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-[#075E54]" />
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-800">
-                        Target Academic Period for this Fee Schedule
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">
-                      Updates here sync with billing & receipts
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-[#075E54]" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+                      Target Academic Period for this Fee Schedule
                     </span>
                   </div>
 
@@ -1366,10 +1361,7 @@ export default function SettingsPage() {
           )}
 
               {/* Bottom Save Bar */}
-              <div className="flex items-center justify-between pt-4 pb-12 border-t border-slate-200">
-                <span className="text-xs font-medium text-slate-500">
-                  Last synchronized with database. Changes persist immediately to receipts & statements.
-                </span>
+              <div className="flex items-center justify-end pt-4 pb-12 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => handleSaveSettings()}

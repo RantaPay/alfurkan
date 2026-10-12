@@ -16,7 +16,7 @@ import {
   UserPlus,
   Edit2,
   GraduationCap,
-  Database,
+  FileSpreadsheet,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
 import { EditStudentModal } from "@/components/students/EditStudentModal";
@@ -92,9 +92,9 @@ export default function StudentsPage() {
               type="button"
               onClick={() => setIsImportModalOpen(true)}
               className="bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 text-emerald-950 px-4 py-2.5 rounded-xl text-sm font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-              title="Upload official student list spreadsheet"
+              title="Upload student list spreadsheet"
             >
-              <Database className="h-4.5 w-4.5 text-[#075E54]" />
+              <FileSpreadsheet className="h-4.5 w-4.5 text-[#075E54]" />
               <span>Upload Student List (Excel)</span>
             </button>
 

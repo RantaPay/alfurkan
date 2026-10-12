@@ -343,8 +343,8 @@ export function ReceiptModal({
                 </div>
 
                 {isSearching && (
-                  <div className="text-xs text-slate-400 font-medium py-2 px-3">
-                    Searching student database...
+                  <div className="py-2.5 px-3 flex items-center justify-center">
+                    <div className="h-4 w-4 border-2 border-[#075E54] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
 

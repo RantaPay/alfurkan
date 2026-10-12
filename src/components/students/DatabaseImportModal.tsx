@@ -117,7 +117,7 @@ export function DatabaseImportModal({
 
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to import students into database.");
+        throw new Error(data.error || "Failed to import students.");
       }
 
       setCompletionStats(data);
@@ -137,7 +137,7 @@ export function DatabaseImportModal({
         onImportSuccess();
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "An error occurred during database import.");
+      setErrorMessage(err.message || "An error occurred while importing students.");
     } finally {
       setIsExecuting(false);
     }
@@ -294,7 +294,7 @@ export function DatabaseImportModal({
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-800">
-                      {file ? file.name : "Choose or drag & drop your student database"}
+                      {file ? file.name : "Choose or drag & drop your student spreadsheet"}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
                       {file

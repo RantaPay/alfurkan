@@ -194,7 +194,7 @@ export default function ReceiptViewPage() {
           <AlertCircle className="h-12 w-12 text-rose-500 mx-auto" />
           <h2 className="text-lg font-black text-slate-900">Receipt Not Found</h2>
           <p className="text-xs text-slate-500">
-            The requested school receipt could not be retrieved from the database.
+            The requested school receipt could not be found.
           </p>
           <Link
             href="/"
