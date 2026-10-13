@@ -33,7 +33,7 @@ interface SidebarLayoutProps {
 export function SidebarLayout({
   children,
   onOpenIssueModal,
-  schoolName = "Al-Furqan International Academy",
+  schoolName = "Alfurqan International Academy",
   currentTerm = "1st Term 2026/2027",
   logoUrl = "/logo.png",
 }: SidebarLayoutProps) {
@@ -53,7 +53,7 @@ export function SidebarLayout({
       group: "BURSARY & ACCOUNTS",
       items: [
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
-        { name: "Receipts Ledger", href: "/receipts", icon: Receipt },
+        { name: "Receipts", href: "/receipts", icon: Receipt },
         { name: "Debtor Reports", href: "/reports", icon: BarChart3 },
         { name: "Students", href: "/students", icon: Users },
       ],

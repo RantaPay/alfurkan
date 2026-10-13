@@ -83,7 +83,7 @@ export default function ReportsPage() {
 
   const hasActiveFilters = classFilter !== "ALL" || bankFilter !== "ALL" || statusFilter !== "ALL";
 
-  // Helper to style bank badge in the ledger
+  // Helper to style bank badge
   const renderBankBadge = (student: Student) => {
     if (student.status === "UNPAID" && (!student.paidBanks || student.paidBanks.length === 0)) {
       return <span className="text-slate-400 font-mono text-xs">—</span>;
@@ -206,7 +206,7 @@ export default function ReportsPage() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.setTextColor(7, 94, 84);
-      doc.text(school?.name || "AL-FURQAN INTERNATIONAL ACADEMY", 14, 15);
+      doc.text(school?.name || "ALFURQAN INTERNATIONAL ACADEMY", 14, 15);
 
       doc.setFontSize(9);
       doc.setTextColor(70, 70, 70);
@@ -328,7 +328,7 @@ export default function ReportsPage() {
           doc.setFont("helvetica", "normal");
           doc.setTextColor(130, 130, 130);
           doc.text(
-            `Al-Furqan International Academy • Debtor Ledger Report • Page ${data.pageNumber} of ${pageCount} • Bursary & Accounts`,
+            `Alfurqan International Academy • Debtor Report • Page ${data.pageNumber} of ${pageCount} • Bursary & Accounts`,
             14,
             202
           );
@@ -615,7 +615,7 @@ export default function ReportsPage() {
                     Bank Reconciliation & Treasury Breakdown
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Verified collections by receiving bank account • Click any bank card to filter ledger
+                    Verified collections by receiving bank account • Click any bank card to filter
                   </p>
                 </div>
               </div>
@@ -674,7 +674,7 @@ export default function ReportsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
             <div>
               <h2 className="text-lg font-black text-slate-900">
-                Student Debt & Payment Ledger ({students.length} Records)
+                Student Debt &amp; Payments ({students.length} Records)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Showing {students.length} students {bankFilter !== "ALL" ? `who made payments to ${bankFilter}` : ""}

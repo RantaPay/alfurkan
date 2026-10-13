@@ -121,6 +121,17 @@ export interface FeeScheduleHistoryEntry {
   summaryText?: string;
 }
 
+export interface ConcessionCategoryConfig {
+  preNurseryNurseryPb: number;
+  basic: number;
+  jss1_2: number;
+  jss3: number;
+  ss1: number;
+  ss2_3: number;
+  dualSrYr: number;
+  adf: number;
+}
+
 export interface SchoolProfile {
   name: string;
   shortName: string;
@@ -143,6 +154,7 @@ export interface SchoolProfile {
   showStamp?: boolean;
   feeStructure?: ClassFeeConfig[];
   feeScheduleHistory?: FeeScheduleHistoryEntry[];
+  concessions?: ConcessionCategoryConfig;
 }
 
 export interface BankReconciliationItem {

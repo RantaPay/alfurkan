@@ -80,12 +80,12 @@ function LoginForm() {
         {/* Top Branding */}
         <div className="text-center space-y-3">
           <div className="h-20 w-20 rounded-3xl bg-white p-2.5 shadow-xl mx-auto flex items-center justify-center border border-white/20">
-            <img src="/logo.png" alt="Al-Furqan Crest" className="h-full w-full object-contain" />
+            <img src="/logo.png" alt="Alfurqan Crest" className="h-full w-full object-contain" />
           </div>
 
           <div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Al-Furqan International Academy
+              Alfurqan International Academy
             </h1>
             <p className="text-xs text-slate-300 font-medium mt-1">
               Bursary &amp; Accounts Portal

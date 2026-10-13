@@ -5,7 +5,7 @@ import path from "path";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting PostgreSQL database migration for Al-Furqan Pay...");
+  console.log("🌱 Starting PostgreSQL database migration for Alfurqan Pay...");
 
   const dbFilePath = path.join(process.cwd(), "data", "alfurqan-db.json");
   let jsonDB: any = null;
@@ -20,8 +20,8 @@ async function main() {
 
   // 1. School Profile
   const schoolData = jsonDB?.school || {
-    name: "Al-Furqan International Academy",
-    shortName: "Al-Furqan",
+    name: "Alfurqan International Academy",
+    shortName: "Alfurqan",
     motto: "Knowledge and Guidance",
     address: "Along Dass Road, Bauchi State",
     email: "admin@alfurqanintlacademy.com",
@@ -30,8 +30,8 @@ async function main() {
     currentSession: "2026/2027 Session",
     bankName: "Jaiz Bank",
     accountNumber: "0012489301",
-    accountName: "Al-Furqan International Academy - Fees",
-    accountantName: "Alhaji Ibrahim S. Danladi",
+    accountName: "Alfurqan International Academy - Fees",
+    accountantName: "Ibrahim S. Danladi",
     accountantPin: "1234",
     logoUrl: "/logo.png",
   };
@@ -40,7 +40,7 @@ async function main() {
     where: { id: "default" },
     update: {
       name: schoolData.name,
-      shortName: schoolData.shortName || "Al-Furqan",
+      shortName: schoolData.shortName || "Alfurqan",
       motto: schoolData.motto || "Knowledge and Guidance",
       address: schoolData.address,
       email: schoolData.email,
@@ -57,7 +57,7 @@ async function main() {
     create: {
       id: "default",
       name: schoolData.name,
-      shortName: schoolData.shortName || "Al-Furqan",
+      shortName: schoolData.shortName || "Alfurqan",
       motto: schoolData.motto || "Knowledge and Guidance",
       address: schoolData.address,
       email: schoolData.email,

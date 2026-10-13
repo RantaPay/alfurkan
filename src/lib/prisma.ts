@@ -5,9 +5,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Refresh PrismaClient instance on reload in development to pick up generated client schema
-export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
-});
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+  });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 

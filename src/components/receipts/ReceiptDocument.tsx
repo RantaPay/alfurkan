@@ -114,7 +114,7 @@ export function ReceiptDocument({
             }`}
           >
             <FileText className="h-4 w-4" />
-            <span>Detailed Ledger Statement</span>
+            <span>Detailed Statement</span>
           </button>
         </div>
 
@@ -198,7 +198,7 @@ export function ReceiptDocument({
                 </div>
               )}
               <h2 className="text-sm sm:text-base font-black tracking-tight uppercase leading-snug">
-                {school?.name || "AL-FURQAN INTERNATIONAL ACADEMY"}
+                {school?.name || "ALFURQAN INTERNATIONAL ACADEMY"}
               </h2>
               <p className="text-[10px] font-bold italic text-slate-700">
                 {school?.motto || "Knowledge & Guidance"}
@@ -301,7 +301,7 @@ export function ReceiptDocument({
               )}
             </div>
 
-            {/* Financial Ledger Totals */}
+            {/* Financial Totals */}
             <div className="py-2.5 space-y-1 border-b-2 border-slate-900 text-xs">
               <div className="flex justify-between text-slate-700">
                 <span>Total Term Bill:</span>
@@ -340,7 +340,7 @@ export function ReceiptDocument({
             <div className="py-2 border-t border-dashed border-slate-400 text-center space-y-0.5">
               <div className="pt-3 border-b border-slate-400 w-36 mx-auto" />
               <div className="text-[10px] font-black text-slate-900 uppercase">
-                {school?.accountantName || "Alhaji Ibrahim S. Danladi"}
+                {school?.accountantName || "Ibrahim S. Danladi"}
               </div>
               <div className="text-[9px] text-slate-600 uppercase tracking-wider">
                 Authorized Cashier & Accounts Dept • Verified
@@ -350,7 +350,7 @@ export function ReceiptDocument({
             {/* Footer Notes */}
             <div className="pt-2 text-center text-[9px] text-slate-600 space-y-0.5">
               <p>Receipt • Fees paid are non-refundable.</p>
-              <p className="font-bold text-slate-900">*** AL-FURQAN INTERNATIONAL ACADEMY ***</p>
+              <p className="font-bold text-slate-900">*** ALFURQAN INTERNATIONAL ACADEMY ***</p>
               <div className="pt-2 text-slate-400 select-none tracking-widest text-[10px]">
                 ✂ - - - - - - - - - - - - - - - - - - - -
               </div>
@@ -401,7 +401,7 @@ export function ReceiptDocument({
                 <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-lg p-1 bg-white border border-emerald-900/30 shadow-2xs flex items-center justify-center overflow-hidden">
                   <img
                     src={school?.logoUrl || "/logo.png"}
-                    alt={school?.name || "Al-Furqan"}
+                    alt={school?.name || "Alfurqan"}
                     className="h-full w-full object-contain"
                   />
                 </div>
@@ -410,7 +410,7 @@ export function ReceiptDocument({
               {/* Center: Official Institutional Header */}
               <div className="flex-1 text-center px-1.5">
                 <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase leading-snug">
-                  {school?.name || "AL-FURQAN INTERNATIONAL ACADEMY"}
+                  {school?.name || "ALFURQAN INTERNATIONAL ACADEMY"}
                 </h1>
                 <p className="text-[11px] font-bold text-emerald-900 italic mt-0.5">
                   {school?.motto || "Knowledge and Guidance"} • العلم والتربية
@@ -533,7 +533,7 @@ export function ReceiptDocument({
                     </div>
                   </div>
 
-                  {/* Ledger Balance Summary */}
+                  {/* Balance Summary */}
                   <div className="bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-[11px] space-y-0.5">
                     <div className="flex justify-between text-slate-600">
                       <span>Total Term Bill:</span>
@@ -568,7 +568,7 @@ export function ReceiptDocument({
                       <path id="topCurve" d="M 18,70 A 52,52 0 0,1 122,70" fill="none" />
                       <text className="text-[8.5px] font-black tracking-wider uppercase fill-current">
                         <textPath href="#topCurve" startOffset="50%" textAnchor="middle">
-                          AL-FURQAN INT&apos;L ACADEMY
+                          ALFURQAN INT&apos;L ACADEMY
                         </textPath>
                       </text>
                       <path id="bottomCurve" d="M 122,70 A 52,52 0 0,1 18,70" fill="none" />
@@ -600,7 +600,7 @@ export function ReceiptDocument({
 
                   <div className="w-36 border-b border-slate-900 pb-0.5 text-center">
                     <span className="text-[11px] font-bold text-slate-950">
-                      {school?.accountantName || "Alhaji Ibrahim S. Danladi"}
+                      {school?.accountantName || "Ibrahim S. Danladi"}
                     </span>
                   </div>
                   <div className="text-[9.5px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">
@@ -682,7 +682,7 @@ export function ReceiptDocument({
                 </table>
               </div>
 
-              {/* Financial Ledger Calculation */}
+              {/* Financial Calculation */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-sm space-y-1.5">
                   <span className="font-bold text-slate-900 block mb-1">Payment Particulars:</span>

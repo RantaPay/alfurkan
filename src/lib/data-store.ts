@@ -10,9 +10,14 @@ import {
   BankAccountConfig,
   ClassFeeConfig,
   FeeScheduleHistoryEntry,
+  ConcessionCategoryConfig,
 } from "./types";
 import { Prisma } from "@prisma/client";
-import { getBillForClass } from "./student-importer";
+import {
+  DEFAULT_CONCESSIONS,
+  calculateStudentBill,
+  detectStudentCategory,
+} from "./student-importer";
 
 export const DEFAULT_USERS: StaffUser[] = [];
 
@@ -36,8 +41,8 @@ export function formatSessionCode(sessionStr?: string): string {
 }
 
 export const DEFAULT_SCHOOL: SchoolProfile = {
-  name: "Al-Furqan International Academy",
-  shortName: "Al-Furqan",
+  name: "Alfurqan International Academy",
+  shortName: "Alfurqan",
   motto: "Knowledge and Guidance",
   address: "Along Dass Road, Bauchi State",
   email: "admin@alfurqanintlacademy.com",
@@ -57,6 +62,7 @@ export const DEFAULT_SCHOOL: SchoolProfile = {
   showStamp: true,
   bankAccounts: [],
   feeStructure: [],
+  concessions: DEFAULT_CONCESSIONS,
 };
 
 // Formatter Helpers to map Prisma database models to frontend types
@@ -182,6 +188,21 @@ function formatSchool(s: any): SchoolProfile {
     }
   }
 
+  let concessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+  if (s.concessionsJson) {
+    try {
+      const parsed = JSON.parse(s.concessionsJson);
+      if (parsed && typeof parsed === "object") {
+        concessions = {
+          ...DEFAULT_CONCESSIONS,
+          ...parsed,
+        };
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   const accountantName = s.accountantName || "Administrator";
   const accountantPin = s.accountantPin || "";
 
@@ -209,6 +230,7 @@ function formatSchool(s: any): SchoolProfile {
     bankAccounts,
     feeStructure,
     feeScheduleHistory,
+    concessions,
   };
 }
 
@@ -237,6 +259,7 @@ export async function getStudents(
     where.OR = [
       { fullName: { contains: q, mode: "insensitive" } },
       { regNumber: { contains: q, mode: "insensitive" } },
+      { parentName: { contains: q, mode: "insensitive" } },
       { parentPhone: { contains: q, mode: "insensitive" } },
     ];
   }
@@ -385,10 +408,11 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     });
 
     let effectiveBill = student.totalTermBill || 0;
-    if (effectiveBill === 0 && school?.feeStructureJson) {
+    if (effectiveBill === 0 && school?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
       try {
         const fees = JSON.parse(school.feeStructureJson);
-        const configuredBill = getBillForClass(student.class, fees);
+        const concessions = school.concessionsJson ? JSON.parse(school.concessionsJson) : DEFAULT_CONCESSIONS;
+        const configuredBill = calculateStudentBill(student.fullName, student.class, fees, concessions);
         if (configuredBill > 0) {
           effectiveBill = configuredBill;
         }
@@ -399,11 +423,11 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     const newTotalPaid = prevTotalPaid + input.amountPaid;
     const newBalanceRemaining = Math.max(0, effectiveBill - newTotalPaid);
     const paymentStatus: "FULL" | "PARTIAL" =
-      effectiveBill > 0 && newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
+      newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
 
     const currentTerm = school?.currentTerm || "1st Term";
     const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
-    const accountantName = school?.accountantName || "Alhaji Ibrahim S. Danladi";
+    const accountantName = school?.accountantName || "Ibrahim S. Danladi";
 
     // 3. Generate sequential receipt number in format session/counter (e.g. 2026-27/0001)
     const sessionCode = formatSessionCode(currentSession);
@@ -509,7 +533,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       },
     });
 
-    // 6. Update student ledger in PostgreSQL
+    // 6. Update student balance in PostgreSQL
     await tx.student.update({
       where: { id: student.id },
       data: {
@@ -692,7 +716,7 @@ export async function getSchoolProfile(): Promise<SchoolProfile> {
 }
 
 export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { feeRevisionNote?: string }): Promise<SchoolProfile> {
-  const { bankAccounts, feeStructure, feeScheduleHistory, feeRevisionNote, ...rest } = updates;
+  const { bankAccounts, feeStructure, feeScheduleHistory, feeRevisionNote, concessions, ...rest } = updates;
   const prismaData: any = { ...rest };
 
   if (bankAccounts !== undefined) {
@@ -703,6 +727,10 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
       prismaData.accountNumber = defaultAcc.accountNumber;
       prismaData.accountName = defaultAcc.accountName;
     }
+  }
+
+  if (concessions !== undefined) {
+    prismaData.concessionsJson = JSON.stringify(concessions);
   }
 
   if (feeStructure !== undefined) {
@@ -725,7 +753,7 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
 
       const activeSession = updates.currentSession || current?.currentSession || "2026/2027 Academic Session";
       const activeTerm = updates.currentTerm || current?.currentTerm || "1st Term";
-      const updater = updates.accountantName || current?.accountantName || "Alhaji Ibrahim S. Danladi (Accountant)";
+      const updater = updates.accountantName || current?.accountantName || "Ibrahim S. Danladi (Accountant)";
 
       const newHistoryEntry: FeeScheduleHistoryEntry = {
         id: `fee_rev_${Date.now()}`,
@@ -756,45 +784,57 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
   });
 
   const isFeeUpdate = feeStructure !== undefined;
-  if (isFeeUpdate && Array.isArray(feeStructure)) {
-    for (const f of feeStructure) {
-      if (!f.classLevel || f.totalBill === undefined) continue;
-      const bill = Number(f.totalBill) || 0;
-      const cleanLvl = f.classLevel.trim();
+  const isConcessionUpdate = concessions !== undefined;
+  if (isFeeUpdate || isConcessionUpdate) {
+    let activeFees: ClassFeeConfig[] = [];
+    if (feeStructure !== undefined && Array.isArray(feeStructure)) {
+      activeFees = feeStructure;
+    } else if (updated.feeStructureJson) {
+      try {
+        activeFees = JSON.parse(updated.feeStructureJson);
+      } catch {}
+    }
 
-      // 1. Fast bulk update for students who have not made any payments (99% of students)
-      await prisma.student.updateMany({
-        where: {
-          class: { startsWith: cleanLvl },
-          totalPaid: 0,
-        },
-        data: {
-          totalTermBill: bill,
-          balanceRemaining: bill,
-          status: "UNPAID",
-        },
-      });
+    let activeConcessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+    if (concessions !== undefined) {
+      activeConcessions = { ...DEFAULT_CONCESSIONS, ...concessions };
+    } else if (updated.concessionsJson) {
+      try {
+        activeConcessions = { ...DEFAULT_CONCESSIONS, ...JSON.parse(updated.concessionsJson) };
+      } catch {}
+    }
 
-      // 2. Update students who have made payments to recalculate their balance and status
-      const paidStudents = await prisma.student.findMany({
-        where: {
-          class: { startsWith: cleanLvl },
-          totalPaid: { gt: 0 },
-        },
-      });
+    const allStudents = await prisma.student.findMany({
+      select: {
+        id: true,
+        fullName: true,
+        class: true,
+        totalPaid: true,
+        totalTermBill: true,
+      },
+    });
 
-      for (const s of paidStudents) {
-        const bal = Math.max(0, bill - s.totalPaid);
-        const status = bill === 0 ? "UNPAID" : bal === 0 ? "FULL" : "PARTIAL";
-        await prisma.student.update({
-          where: { id: s.id },
-          data: {
-            totalTermBill: bill,
-            balanceRemaining: bal,
-            status,
-          },
-        });
+    const updateOps: Promise<any>[] = [];
+    for (const s of allStudents) {
+      const targetBill = calculateStudentBill(s.fullName, s.class, activeFees, activeConcessions);
+      if (s.totalTermBill !== targetBill) {
+        const bal = Math.max(0, targetBill - s.totalPaid);
+        const status = targetBill === 0 ? "FULL" : bal === 0 ? "FULL" : s.totalPaid > 0 ? "PARTIAL" : "UNPAID";
+        updateOps.push(
+          prisma.student.update({
+            where: { id: s.id },
+            data: {
+              totalTermBill: targetBill,
+              balanceRemaining: bal,
+              status,
+            },
+          })
+        );
       }
+    }
+
+    for (let i = 0; i < updateOps.length; i += 50) {
+      await Promise.all(updateOps.slice(i, i + 50));
     }
   }
 
@@ -972,6 +1012,34 @@ export async function updateStudent(
   return formatStudent(updated);
 }
 
+export async function deleteStudent(id: string, operator?: string): Promise<boolean> {
+  const current = await prisma.student.findUnique({
+    where: { id },
+  });
+  if (!current) {
+    throw new Error("Student not found");
+  }
+
+  await prisma.student.delete({
+    where: { id },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: "STUDENT_DELETED",
+      performedBy: operator || "Accountant/Admin",
+      details: JSON.stringify({
+        studentId: id,
+        regNumber: current.regNumber,
+        fullName: current.fullName,
+        class: current.class,
+      }),
+    },
+  });
+
+  return true;
+}
+
 export async function promoteStudentsSession(
   promotions: Array<{
     studentId: string;
@@ -1139,7 +1207,7 @@ export async function voidReceipt(
     }
 
     const school = await tx.schoolProfile.findUnique({ where: { id: "default" } });
-    const operator = voidedBy || school?.accountantName || "Alhaji Ibrahim S. Danladi";
+    const operator = voidedBy || school?.accountantName || "Ibrahim S. Danladi";
     const now = new Date();
 
     // 1. Mark receipt as voided
@@ -1154,7 +1222,7 @@ export async function voidReceipt(
       include: { items: true },
     });
 
-    // 2. Re-adjust student ledger from all remaining active receipts
+    // 2. Re-adjust student balance from all remaining active receipts
     const student = await tx.student.findUnique({
       where: { id: receipt.studentId },
     });

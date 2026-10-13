@@ -5,6 +5,7 @@ import {
   createStudent,
   importStudentsBulk,
   updateStudent,
+  deleteStudent,
   promoteStudentsSession,
   autoPromoteAllStudents,
 } from "@/lib/data-store";
@@ -95,6 +96,24 @@ export async function PATCH(request: Request) {
 
     const updated = await updateStudent(id, updates);
     return NextResponse.json({ success: true, student: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Student ID is required." },
+        { status: 400 }
+      );
+    }
+
+    await deleteStudent(id);
+    return NextResponse.json({ success: true, message: "Student deleted successfully." });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

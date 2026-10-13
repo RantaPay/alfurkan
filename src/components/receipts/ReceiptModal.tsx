@@ -82,10 +82,9 @@ export function ReceiptModal({
       setSelectedStudent(preselectedStudent);
       setDepositorName(preselectedStudent.parentName || "");
       setDepositorPhone(preselectedStudent.parentPhone || "");
-      // Auto-populate initial suggested tuition amount based on student's remaining balance if set
-      const remaining = preselectedStudent.balanceRemaining > 0 ? preselectedStudent.balanceRemaining : preselectedStudent.totalTermBill;
+      // Amount input starts empty so cashier manually types amount paid
       setItems([
-        { name: "Tuition / School Fees", category: "Tuition", amount: remaining || 0 },
+        { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
       ]);
     }
   }, [preselectedStudent]);
@@ -257,7 +256,7 @@ export function ReceiptModal({
         <div className="bg-[#075E54] text-white px-5 sm:px-7 py-4.5 flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 rounded-2xl bg-white p-1 flex items-center justify-center border border-white/30 overflow-hidden shadow-xs shrink-0">
-              <img src="/logo.png" alt="Al-Furqan Crest" className="h-full w-full object-contain" />
+              <img src="/logo.png" alt="Alfurqan Crest" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-1.5 font-black text-sm sm:text-base leading-tight">
@@ -265,7 +264,7 @@ export function ReceiptModal({
                 <Sparkles className="h-4 w-4 text-[#FFB21D]" />
               </div>
               <p className="text-[11px] text-emerald-100 font-medium">
-                Al-Furqan International Academy • Cashier & Accounts Clearance Desk
+                Alfurqan International Academy • Accounts Desk
               </p>
             </div>
           </div>
@@ -342,9 +341,8 @@ export function ReceiptModal({
                           setDepositorPhone(std.parentPhone || "");
                           setSearchQuery("");
                           setSearchResults([]);
-                          const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
                           setItems([
-                            { name: "Tuition / School Fees", category: "Tuition", amount: rem },
+                            { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
                           ]);
                         }
                       }
@@ -370,10 +368,8 @@ export function ReceiptModal({
                           setDepositorName(std.parentName || "");
                           setDepositorPhone(std.parentPhone || "");
                           setSearchQuery("");
-                          const bill = std.totalTermBill > 0 ? std.totalTermBill : getBillForClass(std.class, feeStructure);
-                          const rem = std.balanceRemaining > 0 ? std.balanceRemaining : (bill > (std.totalPaid || 0) ? bill - (std.totalPaid || 0) : bill);
                           setItems([
-                            { name: "Tuition / School Fees", category: "Tuition", amount: rem || 0 },
+                            { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
                           ]);
                         }}
                         className="p-3.5 hover:bg-emerald-50/60 cursor-pointer flex items-center justify-between transition-colors"
@@ -688,11 +684,11 @@ export function ReceiptModal({
                 type="text"
                 value={depositorName}
                 onChange={(e) => setDepositorName(e.target.value)}
-                placeholder="e.g. Alhaji Musa Garba (Optional — defaults to parent name if blank)"
+                placeholder="e.g. Musa Garba (Optional — defaults to parent name if blank)"
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
               />
               <span className="text-[11px] text-slate-500 mt-1 block">
-                Optional: leave blank if not applicable. If omitted, the receipt will be issued directly with the registered parent name.
+                Optional: leave blank to use the parent name.
               </span>
             </div>
           </div>

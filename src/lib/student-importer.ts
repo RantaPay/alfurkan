@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { CreateStudentInput } from "./types";
+import { CreateStudentInput, ConcessionCategoryConfig } from "./types";
 
 export interface ParsedStudentItem {
   index: number;
@@ -131,6 +131,98 @@ export function standardizeClassName(sheetName: string, title?: string): string 
   return sheetName.trim();
 }
 
+export const DEFAULT_CONCESSIONS: ConcessionCategoryConfig = {
+  preNurseryNurseryPb: 21500,
+  basic: 24000,
+  jss1_2: 30000,
+  jss3: 45000,
+  ss1: 35000,
+  ss2_3: 52500,
+  dualSrYr: 5000,
+  adf: 0,
+};
+
+export function detectStudentCategory(fullName: string): "ADF" | "DUAL_SR_YR" | "SR" | "YR" | "REGULAR" {
+  if (!fullName) return "REGULAR";
+  const upper = fullName.toUpperCase();
+  if (/\bADF\b/.test(upper) || /\(ADF\)/.test(upper)) {
+    return "ADF";
+  }
+  const hasDual = /SR\/YR|YR\/SR/.test(upper) || (/\bSR\b/.test(upper) && /\bYR\b/.test(upper));
+  if (hasDual) return "DUAL_SR_YR";
+  if (/\bSR\b/.test(upper) || /\(SR\)/.test(upper)) return "SR";
+  if (/\bYR\b/.test(upper) || /\(YR\)/.test(upper)) return "YR";
+  return "REGULAR";
+}
+
+export function calculateStudentBill(
+  fullName: string,
+  className: string,
+  feeStructure?: { classLevel: string; totalBill: number }[],
+  concessions?: Partial<ConcessionCategoryConfig>
+): number {
+  const conf: ConcessionCategoryConfig = {
+    ...DEFAULT_CONCESSIONS,
+    ...(concessions || {}),
+  };
+
+  const category = detectStudentCategory(fullName);
+
+  if (category === "ADF") {
+    return Number(conf.adf) || 0;
+  }
+
+  if (category === "DUAL_SR_YR") {
+    return Number(conf.dualSrYr) || 0;
+  }
+
+  if (category === "SR" || category === "YR") {
+    const c = (className || "").toLowerCase();
+    if (
+      c.includes("pre-nursery") ||
+      c.includes("prenursery") ||
+      c.includes("nursery") ||
+      c.includes("pre-basic") ||
+      c.includes("pre basic") ||
+      /^pn\b/i.test(c) ||
+      /^n\s*\d/i.test(c)
+    ) {
+      return Number(conf.preNurseryNurseryPb) || 0;
+    }
+    if (c.includes("basic") || c.includes("primary") || /^b\s*\d/i.test(c)) {
+      return Number(conf.basic) || 0;
+    }
+    if (c.includes("jss 3") || c.includes("jss3") || c.includes("junior secondary 3") || /^js\s*3/i.test(c)) {
+      return Number(conf.jss3) || 0;
+    }
+    if (
+      c.includes("jss 1") ||
+      c.includes("jss1") ||
+      c.includes("jss 2") ||
+      c.includes("jss2") ||
+      c.includes("junior secondary") ||
+      /^js\s*[12]/i.test(c)
+    ) {
+      return Number(conf.jss1_2) || 0;
+    }
+    if (c.includes("ss 1") || c.includes("ss1") || c.includes("senior secondary 1") || /^ss\s*1/i.test(c)) {
+      return Number(conf.ss1) || 0;
+    }
+    if (
+      c.includes("ss 2") ||
+      c.includes("ss2") ||
+      c.includes("ss 3") ||
+      c.includes("ss3") ||
+      c.includes("senior secondary") ||
+      /^ss\s*[23]/i.test(c)
+    ) {
+      return Number(conf.ss2_3) || 0;
+    }
+  }
+
+  return getBillForClass(className, feeStructure);
+}
+
 /**
  * Determine term bill dynamically based on configured fee schedule from settings.
  * Returns 0 if not configured.
@@ -176,7 +268,7 @@ export function inferGender(fullName: string, className: string): "Male" | "Fema
     return "Female";
   }
 
-  // In secondary & Pre-Nursery B arms at Al-Furqan, arm B is typically predominantly female
+  // In secondary & Pre-Nursery B arms at Alfurqan, arm B is typically predominantly female
   if (
     className.includes("SS 1 B") ||
     className.includes("SS 2 B") ||
@@ -252,8 +344,7 @@ export function inferParentName(studentFullName: string): string {
 
   if (parts.length >= 2) {
     // Take father / grandfather name
-    const surname = parts.slice(1).join(" ");
-    return `Alhaji ${surname}`;
+    return parts.slice(1).join(" ");
   }
   return `Parent of ${cleanName}`;
 }
@@ -264,7 +355,8 @@ export function inferParentName(studentFullName: string): string {
 export function parseStudentWorkbook(
   buffer: ArrayBuffer | Buffer,
   filename: string,
-  feeStructure?: { classLevel: string; totalBill: number }[]
+  feeStructure?: { classLevel: string; totalBill: number }[],
+  concessions?: Partial<ConcessionCategoryConfig>
 ): ParseResult {
   const wb = XLSX.read(buffer, { type: Buffer.isBuffer(buffer) ? "buffer" : "array" });
   
@@ -405,8 +497,8 @@ export function parseStudentWorkbook(
       // Infer Gender
       const gender = inferGender(fullName, standardClass);
 
-      // Calculate Class Term Bill (dynamic based on configured fee schedule)
-      const totalTermBill = getBillForClass(standardClass, feeStructure);
+      // Calculate Class Term Bill (dynamic based on configured fee schedule and special categories)
+      const totalTermBill = calculateStudentBill(fullName, standardClass, feeStructure, concessions);
 
       // Infer Parent Name
       const parentName = inferParentName(fullName);

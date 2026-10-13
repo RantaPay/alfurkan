@@ -218,7 +218,7 @@ export function AddStudentModal({
                   type="text"
                   value={parentName}
                   onChange={(e) => setParentName(e.target.value)}
-                  placeholder="e.g. Alhaji Muhammad Bello"
+                  placeholder="e.g. Muhammad Bello"
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                 />
               </div>

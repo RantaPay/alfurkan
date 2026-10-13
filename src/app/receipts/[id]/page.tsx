@@ -212,7 +212,7 @@ export default function ReceiptViewPage() {
 
   // WhatsApp Pre-composed Message for parent
   const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-    `Assalamu Alaikum ${receipt.parentName},\n\nFee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAl-Furqan International Academy`
+    `Assalamu Alaikum ${receipt.parentName},\n\nFee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Alfurqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAlfurqan International Academy`
   )}`;
 
   return (
@@ -315,7 +315,7 @@ export default function ReceiptViewPage() {
                   setIsVoidModalOpen(true);
                 }}
                 className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Cancel receipt and reverse student payment in ledger"
+                title="Cancel receipt and reverse student payment"
               >
                 <Ban className="h-4 w-4 text-rose-600" />
                 <span>Void Receipt</span>
@@ -334,7 +334,7 @@ export default function ReceiptViewPage() {
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in duration-200">
             <CheckCircle2 className="h-5 w-5 text-rose-600 shrink-0" />
             <span>
-              Receipt {receipt.receiptNumber} has been successfully voided. Student ledger and debt balance have been automatically adjusted.
+              Receipt {receipt.receiptNumber} has been successfully voided. Student balance has been automatically adjusted.
             </span>
           </div>
         )}
@@ -374,10 +374,10 @@ export default function ReceiptViewPage() {
             <div className="bg-rose-50 p-4 rounded-2xl border border-rose-200 text-rose-900 text-xs space-y-1.5">
               <div className="font-bold flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
-                <span>Financial Ledger Reversal Warning</span>
+                <span>Payment Reversal Warning</span>
               </div>
               <p className="leading-relaxed">
-                Voiding receipt <strong className="font-mono">{receipt.receiptNumber}</strong> will reverse the payment of <strong className="font-mono">{formatNaira(receipt.amountPaid)}</strong> from <strong>{receipt.studentName}&apos;s</strong> ledger. Their debt balance will increase back to the unpaid amount.
+                Voiding receipt <strong className="font-mono">{receipt.receiptNumber}</strong> will reverse the payment of <strong className="font-mono">{formatNaira(receipt.amountPaid)}</strong> for <strong>{receipt.studentName}</strong>. Their balance will increase back to the unpaid amount.
               </p>
             </div>
 

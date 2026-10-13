@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Student, ClassFeeConfig } from "@/lib/types";
+import { Student, ClassFeeConfig, ConcessionCategoryConfig } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
 import {
   X,
@@ -12,7 +12,14 @@ import {
   GraduationCap,
   Sparkles,
   Save,
+  Tag,
+  Trash2,
 } from "lucide-react";
+import {
+  calculateStudentBill,
+  detectStudentCategory,
+  DEFAULT_CONCESSIONS,
+} from "@/lib/student-importer";
 
 interface EditStudentModalProps {
   isOpen: boolean;
@@ -21,8 +28,24 @@ interface EditStudentModalProps {
   onStudentUpdated: () => void;
 }
 
-const CLASS_LEVELS = ["JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"];
-const CLASS_ARMS = ["Diamond", "Gold", "Science", "Arts", "Commercial", "A", "B", "C"];
+const CLASS_LEVELS = [
+  "Pre-Nursery",
+  "Nursery 1",
+  "Nursery 2",
+  "Basic 1",
+  "Basic 2",
+  "Basic 3",
+  "Basic 4",
+  "Basic 5",
+  "Basic 6",
+  "JSS 1",
+  "JSS 2",
+  "JSS 3",
+  "SS 1",
+  "SS 2",
+  "SS 3",
+];
+const CLASS_ARMS = ["A", "B", "C", "D", "Diamond", "Gold", "Science", "Arts", "Commercial"];
 
 export function EditStudentModal({
   isOpen,
@@ -39,16 +62,23 @@ export function EditStudentModal({
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feeSchedule, setFeeSchedule] = useState<ClassFeeConfig[]>([]);
+  const [concessions, setConcessions] = useState<ConcessionCategoryConfig>(DEFAULT_CONCESSIONS);
 
-  // Load fee schedule from settings to auto-fill bills
+  // Load fee schedule and concessions from settings to auto-fill bills
   useEffect(() => {
     if (isOpen) {
       fetch("/api/settings")
         .then((r) => r.json())
         .then((d) => {
-          if (d.success && d.school?.feeStructure) {
-            setFeeSchedule(d.school.feeStructure);
+          if (d.success) {
+            if (d.school?.feeStructure) {
+              setFeeSchedule(d.school.feeStructure);
+            }
+            if (d.school?.concessions) {
+              setConcessions(d.school.concessions);
+            }
           }
         })
         .catch(() => {});
@@ -65,20 +95,27 @@ export function EditStudentModal({
       setParentPhone(student.parentPhone);
       setParentEmail(student.parentEmail || "");
 
-      // Split class string into level and arm if possible
-      const parts = student.class.split(" ");
-      if (parts.length >= 2) {
-        const potentialLevel = `${parts[0]} ${parts[1]}`;
-        if (CLASS_LEVELS.includes(potentialLevel)) {
-          setClassLevel(potentialLevel);
-          setClassArm(parts.slice(2).join(" ") || "Diamond");
-        } else {
-          setClassLevel(parts[0]);
-          setClassArm(parts.slice(1).join(" ") || "Diamond");
-        }
+      const trimmed = (student.class || "").trim();
+      const matchedLevel = CLASS_LEVELS.find((lvl) => trimmed.toLowerCase().startsWith(lvl.toLowerCase()));
+      if (matchedLevel) {
+        setClassLevel(matchedLevel);
+        const remainder = trimmed.slice(matchedLevel.length).trim();
+        setClassArm(remainder || "A");
       } else {
-        setClassLevel("JSS 1");
-        setClassArm("Diamond");
+        const parts = trimmed.split(" ");
+        if (parts.length >= 2) {
+          const potentialLevel = `${parts[0]} ${parts[1]}`;
+          if (CLASS_LEVELS.includes(potentialLevel)) {
+            setClassLevel(potentialLevel);
+            setClassArm(parts.slice(2).join(" ") || "A");
+          } else {
+            setClassLevel(parts[0]);
+            setClassArm(parts.slice(1).join(" ") || "A");
+          }
+        } else {
+          setClassLevel(trimmed || "Basic 1");
+          setClassArm("A");
+        }
       }
     }
   }, [student]);
@@ -87,17 +124,26 @@ export function EditStudentModal({
 
   const currentConstructedClass = classArm ? `${classLevel} ${classArm}`.trim() : classLevel;
 
-  // Auto-fill bill based on fee schedule for selected classLevel
+  // Auto-fill bill based on fee schedule & category
   const handleAutoFillFee = () => {
-    const feeMatch = feeSchedule.find(
-      (f) => f.classLevel.toLowerCase() === classLevel.toLowerCase()
-    );
-    if (feeMatch && feeMatch.totalBill > 0) {
-      setTotalTermBill(feeMatch.totalBill);
-    } else {
-      alert(`No fee schedule found for ${classLevel}. Please enter manually.`);
-    }
+    const calculated = calculateStudentBill(fullName, currentConstructedClass, feeSchedule, concessions);
+    setTotalTermBill(calculated);
   };
+
+  const handleSelectCategory = (cat: "REGULAR" | "SR" | "YR" | "DUAL_SR_YR" | "ADF") => {
+    const clean = fullName.replace(/\s*\((SR|YR|ADF|SR\/YR|YR\/SR)\)\s*/gi, " ").trim();
+    let updatedName = clean;
+    if (cat === "SR") updatedName = `${clean} (SR)`;
+    else if (cat === "YR") updatedName = `${clean} (YR)`;
+    else if (cat === "DUAL_SR_YR") updatedName = `${clean} (SR/YR)`;
+    else if (cat === "ADF") updatedName = `${clean} (ADF)`;
+
+    setFullName(updatedName);
+    const calculated = calculateStudentBill(updatedName, currentConstructedClass, feeSchedule, concessions);
+    setTotalTermBill(calculated);
+  };
+
+  const currentCategory = detectStudentCategory(fullName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +176,30 @@ export function EditStudentModal({
       alert("Network error updating student.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!student) return;
+    if (!window.confirm(`Are you sure you want to delete ${student.fullName}? This cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/students?id=${student.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        onStudentUpdated();
+        onClose();
+      } else {
+        alert("Failed to delete student: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      alert("Network error deleting student.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -174,6 +244,70 @@ export function EditStudentModal({
             />
           </div>
 
+          {/* Special Category Tag Selector */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+              Category Tag
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("REGULAR")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "REGULAR"
+                    ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                Regular
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("SR")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "SR"
+                    ? "bg-[#075E54] text-white border-[#075E54] shadow-xs"
+                    : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
+                }`}
+              >
+                (SR)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("YR")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "YR"
+                    ? "bg-teal-700 text-white border-teal-700 shadow-xs"
+                    : "bg-teal-50 text-teal-900 border-teal-200 hover:bg-teal-100"
+                }`}
+              >
+                (YR)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("DUAL_SR_YR")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "DUAL_SR_YR"
+                    ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                    : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                (SR/YR) Dual
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("ADF")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "ADF"
+                    ? "bg-indigo-700 text-white border-indigo-700 shadow-xs"
+                    : "bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100"
+                }`}
+              >
+                (ADF)
+              </button>
+            </div>
+          </div>
+
           {/* Class Placement: Level & Arm */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -200,7 +334,7 @@ export function EditStudentModal({
               <input
                 type="text"
                 value={classArm}
-                placeholder="e.g. Diamond, Science, Arts"
+                placeholder="e.g. Diamond, Science, Arts, A, B"
                 onChange={(e) => setClassArm(e.target.value)}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
               />
@@ -228,7 +362,7 @@ export function EditStudentModal({
                   Mark as Repeating Student (Retained in Class)
                 </span>
                 <span className="text-xs text-slate-600 block mt-0.5">
-                  Check this if the student did not promote and is repeating {classLevel} this academic session. A &quot;Repeating&quot; badge will be visible in the ledger.
+                  Check if the student is repeating {classLevel}. A &quot;Repeating&quot; badge will be shown.
                 </span>
               </div>
             </label>
@@ -244,10 +378,10 @@ export function EditStudentModal({
                 type="button"
                 onClick={handleAutoFillFee}
                 className="text-xs font-bold text-[#075E54] hover:underline cursor-pointer flex items-center gap-1"
-                title="Fetch bill from Class Fee Schedule in Settings"
+                title="Fetch bill from Fee Schedule and Special Category rates"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>Auto-fill from {classLevel} Fee Schedule</span>
+                <span>Auto-fill from Fee Schedule</span>
               </button>
             </div>
             <input
@@ -297,22 +431,34 @@ export function EditStudentModal({
           </div>
 
           {/* Actions */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+              onClick={handleDelete}
+              disabled={isDeleting || isSubmitting}
+              className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              Cancel
+              <Trash2 className="h-4 w-4" />
+              <span>{isDeleting ? "Deleting..." : "Delete"}</span>
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              <span>{isSubmitting ? "Saving..." : "Save Class & Ledger"}</span>
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || isDeleting}
+                className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                <span>{isSubmitting ? "Saving..." : "Save"}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

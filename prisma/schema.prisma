@@ -9,8 +9,8 @@ datasource db {
 
 model SchoolProfile {
   id                   String   @id @default("default")
-  name                 String   @default("Al-Furqan International Academy")
-  shortName            String   @default("Al-Furqan")
+  name                 String   @default("Alfurqan International Academy")
+  shortName            String   @default("Alfurqan")
   motto                String   @default("Knowledge and Guidance")
   address              String   @default("Along Dass Road, Bauchi State")
   email                String   @default("admin@alfurqanintlacademy.com")
@@ -30,6 +30,7 @@ model SchoolProfile {
   showStamp            Boolean  @default(true)
   feeStructureJson       String?  @default("[]")
   feeScheduleHistoryJson String?  @default("[]")
+  concessionsJson        String?  @default("{}")
   updatedAt              DateTime @updatedAt
 }
 

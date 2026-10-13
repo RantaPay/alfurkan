@@ -41,6 +41,7 @@ import {
   StaffUser,
   FeeScheduleHistoryEntry,
 } from "@/lib/types";
+import { DEFAULT_CONCESSIONS } from "@/lib/student-importer";
 
 type SettingsTab = "identity" | "banks" | "fees" | "staff";
 
@@ -49,8 +50,8 @@ export default function SettingsPage() {
 
   // School profile state
   const [school, setSchool] = useState<SchoolProfile>({
-    name: "Al-Furqan International Academy",
-    shortName: "Al-Furqan",
+    name: "Alfurqan International Academy",
+    shortName: "Alfurqan",
     motto: "Knowledge and Guidance",
     address: "Along Dass Road, Bauchi State",
     email: "admin@alfurqanintlacademy.com",
@@ -70,6 +71,7 @@ export default function SettingsPage() {
     showStamp: true,
     bankAccounts: [],
     feeStructure: [],
+    concessions: DEFAULT_CONCESSIONS,
   });
 
   // Staff users state
@@ -120,6 +122,7 @@ export default function SettingsPage() {
   const [selectedHistorySnapshot, setSelectedHistorySnapshot] = useState<FeeScheduleHistoryEntry | null>(null);
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
   const [savingFees, setSavingFees] = useState(false);
+  const [savingConcessions, setSavingConcessions] = useState(false);
 
   // Load Settings and Staff
   useEffect(() => {
@@ -133,7 +136,10 @@ export default function SettingsPage() {
 
         const settingsData = await settingsRes.json();
         if (settingsData.success && settingsData.school) {
-          setSchool(settingsData.school);
+          setSchool({
+            ...settingsData.school,
+            concessions: settingsData.school.concessions || DEFAULT_CONCESSIONS,
+          });
         }
 
         const staffData = await staffRes.json();
@@ -233,7 +239,7 @@ export default function SettingsPage() {
       id: `bank_${Date.now()}`,
       bankName: "",
       accountNumber: "",
-      accountName: school.name ? `${school.name} - Tuition` : "Al-Furqan Academy",
+      accountName: school.name ? `${school.name} - Tuition` : "Alfurqan Academy",
       isDefault: (school.bankAccounts || []).length === 0,
     });
     setIsBankModalOpen(true);
@@ -410,6 +416,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveConcessions = async () => {
+    setSavingConcessions(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          concessions: school.concessions || DEFAULT_CONCESSIONS,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.school) {
+        setSchool(data.school);
+        showNotification("Saved successfully.");
+      } else {
+        alert("Failed to save: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Network error saving special category fees");
+    } finally {
+      setSavingConcessions(false);
+    }
+  };
+
   const handleRestoreSnapshot = async (entry: FeeScheduleHistoryEntry) => {
     if (
       confirm(
@@ -574,7 +605,7 @@ export default function SettingsPage() {
                 className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-6 py-2.5 rounded-xl text-sm font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <Save className="h-4.5 w-4.5" />
-                <span>{saving ? "Saving Changes..." : "Save Settings"}</span>
+                <span>{saving ? "Saving..." : "Save"}</span>
               </button>
             </div>
           </div>
@@ -774,7 +805,7 @@ export default function SettingsPage() {
                       type="text"
                       value={school.accountantName || ""}
                       onChange={(e) => setSchool({ ...school, accountantName: e.target.value })}
-                      placeholder="e.g. Alhaji Ibrahim S. Danladi"
+                      placeholder="e.g. Ibrahim S. Danladi"
                       className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                     />
                   </div>
@@ -1163,7 +1194,231 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Card 2: Previous Records of Fee Updates (History & Audit Trail) */}
+              {/* Card 2: Special Category Fees (SR, YR, ADF, Dual) */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-[#075E54]" />
+                      <span>Special Category Fees</span>
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                      Set fees for students with special category tags (SR, YR, ADF, and Dual).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Pre-Nursery / Nursery / Pre-Basic (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      Pre-Nursery &amp; Nursery (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.preNurseryNurseryPb ?? 21500}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              preNurseryNurseryPb: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Basic 1 - 6 (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      Basic 1 - 6 (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.basic ?? 24000}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              basic: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* JSS 1 - 2 (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      JSS 1 - 2 (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.jss1_2 ?? 30000}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              jss1_2: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* JSS 3 (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      JSS 3 (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.jss3 ?? 45000}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              jss3: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* SS 1 (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      SS 1 (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.ss1 ?? 35000}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              ss1: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* SS 2 - 3 (SR or YR) */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      SS 2 - 3 (SR / YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.ss2_3 ?? 52500}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              ss2_3: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dual SR & YR */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      Dual Category (SR + YR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.dualSrYr ?? 5000}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              dualSrYr: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ADF */}
+                  <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-black uppercase text-slate-700">
+                      ADF
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
+                      <input
+                        type="number"
+                        value={school.concessions?.adf ?? 0}
+                        onChange={(e) =>
+                          setSchool({
+                            ...school,
+                            concessions: {
+                              ...(school.concessions || DEFAULT_CONCESSIONS),
+                              adf: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-slate-200 font-mono font-bold text-slate-900 text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
+                  <div className="text-xs text-slate-500 font-medium">
+                    Saving updates special category fees across all students.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveConcessions}
+                    disabled={savingConcessions}
+                    className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{savingConcessions ? "Saving..." : "Save"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: Previous Records of Fee Updates (History & Audit Trail) */}
               <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div>
@@ -1172,7 +1427,7 @@ export default function SettingsPage() {
                       <span>Previous Records of Fee Updates & Audit Trail</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                      Historical ledger of fee changes across academic sessions and terms. View past rates or reload them into the schedule.
+                      History of fee changes across academic sessions and terms. View past rates or reload them into the schedule.
                     </p>
                   </div>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700 border border-slate-200 self-start sm:self-auto">
@@ -1408,7 +1663,7 @@ export default function SettingsPage() {
                   className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-8 py-3 rounded-2xl text-sm sm:text-base font-black shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Save className="h-4.5 w-4.5" />
-                  <span>{saving ? "Saving Changes..." : "Save Settings"}</span>
+                  <span>{saving ? "Saving..." : "Save"}</span>
                 </button>
               </div>
             </>
@@ -1477,7 +1732,7 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Al-Furqan International Academy"
+                  placeholder="e.g. Alfurqan International Academy"
                   value={bankModalData.accountName}
                   onChange={(e) =>
                     setBankModalData({ ...bankModalData, accountName: e.target.value })
@@ -1516,7 +1771,7 @@ export default function SettingsPage() {
                 onClick={handleSaveBankModal}
                 className="bg-[#075E54] hover:bg-[#128C7E] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-sm cursor-pointer"
               >
-                Save Account
+                Save
               </button>
             </div>
           </div>
@@ -1642,7 +1897,7 @@ export default function SettingsPage() {
                   type="submit"
                   className="bg-[#075E54] hover:bg-[#128C7E] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-sm cursor-pointer"
                 >
-                  Create Administrator
+                  Save
                 </button>
               </div>
             </form>
@@ -1705,7 +1960,7 @@ export default function SettingsPage() {
                   disabled={isSavingPassword || !newPasswordInput.trim()}
                   className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-sm cursor-pointer"
                 >
-                  {isSavingPassword ? "Updating..." : "Update Password"}
+                  {isSavingPassword ? "Saving..." : "Save"}
                 </button>
               </div>
             </form>

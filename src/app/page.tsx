@@ -134,7 +134,7 @@ export default function DashboardPage() {
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-              Al-Furqan Digital Receipts &amp; Bursary Portal
+              Alfurqan Digital Receipts &amp; Bursary Portal
             </h1>
             <p className="text-emerald-100/90 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
               Search students by admission number, record school fee payments, and issue receipts.
@@ -418,7 +418,7 @@ export default function DashboardPage() {
                             {/* 1-Click WhatsApp Share */}
                             <a
                               href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Al-Furqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nAccounts Department, Al-Furqan International Academy`
+                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Alfurqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nAccounts Department, Alfurqan International Academy`
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -452,7 +452,7 @@ export default function DashboardPage() {
           <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
             <span>Showing recent receipts issued this term</span>
             <Link href="/receipts" className="font-bold text-[#075E54] hover:underline flex items-center gap-1.5">
-              <span>View Full Receipts Ledger</span>
+              <span>View All Receipts</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

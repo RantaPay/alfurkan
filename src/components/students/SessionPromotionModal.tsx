@@ -242,7 +242,7 @@ export function SessionPromotionModal({
                   onClick={handleClose}
                   className="px-6 py-2.5 bg-[#075E54] hover:bg-[#128C7E] text-white font-semibold rounded-xl text-sm shadow-sm transition-all"
                 >
-                  Done & Return to Students Directory
+                  Done & Return to Students List
                 </button>
               </div>
             </div>

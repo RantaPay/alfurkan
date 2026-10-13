@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 
-export default function ReceiptsLedgerPage() {
+export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "FULL" | "PARTIAL" | "VOIDED">("ALL");
@@ -80,7 +80,7 @@ export default function ReceiptsLedgerPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Receipts Ledger
+              Receipts
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Search, view, and print fee payment receipts
@@ -171,7 +171,7 @@ export default function ReceiptsLedgerPage() {
           </div>
         </div>
 
-        {/* Ledger Table */}
+        {/* Receipts Table */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 sm:p-7 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
@@ -273,7 +273,7 @@ export default function ReceiptsLedgerPage() {
 
                             <a
                               href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} at Al-Furqan International Academy.\nReceipt: ${receipt.receiptNumber}\nAmount Paid: ${formatNaira(receipt.amountPaid)}\nStatus: ${isFull ? "PAID IN FULL" : `PARTIAL PAYMENT (Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n\nView digital receipt: https://alfurqan.edu.ng/receipts/${receipt.id}`
+                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} at Alfurqan International Academy.\nReceipt: ${receipt.receiptNumber}\nAmount Paid: ${formatNaira(receipt.amountPaid)}\nStatus: ${isFull ? "PAID IN FULL" : `PARTIAL PAYMENT (Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n\nView digital receipt: https://alfurqan.edu.ng/receipts/${receipt.id}`
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -296,7 +296,7 @@ export default function ReceiptsLedgerPage() {
                         <p className="text-xs text-slate-400">
                           {query || statusFilter !== "ALL" || bankFilter !== "ALL"
                             ? "Try adjusting your search query or filter options."
-                            : "No fee payment receipts have been recorded in the ledger yet."}
+                            : "No fee payment receipts have been recorded yet."}
                         </p>
                       </div>
                     </td>

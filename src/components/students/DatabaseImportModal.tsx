@@ -258,7 +258,7 @@ export function DatabaseImportModal({
                   }}
                   className="px-6 py-2.5 rounded-xl bg-[#075E54] hover:bg-[#064e46] text-white font-bold text-sm shadow-md transition-all cursor-pointer"
                 >
-                  View Student Directory
+                  View Students List
                 </button>
               </div>
             </div>

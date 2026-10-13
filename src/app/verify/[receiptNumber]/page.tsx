@@ -52,10 +52,10 @@ export default function VerifyReceiptPage() {
         {/* Verification Header */}
         <div className="bg-[#075E54] p-5 text-center relative overflow-hidden">
           <div className="h-16 w-16 rounded-2xl bg-white p-1.5 shadow-lg mx-auto mb-2 flex items-center justify-center overflow-hidden">
-            <img src="/logo.png" alt="Al-Furqan Crest" className="h-full w-full object-contain" />
+            <img src="/logo.png" alt="Alfurqan Crest" className="h-full w-full object-contain" />
           </div>
           <h1 className="text-base font-black tracking-tight text-white">
-            Al-Furqan International Academy
+            Alfurqan International Academy
           </h1>
           <p className="text-[11px] text-emerald-100 font-medium mt-0.5">
             Receipt Verification Portal
@@ -74,7 +74,7 @@ export default function VerifyReceiptPage() {
               <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto" />
               <h2 className="text-base font-bold text-white">Verification Failed</h2>
               <p className="text-xs text-slate-400">
-                This receipt code was not issued by Al-Furqan International Academy or is invalid.
+                This receipt code was not issued by Alfurqan International Academy or is invalid.
               </p>
             </div>
           ) : (
@@ -185,7 +185,7 @@ export default function VerifyReceiptPage() {
               href="/"
               className="text-xs font-bold text-slate-400 hover:text-white underline"
             >
-              Back to Al-Furqan Home
+              Back to Alfurqan Home
             </Link>
           </div>
         </div>
