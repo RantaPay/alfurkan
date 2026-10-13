@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Student, ReceiptItem, FeeCategory } from "@/lib/types";
+import { Student, ReceiptItem, FeeCategory, ClassFeeConfig } from "@/lib/types";
+import { getBillForClass } from "@/lib/student-importer";
 import { formatNaira } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import {
@@ -22,9 +23,9 @@ import {
 export const PRESET_FEE_OPTIONS: { name: string; category: FeeCategory; label: string }[] = [
   { name: "Tuition / School Fees", category: "Tuition", label: "Tuition / School Fees" },
   { name: "Tuition Part Payment", category: "Tuition", label: "Tuition Part Payment" },
-  { name: "Textbooks & Revision Pack", category: "Books", label: "Textbooks & Revision Pack" },
+  { name: "Notebook / Textbooks", category: "Books", label: "Notebook / Textbooks" },
   { name: "School Uniform (2 Sets)", category: "Uniform", label: "School Uniform (2 Sets)" },
-  { name: "PTA Termly Levy", category: "PTA", label: "PTA Termly Levy" },
+  { name: "Sport Wears", category: "PTA", label: "Sport Wears" },
   { name: "Transport / Bus Service", category: "Transport", label: "Transport / Bus Service" },
   { name: "Laboratory & Practical Fees", category: "Development", label: "Laboratory & Practical Fees" },
   { name: "Excursion & Field Trip", category: "Excursion", label: "Excursion & Field Trip" },
@@ -89,10 +90,11 @@ export function ReceiptModal({
     }
   }, [preselectedStudent]);
 
-  // Configured bank accounts from settings
+  // Configured bank accounts and fee structure from settings
   const [configuredBanks, setConfiguredBanks] = useState<
     { id: string; bankName: string; accountNumber: string; isDefault?: boolean }[]
   >([]);
+  const [feeStructure, setFeeStructure] = useState<ClassFeeConfig[]>([]);
 
   // Reset receiving date to today and load bank accounts whenever modal opens
   useEffect(() => {
@@ -101,14 +103,19 @@ export function ReceiptModal({
       fetch("/api/settings")
         .then((r) => r.json())
         .then((d) => {
-          if (d.success && d.school?.bankAccounts && d.school.bankAccounts.length > 0) {
-            setConfiguredBanks(d.school.bankAccounts);
-            const def = d.school.bankAccounts.find((b: any) => b.isDefault) || d.school.bankAccounts[0];
-            if (def && paymentMethod !== "Cash") {
-              setReceivingBank(def.bankName);
+          if (d.success) {
+            if (d.school?.feeStructure && Array.isArray(d.school.feeStructure)) {
+              setFeeStructure(d.school.feeStructure);
             }
-          } else {
-            setConfiguredBanks([]);
+            if (d.school?.bankAccounts && d.school.bankAccounts.length > 0) {
+              setConfiguredBanks(d.school.bankAccounts);
+              const def = d.school.bankAccounts.find((b: any) => b.isDefault) || d.school.bankAccounts[0];
+              if (def && paymentMethod !== "Cash") {
+                setReceivingBank(def.bankName);
+              }
+            } else {
+              setConfiguredBanks([]);
+            }
           }
         })
         .catch(() => {});
@@ -148,10 +155,15 @@ export function ReceiptModal({
   // Calculate what the new balance will be
   const currentTotalPaid = selectedStudent?.totalPaid || 0;
   const newCumulativeTotal = currentTotalPaid + totalAmount;
-  const projectedBalance = selectedStudent
-    ? Math.max(0, selectedStudent.totalTermBill - newCumulativeTotal)
+  const studentTotalBill = selectedStudent
+    ? selectedStudent.totalTermBill > 0
+      ? selectedStudent.totalTermBill
+      : getBillForClass(selectedStudent.class, feeStructure)
     : 0;
-  const willBeFull = projectedBalance === 0;
+  const projectedBalance = selectedStudent
+    ? Math.max(0, studentTotalBill - newCumulativeTotal)
+    : 0;
+  const willBeFull = studentTotalBill > 0 && projectedBalance === 0;
 
   const handleAddItem = (category: FeeCategory, defaultName: string, defaultAmount: number) => {
     setItems((prev) => [
@@ -358,10 +370,10 @@ export function ReceiptModal({
                           setDepositorName(std.parentName || "");
                           setDepositorPhone(std.parentPhone || "");
                           setSearchQuery("");
-                          setSearchResults([]);
-                          const rem = std.balanceRemaining > 0 ? std.balanceRemaining : std.totalTermBill;
+                          const bill = std.totalTermBill > 0 ? std.totalTermBill : getBillForClass(std.class, feeStructure);
+                          const rem = std.balanceRemaining > 0 ? std.balanceRemaining : (bill > (std.totalPaid || 0) ? bill - (std.totalPaid || 0) : bill);
                           setItems([
-                            { name: "Tuition / School Fees", category: "Tuition", amount: rem },
+                            { name: "Tuition / School Fees", category: "Tuition", amount: rem || 0 },
                           ]);
                         }}
                         className="p-3.5 hover:bg-emerald-50/60 cursor-pointer flex items-center justify-between transition-colors"
@@ -439,10 +451,10 @@ export function ReceiptModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Books", "Textbooks & Revision Pack", 0)}
+                  onClick={() => handleAddItem("Books", "Notebook / Textbooks", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
-                  + Books
+                  + Notebook / Textbooks
                 </button>
                 <button
                   type="button"
@@ -453,10 +465,10 @@ export function ReceiptModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("PTA", "PTA Termly Levy", 0)}
+                  onClick={() => handleAddItem("PTA", "Sport Wears", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
-                  + PTA
+                  + Sport Wears
                 </button>
               </div>
             </div>

@@ -139,16 +139,29 @@ export function getBillForClass(
   className: string,
   feeStructure?: { classLevel: string; totalBill: number }[]
 ): number {
-  if (feeStructure && feeStructure.length > 0) {
-    const cleanClass = className.toLowerCase().trim();
-    const match = feeStructure.find((f) => {
-      const lvl = f.classLevel.toLowerCase().trim();
-      return cleanClass.startsWith(lvl) || cleanClass.includes(lvl) || lvl.includes(cleanClass);
-    });
-    if (match && match.totalBill > 0) {
-      return match.totalBill;
-    }
-  }
+  if (!className || !feeStructure || feeStructure.length === 0) return 0;
+
+  const cleanClass = className.trim();
+  const lowerClass = cleanClass.toLowerCase();
+
+  // 1. Direct exact match
+  const exact = feeStructure.find((f) => f.classLevel.trim().toLowerCase() === lowerClass);
+  if (exact) return exact.totalBill;
+
+  // 2. Strip section / arm (e.g. "Basic 1 A", "Basic 1 B", "JSS 1 C", "SS 3 B" -> base class "Basic 1", "JSS 1", "SS 3")
+  const baseName = cleanClass.replace(/\s+[-–]?[A-Za-z0-9]$/i, "").trim().toLowerCase();
+  const baseMatch = feeStructure.find((f) => f.classLevel.trim().toLowerCase() === baseName);
+  if (baseMatch) return baseMatch.totalBill;
+
+  // 3. Fallback prefix match
+  const normClass = lowerClass.replace(/[^a-z0-9]/g, "");
+  const prefixMatch = feeStructure.find((f) => {
+    const lvl = f.classLevel.trim().toLowerCase();
+    const normLvl = lvl.replace(/[^a-z0-9]/g, "");
+    return lowerClass.startsWith(lvl) || normClass.startsWith(normLvl);
+  });
+  if (prefixMatch) return prefixMatch.totalBill;
+
   return 0;
 }
 

@@ -100,11 +100,12 @@ export interface BankAccountConfig {
 }
 
 export interface ClassFeeConfig {
-  classLevel: string; // e.g. "JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"
+  classLevel: string; // e.g. "Basic 1", "JSS 1", "SS 1"
   tuitionFee: number;
-  booksFee: number;
+  booksFee: number; // Notebook / Textbooks
   uniformFee: number;
-  ptaLevy: number;
+  sportsWearFee: number; // Sport Wears
+  ptaLevy?: number; // legacy optional
   developmentLevy?: number;
   totalBill: number;
 }

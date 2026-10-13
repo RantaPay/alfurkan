@@ -12,6 +12,7 @@ import {
   FeeScheduleHistoryEntry,
 } from "./types";
 import { Prisma } from "@prisma/client";
+import { getBillForClass } from "./student-importer";
 
 export const DEFAULT_USERS: StaffUser[] = [];
 
@@ -147,18 +148,22 @@ function formatSchool(s: any): SchoolProfile {
     try {
       const parsed = JSON.parse(s.feeStructureJson);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        feeStructure = parsed.map((item: any) => ({
-          classLevel: item.classLevel,
-          tuitionFee: Number(item.tuitionFee) || 0,
-          booksFee: Number(item.booksFee) || 0,
-          uniformFee: Number(item.uniformFee) || 0,
-          ptaLevy: Number(item.ptaLevy) || 0,
-          totalBill:
-            (Number(item.tuitionFee) || 0) +
-            (Number(item.booksFee) || 0) +
-            (Number(item.uniformFee) || 0) +
-            (Number(item.ptaLevy) || 0),
-        }));
+        feeStructure = parsed.map((item: any) => {
+          const sportsWear = Number(item.sportsWearFee ?? item.ptaLevy) || 0;
+          return {
+            classLevel: item.classLevel || "",
+            tuitionFee: Number(item.tuitionFee) || 0,
+            booksFee: Number(item.booksFee) || 0,
+            uniformFee: Number(item.uniformFee) || 0,
+            sportsWearFee: sportsWear,
+            ptaLevy: sportsWear,
+            totalBill:
+              (Number(item.tuitionFee) || 0) +
+              (Number(item.booksFee) || 0) +
+              (Number(item.uniformFee) || 0) +
+              sportsWear,
+          };
+        });
       }
     } catch {
       // fallback
@@ -252,6 +257,49 @@ export async function getStudents(
   return students.map(formatStudent);
 }
 
+export async function getDistinctClassLevels(): Promise<string[]> {
+  const distinct = await prisma.student.findMany({
+    select: { class: true },
+    distinct: ["class"],
+  });
+
+  const baseSet = new Set<string>();
+  for (const item of distinct) {
+    if (!item.class) continue;
+    // Strip trailing arm letter: e.g. "Basic 1 A" -> "Basic 1", "JSS 2 C" -> "JSS 2", "Pre-Nursery B" -> "Pre-Nursery"
+    const base = item.class.replace(/\s+[-–]?[A-Za-z0-9]$/i, "").trim();
+    if (base) {
+      baseSet.add(base);
+    }
+  }
+
+  // Canonical educational sorting
+  const orderRank = (cls: string) => {
+    const l = cls.toLowerCase();
+    if (l.includes("pre-nursery")) return 1;
+    if (l.includes("nursery 1")) return 2;
+    if (l.includes("nursery 2")) return 3;
+    if (l.includes("basic 1")) return 11;
+    if (l.includes("basic 2")) return 12;
+    if (l.includes("basic 3")) return 13;
+    if (l.includes("basic 4")) return 14;
+    if (l.includes("basic 5")) return 15;
+    if (l.includes("basic 6")) return 16;
+    if (l.includes("jss 1")) return 21;
+    if (l.includes("jss 2")) return 22;
+    if (l.includes("jss 3")) return 23;
+    if (l.includes("ss 1")) return 31;
+    if (l.includes("ss 2")) return 32;
+    if (l.includes("ss 3")) return 33;
+    return 99;
+  };
+
+  return Array.from(baseSet).sort((a, b) => {
+    const diff = orderRank(a) - orderRank(b);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+}
+
 export async function getStudentById(id: string): Promise<Student | null> {
   const student = await prisma.student.findUnique({
     where: { id },
@@ -324,7 +372,7 @@ export interface CreateReceiptInput {
 
 export async function createReceipt(input: CreateReceiptInput): Promise<Receipt> {
   return await prisma.$transaction(async (tx) => {
-    // 1. Fetch student in transaction to prevent race conditions
+    // 1. Fetch student and school profile in transaction to prevent race conditions
     const student = await tx.student.findUnique({
       where: { id: input.studentId },
     });
@@ -332,15 +380,26 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       throw new Error("Student not found");
     }
 
-    const prevTotalPaid = student.totalPaid || 0;
-    const newTotalPaid = prevTotalPaid + input.amountPaid;
-    const newBalanceRemaining = Math.max(0, student.totalTermBill - newTotalPaid);
-    const paymentStatus: "FULL" | "PARTIAL" = newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
-
-    // 2. Fetch school profile for term, session, accountant
     const school = await tx.schoolProfile.findUnique({
       where: { id: "default" },
     });
+
+    let effectiveBill = student.totalTermBill || 0;
+    if (effectiveBill === 0 && school?.feeStructureJson) {
+      try {
+        const fees = JSON.parse(school.feeStructureJson);
+        const configuredBill = getBillForClass(student.class, fees);
+        if (configuredBill > 0) {
+          effectiveBill = configuredBill;
+        }
+      } catch {}
+    }
+
+    const prevTotalPaid = student.totalPaid || 0;
+    const newTotalPaid = prevTotalPaid + input.amountPaid;
+    const newBalanceRemaining = Math.max(0, effectiveBill - newTotalPaid);
+    const paymentStatus: "FULL" | "PARTIAL" =
+      effectiveBill > 0 && newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
 
     const currentTerm = school?.currentTerm || "1st Term";
     const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
@@ -425,7 +484,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         parentPhone: input.depositorPhone?.trim() || input.payerPhone?.trim() || student.parentPhone,
         parentEmail: student.parentEmail,
         amountPaid: input.amountPaid,
-        totalTermBill: student.totalTermBill,
+        totalTermBill: effectiveBill,
         previousTotalPaid: prevTotalPaid,
         newTotalPaid,
         balanceRemaining: newBalanceRemaining,
@@ -454,9 +513,10 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     await tx.student.update({
       where: { id: student.id },
       data: {
+        totalTermBill: effectiveBill,
         totalPaid: newTotalPaid,
         balanceRemaining: newBalanceRemaining,
-        status: newBalanceRemaining === 0 ? "FULL" : "PARTIAL",
+        status: effectiveBill === 0 ? "UNPAID" : newBalanceRemaining === 0 ? "FULL" : "PARTIAL",
         lastPaymentDate: isoDateString,
       },
     });
@@ -696,6 +756,48 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
   });
 
   const isFeeUpdate = feeStructure !== undefined;
+  if (isFeeUpdate && Array.isArray(feeStructure)) {
+    for (const f of feeStructure) {
+      if (!f.classLevel || f.totalBill === undefined) continue;
+      const bill = Number(f.totalBill) || 0;
+      const cleanLvl = f.classLevel.trim();
+
+      // 1. Fast bulk update for students who have not made any payments (99% of students)
+      await prisma.student.updateMany({
+        where: {
+          class: { startsWith: cleanLvl },
+          totalPaid: 0,
+        },
+        data: {
+          totalTermBill: bill,
+          balanceRemaining: bill,
+          status: "UNPAID",
+        },
+      });
+
+      // 2. Update students who have made payments to recalculate their balance and status
+      const paidStudents = await prisma.student.findMany({
+        where: {
+          class: { startsWith: cleanLvl },
+          totalPaid: { gt: 0 },
+        },
+      });
+
+      for (const s of paidStudents) {
+        const bal = Math.max(0, bill - s.totalPaid);
+        const status = bill === 0 ? "UNPAID" : bal === 0 ? "FULL" : "PARTIAL";
+        await prisma.student.update({
+          where: { id: s.id },
+          data: {
+            totalTermBill: bill,
+            balanceRemaining: bal,
+            status,
+          },
+        });
+      }
+    }
+  }
+
   await prisma.auditLog.create({
     data: {
       action: isFeeUpdate ? "FEE_SCHEDULE_UPDATED" : "SETTINGS_UPDATED",
