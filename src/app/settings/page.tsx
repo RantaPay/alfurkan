@@ -61,7 +61,7 @@ export default function SettingsPage() {
     bankName: "",
     accountNumber: "",
     accountName: "",
-    accountantName: "Administrator",
+    accountantName: "Aminu S. Boro",
     logoUrl: "",
     accountantPin: "",
     receiptPrefix: "AFIA/",
@@ -799,15 +799,18 @@ export default function SettingsPage() {
 
                   <div className="sm:col-span-2">
                     <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-1.5">
-                      Chief Accountant / Bursar Name
+                      Chief Accountant / Signatory Name (Receipt Stamp &amp; Signature)
                     </label>
                     <input
                       type="text"
                       value={school.accountantName || ""}
                       onChange={(e) => setSchool({ ...school, accountantName: e.target.value })}
-                      placeholder="e.g. Ibrahim S. Danladi"
+                      placeholder="e.g. Aminu S. Boro"
                       className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
                     />
+                    <p className="text-xs text-slate-500 mt-1">
+                      This name appears as the authorized signature and inside the official paid stamp on all receipts.
+                    </p>
                   </div>
                 </div>
 

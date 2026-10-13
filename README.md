@@ -65,7 +65,7 @@ npm run dev
 
 | Role | Name | Email | Password | PIN |
 |---|---|---|---|---|
-| **Chief Accountant** | Alhaji Ibrahim S. Danladi | `accountant@alfurqan.edu.ng` | `accountant2026` | `1234` |
+| **Chief Accountant** | Aminu S. Boro | `accountant@alfurqan.edu.ng` | `accountant2026` | `1234` |
 | **Principal / Admin** | Dr. Shehu Danladi | `admin@alfurqan.edu.ng` | `admin2026` | `9988` |
 
 ---

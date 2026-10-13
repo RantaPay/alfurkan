@@ -31,7 +31,7 @@ async function main() {
     bankName: "Jaiz Bank",
     accountNumber: "0012489301",
     accountName: "Alfurqan International Academy - Fees",
-    accountantName: "Ibrahim S. Danladi",
+    accountantName: "Aminu S. Boro",
     accountantPin: "1234",
     logoUrl: "/logo.png",
   };

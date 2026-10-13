@@ -1,7 +1,7 @@
 {
   "school": {
-    "name": "Al-Furqan International Academy",
-    "shortName": "Al-Furqan",
+    "name": "Alfurqan International Academy",
+    "shortName": "Alfurqan",
     "motto": "Knowledge and Guidance",
     "address": "Along Dass Road, Bauchi State",
     "email": "admin@alfurqanintlacademy.com",
@@ -11,7 +11,7 @@
     "bankName": "",
     "accountNumber": "",
     "accountName": "",
-    "accountantName": "Administrator",
+    "accountantName": "Aminu S. Boro",
     "accountantPin": "",
     "logoUrl": "/logo.png"
   },

@@ -52,7 +52,7 @@ export const DEFAULT_SCHOOL: SchoolProfile = {
   bankName: "",
   accountNumber: "",
   accountName: "",
-  accountantName: "Administrator",
+  accountantName: "Aminu S. Boro",
   accountantPin: "",
   logoUrl: "/logo.png",
   receiptPrefix: "AFIA/",
@@ -203,7 +203,10 @@ function formatSchool(s: any): SchoolProfile {
     }
   }
 
-  const accountantName = s.accountantName || "Administrator";
+  const accountantName =
+    s.accountantName === "Administrator" || !s.accountantName
+      ? "Aminu S. Boro"
+      : s.accountantName;
   const accountantPin = s.accountantPin || "";
 
   return {
@@ -408,10 +411,11 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     });
 
     let effectiveBill = student.totalTermBill || 0;
-    if (effectiveBill === 0 && school?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
+    const schoolAny = school as any;
+    if (effectiveBill === 0 && schoolAny?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
       try {
-        const fees = JSON.parse(school.feeStructureJson);
-        const concessions = school.concessionsJson ? JSON.parse(school.concessionsJson) : DEFAULT_CONCESSIONS;
+        const fees = JSON.parse(schoolAny.feeStructureJson);
+        const concessions = schoolAny.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : DEFAULT_CONCESSIONS;
         const configuredBill = calculateStudentBill(student.fullName, student.class, fees, concessions);
         if (configuredBill > 0) {
           effectiveBill = configuredBill;
@@ -427,7 +431,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
 
     const currentTerm = school?.currentTerm || "1st Term";
     const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
-    const accountantName = school?.accountantName || "Ibrahim S. Danladi";
+    const accountantName = school?.accountantName || "Aminu S. Boro";
 
     // 3. Generate sequential receipt number in format session/counter (e.g. 2026-27/0001)
     const sessionCode = formatSessionCode(currentSession);
@@ -742,9 +746,10 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
     } else {
       const current = await prisma.schoolProfile.findUnique({ where: { id: "default" } });
       let currentHistory: FeeScheduleHistoryEntry[] = [];
-      if (current?.feeScheduleHistoryJson) {
+      const currentAny = current as any;
+      if (currentAny?.feeScheduleHistoryJson) {
         try {
-          const parsed = JSON.parse(current.feeScheduleHistoryJson);
+          const parsed = JSON.parse(currentAny.feeScheduleHistoryJson);
           if (Array.isArray(parsed)) currentHistory = parsed;
         } catch {
           // ignore
@@ -753,7 +758,7 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
 
       const activeSession = updates.currentSession || current?.currentSession || "2026/2027 Academic Session";
       const activeTerm = updates.currentTerm || current?.currentTerm || "1st Term";
-      const updater = updates.accountantName || current?.accountantName || "Ibrahim S. Danladi (Accountant)";
+      const updater = updates.accountantName || current?.accountantName || "Aminu S. Boro (Accountant)";
 
       const newHistoryEntry: FeeScheduleHistoryEntry = {
         id: `fee_rev_${Date.now()}`,
@@ -796,11 +801,12 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
     }
 
     let activeConcessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+    const updatedAny = updated as any;
     if (concessions !== undefined) {
       activeConcessions = { ...DEFAULT_CONCESSIONS, ...concessions };
-    } else if (updated.concessionsJson) {
+    } else if (updatedAny.concessionsJson) {
       try {
-        activeConcessions = { ...DEFAULT_CONCESSIONS, ...JSON.parse(updated.concessionsJson) };
+        activeConcessions = { ...DEFAULT_CONCESSIONS, ...JSON.parse(updatedAny.concessionsJson) };
       } catch {}
     }
 
@@ -841,7 +847,7 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
   await prisma.auditLog.create({
     data: {
       action: isFeeUpdate ? "FEE_SCHEDULE_UPDATED" : "SETTINGS_UPDATED",
-      performedBy: updated.accountantName || "Administrator",
+      performedBy: updated.accountantName || "Aminu S. Boro",
       details: JSON.stringify({
         ...updates,
         session: updated.currentSession,
@@ -1207,7 +1213,7 @@ export async function voidReceipt(
     }
 
     const school = await tx.schoolProfile.findUnique({ where: { id: "default" } });
-    const operator = voidedBy || school?.accountantName || "Ibrahim S. Danladi";
+    const operator = voidedBy || school?.accountantName || "Aminu S. Boro";
     const now = new Date();
 
     // 1. Mark receipt as voided

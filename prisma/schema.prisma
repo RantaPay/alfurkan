@@ -20,7 +20,7 @@ model SchoolProfile {
   bankName             String   @default("")
   accountNumber        String   @default("")
   accountName          String   @default("")
-  accountantName       String   @default("Administrator") @map("bursarName")
+  accountantName       String   @default("Aminu S. Boro") @map("bursarName")
   accountantPin        String   @default("") @map("bursarPin")
   logoUrl              String   @default("/logo.png")
   bankAccountsJson     String?  @default("[]")

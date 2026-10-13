@@ -340,7 +340,7 @@ export function ReceiptDocument({
             <div className="py-2 border-t border-dashed border-slate-400 text-center space-y-0.5">
               <div className="pt-3 border-b border-slate-400 w-36 mx-auto" />
               <div className="text-[10px] font-black text-slate-900 uppercase">
-                {school?.accountantName || "Ibrahim S. Danladi"}
+                {school?.accountantName || "Aminu S. Boro"}
               </div>
               <div className="text-[9px] text-slate-600 uppercase tracking-wider">
                 Authorized Cashier & Accounts Dept • Verified
@@ -590,17 +590,17 @@ export function ReceiptDocument({
 
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <span
-                        className="text-lg sm:text-xl font-bold text-slate-900 tracking-wider rotate-[-8deg] opacity-90 select-none"
+                        className="text-lg sm:text-xl font-bold text-slate-900 tracking-wider rotate-[-8deg] opacity-90 select-none text-center px-2"
                         style={{ fontFamily: "'Brush Script MT', 'Dancing Script', 'Segoe Script', cursive" }}
                       >
-                        Ibrahim Danladi
+                        {school?.accountantName || "Aminu S. Boro"}
                       </span>
                     </div>
                   </div>
 
                   <div className="w-36 border-b border-slate-900 pb-0.5 text-center">
                     <span className="text-[11px] font-bold text-slate-950">
-                      {school?.accountantName || "Ibrahim S. Danladi"}
+                      {school?.accountantName || "Aminu S. Boro"}
                     </span>
                   </div>
                   <div className="text-[9.5px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">
