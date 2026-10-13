@@ -243,23 +243,29 @@ export function ReceiptDocument({
             {/* Student & Payer Info */}
             <div className="py-2.5 space-y-1 text-[11px] border-b border-dashed border-slate-400">
               <div className="flex justify-between">
-                <span className="text-slate-600">STUDENT:</span>
+                <span className="text-slate-600">{!receipt.studentId || receipt.regNumber === "N/A" ? "PAYER / CUSTOMER:" : "STUDENT:"}</span>
                 <strong className="font-black text-slate-900 text-right truncate max-w-[190px]">
                   {receipt.studentName}
                 </strong>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">REG NO:</span>
-                <strong className="font-bold">{receipt.regNumber}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">CLASS:</span>
-                <strong className="font-black">{receipt.studentClass}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">DEPOSITOR / PAYER:</span>
-                <span className="text-right truncate max-w-[180px] font-bold">{receipt.parentName}</span>
-              </div>
+              {receipt.regNumber && receipt.regNumber !== "N/A" && (
+                <div className="flex justify-between">
+                  <span className="text-slate-600">REG NO:</span>
+                  <strong className="font-bold">{receipt.regNumber}</strong>
+                </div>
+              )}
+              {receipt.studentClass && receipt.studentClass !== "General" && receipt.studentClass !== "N/A" && (
+                <div className="flex justify-between">
+                  <span className="text-slate-600">CLASS:</span>
+                  <strong className="font-black">{receipt.studentClass}</strong>
+                </div>
+              )}
+              {receipt.parentName && receipt.parentName !== receipt.studentName && (
+                <div className="flex justify-between">
+                  <span className="text-slate-600">DEPOSITOR / PAYER:</span>
+                  <span className="text-right truncate max-w-[180px] font-bold">{receipt.parentName}</span>
+                </div>
+              )}
             </div>
 
             {/* Payment Channel / Bank */}
@@ -303,30 +309,38 @@ export function ReceiptDocument({
 
             {/* Financial Totals */}
             <div className="py-2.5 space-y-1 border-b-2 border-slate-900 text-xs">
-              <div className="flex justify-between text-slate-700">
-                <span>Total Term Bill:</span>
-                <span>{formatNaira(receipt.totalTermBill)}</span>
-              </div>
-              <div className="flex justify-between text-slate-700">
-                <span>Prior Paid:</span>
-                <span>{formatNaira(receipt.previousTotalPaid)}</span>
-              </div>
+              {receipt.studentId && receipt.regNumber !== "N/A" && (
+                <>
+                  <div className="flex justify-between text-slate-700">
+                    <span>Total Term Bill:</span>
+                    <span>{formatNaira(receipt.totalTermBill)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-700">
+                    <span>Prior Paid:</span>
+                    <span>{formatNaira(receipt.previousTotalPaid)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between pt-1 border-t border-dotted border-slate-400 text-sm font-black text-slate-950">
                 <span>AMOUNT PAID NOW:</span>
                 <span>{formatNaira(receipt.amountPaid)}</span>
               </div>
-              <div className="flex justify-between text-slate-700">
-                <span>Total Paid to Date:</span>
-                <span className="font-bold">{formatNaira(receipt.newTotalPaid)}</span>
-              </div>
-              <div className={`flex justify-between pt-1 font-black ${
-                receipt.balanceRemaining === 0 ? "text-emerald-900" : "text-amber-950"
-              }`}>
-                <span>BALANCE DUE:</span>
-                <span>
-                  {receipt.balanceRemaining === 0 ? "₦0.00 (CLEARED)" : formatNaira(receipt.balanceRemaining)}
-                </span>
-              </div>
+              {receipt.studentId && receipt.regNumber !== "N/A" && (
+                <>
+                  <div className="flex justify-between text-slate-700">
+                    <span>Total Paid to Date:</span>
+                    <span className="font-bold">{formatNaira(receipt.newTotalPaid)}</span>
+                  </div>
+                  <div className={`flex justify-between pt-1 font-black ${
+                    receipt.balanceRemaining === 0 ? "text-emerald-900" : "text-amber-950"
+                  }`}>
+                    <span>BALANCE DUE:</span>
+                    <span>
+                      {receipt.balanceRemaining === 0 ? "₦0.00 (CLEARED)" : formatNaira(receipt.balanceRemaining)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Status Box */}
@@ -457,6 +471,7 @@ export function ReceiptDocument({
           {viewFormat === "traditional" ? (
             <div className="relative z-10 py-2.5 space-y-2.5">
               {/* Row 1: Received from */}
+              {/* Row 1: Received from */}
               <div className="flex flex-col sm:flex-row sm:items-baseline gap-1.5">
                 <span className="text-xs sm:text-[13px] font-black text-slate-900 uppercase tracking-wide shrink-0">
                   RECEIVED from:
@@ -465,9 +480,15 @@ export function ReceiptDocument({
                   <span className="text-sm sm:text-base font-black text-slate-950 tracking-wide">
                     {receipt.studentName}
                   </span>
-                  <span className="text-[11px] text-slate-700 font-semibold">
-                    Adm / Reg No: <strong className="font-mono text-slate-950 font-black text-xs sm:text-sm">{receipt.regNumber}</strong> • Class: <strong className="text-slate-950 text-xs sm:text-sm">{receipt.studentClass}</strong>
-                  </span>
+                  {receipt.regNumber && receipt.regNumber !== "N/A" ? (
+                    <span className="text-[11px] text-slate-700 font-semibold">
+                      Adm / Reg No: <strong className="font-mono text-slate-950 font-black text-xs sm:text-sm">{receipt.regNumber}</strong> • Class: <strong className="text-slate-950 text-xs sm:text-sm">{receipt.studentClass}</strong>
+                    </span>
+                  ) : receipt.studentClass && receipt.studentClass !== "General" && receipt.studentClass !== "N/A" ? (
+                    <span className="text-[11px] text-slate-700 font-semibold">
+                      Category: <strong className="text-slate-950 text-xs sm:text-sm">{receipt.studentClass}</strong>
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -492,11 +513,24 @@ export function ReceiptDocument({
                 </span>
                 <div className="flex-1 border-b border-dotted border-slate-400 pb-0.5 flex flex-wrap items-baseline justify-between gap-1.5">
                   <span className="text-xs sm:text-[12.5px] font-semibold text-slate-900">
-                    {receipt.paymentStatus === "FULL" ? "Full Settlement of" : "Part-Payment installment towards"}{" "}
-                    <strong>{receipt.term}, {displaySession}</strong> fees &amp; educational package
-                    {receipt.items && receipt.items.length > 0
-                      ? ` (${receipt.items.map((i) => i.name).join(", ")})`
-                      : ""}
+                    {!receipt.studentId || receipt.regNumber === "N/A" ? (
+                      <>
+                        Payment for{" "}
+                        <strong>
+                          {receipt.items && receipt.items.length > 0
+                            ? receipt.items.map((i) => i.name).join(", ")
+                            : "Official School Services"}
+                        </strong>
+                      </>
+                    ) : (
+                      <>
+                        {receipt.paymentStatus === "FULL" ? "Full Settlement of" : "Part-Payment installment towards"}{" "}
+                        <strong>{receipt.term}, {displaySession}</strong> fees &amp; educational package
+                        {receipt.items && receipt.items.length > 0
+                          ? ` (${receipt.items.map((i) => i.name).join(", ")})`
+                          : ""}
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
@@ -533,25 +567,27 @@ export function ReceiptDocument({
                     </div>
                   </div>
 
-                  {/* Balance Summary */}
-                  <div className="bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-[11px] space-y-0.5">
-                    <div className="flex justify-between text-slate-600">
-                      <span>Total Term Bill:</span>
-                      <strong className="font-mono text-slate-900">{formatNaira(receipt.totalTermBill)}</strong>
+                  {/* Balance Summary (Only for registered academic students) */}
+                  {receipt.studentId && receipt.regNumber !== "N/A" && (
+                    <div className="bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-[11px] space-y-0.5">
+                      <div className="flex justify-between text-slate-600">
+                        <span>Total Term Bill:</span>
+                        <strong className="font-mono text-slate-900">{formatNaira(receipt.totalTermBill)}</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Total Paid to Date:</span>
+                        <strong className="font-mono text-slate-900">{formatNaira(receipt.newTotalPaid)}</strong>
+                      </div>
+                      <div className={`flex justify-between pt-0.5 border-t border-slate-200 font-black ${
+                        receipt.balanceRemaining === 0 ? "text-emerald-800" : "text-amber-800"
+                      }`}>
+                        <span>Balance Remaining:</span>
+                        <span className="font-mono text-[11px] sm:text-xs">
+                          {receipt.balanceRemaining === 0 ? "₦0.00 (NIL / CLEARED)" : formatNaira(receipt.balanceRemaining)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>Total Paid to Date:</span>
-                      <strong className="font-mono text-slate-900">{formatNaira(receipt.newTotalPaid)}</strong>
-                    </div>
-                    <div className={`flex justify-between pt-0.5 border-t border-slate-200 font-black ${
-                      receipt.balanceRemaining === 0 ? "text-emerald-800" : "text-amber-800"
-                    }`}>
-                      <span>Balance Remaining:</span>
-                      <span className="font-mono text-[11px] sm:text-xs">
-                        {receipt.balanceRemaining === 0 ? "₦0.00 (NIL / CLEARED)" : formatNaira(receipt.balanceRemaining)}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right: Authentic Accounts Rubber Stamp & Signature */}

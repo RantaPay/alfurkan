@@ -40,15 +40,19 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    if (!studentId || !amountPaid || amountPaid <= 0) {
+    const finalPayerName = (body.studentName || depositorName || payerName || "").trim();
+    if ((!studentId && !finalPayerName) || !amountPaid || Number(amountPaid) <= 0) {
       return NextResponse.json(
-        { success: false, error: "Student ID and a valid payment amount are required." },
+        { success: false, error: "Payer Name / Student and a valid payment amount are required." },
         { status: 400 }
       );
     }
 
     const receipt = await createReceipt({
-      studentId,
+      studentId: studentId || null,
+      studentName: body.studentName || finalPayerName,
+      studentClass: body.studentClass || "General",
+      regNumber: body.regNumber || "N/A",
       amountPaid: Number(amountPaid),
       paymentMethod: paymentMethod || "Bank Transfer",
       bankReference,

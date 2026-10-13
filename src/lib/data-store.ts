@@ -382,7 +382,10 @@ export async function getStudentReceipts(studentId: string): Promise<Receipt[]> 
 }
 
 export interface CreateReceiptInput {
-  studentId: string;
+  studentId?: string | null;
+  studentName?: string;
+  regNumber?: string;
+  studentClass?: string;
   amountPaid: number;
   paymentMethod: "Bank Transfer" | "Bank Deposit" | "POS" | "Cash";
   bankReference?: string;
@@ -398,11 +401,14 @@ export interface CreateReceiptInput {
 
 export async function createReceipt(input: CreateReceiptInput): Promise<Receipt> {
   return await prisma.$transaction(async (tx) => {
-    // 1. Fetch student and school profile in transaction to prevent race conditions
-    const student = await tx.student.findUnique({
-      where: { id: input.studentId },
-    });
-    if (!student) {
+    // 1. Fetch student if studentId is provided, or prepare external payer
+    const student = input.studentId
+      ? await tx.student.findUnique({
+          where: { id: input.studentId },
+        })
+      : null;
+
+    if (input.studentId && !student) {
       throw new Error("Student not found");
     }
 
@@ -410,9 +416,32 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       where: { id: "default" },
     });
 
-    let effectiveBill = student.totalTermBill || 0;
+    const payerFullName = (
+      input.studentName ||
+      input.depositorName ||
+      input.payerName ||
+      "External Payer"
+    ).trim();
+
+    const regNumber = student?.regNumber || input.regNumber || "N/A";
+    const studentClass = student?.class || input.studentClass || "General";
+    const parentName = (
+      input.depositorName?.trim() ||
+      input.payerName?.trim() ||
+      student?.parentName ||
+      payerFullName
+    );
+    const parentPhone = (
+      input.depositorPhone?.trim() ||
+      input.payerPhone?.trim() ||
+      student?.parentPhone ||
+      ""
+    );
+    const parentEmail = student?.parentEmail || null;
+
+    let effectiveBill = student ? (student.totalTermBill || 0) : input.amountPaid;
     const schoolAny = school as any;
-    if (effectiveBill === 0 && schoolAny?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
+    if (student && effectiveBill === 0 && schoolAny?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
       try {
         const fees = JSON.parse(schoolAny.feeStructureJson);
         const concessions = schoolAny.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : DEFAULT_CONCESSIONS;
@@ -423,9 +452,9 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       } catch {}
     }
 
-    const prevTotalPaid = student.totalPaid || 0;
-    const newTotalPaid = prevTotalPaid + input.amountPaid;
-    const newBalanceRemaining = Math.max(0, effectiveBill - newTotalPaid);
+    const prevTotalPaid = student ? (student.totalPaid || 0) : 0;
+    const newTotalPaid = student ? prevTotalPaid + input.amountPaid : input.amountPaid;
+    const newBalanceRemaining = student ? Math.max(0, effectiveBill - newTotalPaid) : 0;
     const paymentStatus: "FULL" | "PARTIAL" =
       newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
 
@@ -504,13 +533,13 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     const createdReceipt = await tx.receipt.create({
       data: {
         receiptNumber,
-        studentId: student.id,
-        regNumber: student.regNumber,
-        studentName: student.fullName,
-        studentClass: student.class,
-        parentName: input.depositorName?.trim() || input.payerName?.trim() || student.parentName,
-        parentPhone: input.depositorPhone?.trim() || input.payerPhone?.trim() || student.parentPhone,
-        parentEmail: student.parentEmail,
+        ...(student ? { student: { connect: { id: student.id } } } : {}),
+        regNumber,
+        studentName: student ? student.fullName : payerFullName,
+        studentClass,
+        parentName,
+        parentPhone,
+        parentEmail,
         amountPaid: input.amountPaid,
         totalTermBill: effectiveBill,
         previousTotalPaid: prevTotalPaid,
@@ -537,17 +566,19 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       },
     });
 
-    // 6. Update student balance in PostgreSQL
-    await tx.student.update({
-      where: { id: student.id },
-      data: {
-        totalTermBill: effectiveBill,
-        totalPaid: newTotalPaid,
-        balanceRemaining: newBalanceRemaining,
-        status: effectiveBill === 0 ? "UNPAID" : newBalanceRemaining === 0 ? "FULL" : "PARTIAL",
-        lastPaymentDate: isoDateString,
-      },
-    });
+    // 6. Update student balance in PostgreSQL (if registered student)
+    if (student) {
+      await tx.student.update({
+        where: { id: student.id },
+        data: {
+          totalTermBill: effectiveBill,
+          totalPaid: newTotalPaid,
+          balanceRemaining: newBalanceRemaining,
+          status: effectiveBill === 0 ? "UNPAID" : newBalanceRemaining === 0 ? "FULL" : "PARTIAL",
+          lastPaymentDate: isoDateString,
+        },
+      });
+    }
 
     // 7. Insert Audit Log
     await tx.auditLog.create({
@@ -556,7 +587,8 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         performedBy: accountantName,
         details: JSON.stringify({
           receiptNumber,
-          studentRegNumber: student.regNumber,
+          studentRegNumber: student?.regNumber || regNumber,
+          studentName: student?.fullName || payerFullName,
           amountPaid: input.amountPaid,
           paymentMethod: input.paymentMethod,
           bankName: (input as any).bankName || school?.bankName || "",
@@ -1229,9 +1261,11 @@ export async function voidReceipt(
     });
 
     // 2. Re-adjust student balance from all remaining active receipts
-    const student = await tx.student.findUnique({
-      where: { id: receipt.studentId },
-    });
+    const student = receipt.studentId
+      ? await tx.student.findUnique({
+          where: { id: receipt.studentId },
+        })
+      : null;
 
     if (student) {
       const activeReceipts = await tx.receipt.findMany({

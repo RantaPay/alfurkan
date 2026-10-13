@@ -60,7 +60,7 @@ export interface ReceiptItem {
 export interface Receipt {
   id: string;
   receiptNumber: string; // e.g. AIA-RCP-2026-0041
-  studentId: string;
+  studentId?: string | null;
   regNumber: string;
   studentName: string;
   studentClass: string;

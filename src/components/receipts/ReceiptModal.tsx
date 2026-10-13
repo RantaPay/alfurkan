@@ -18,19 +18,46 @@ import {
   Sparkles,
   ArrowRight,
   Calendar,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 
-export const PRESET_FEE_OPTIONS: { name: string; category: FeeCategory; label: string }[] = [
-  { name: "Tuition / School Fees", category: "Tuition", label: "Tuition / School Fees" },
-  { name: "Tuition Part Payment", category: "Tuition", label: "Tuition Part Payment" },
-  { name: "Notebook / Textbooks", category: "Books", label: "Notebook / Textbooks" },
-  { name: "School Uniform (2 Sets)", category: "Uniform", label: "School Uniform (2 Sets)" },
-  { name: "Sport Wears", category: "PTA", label: "Sport Wears" },
-  { name: "Transport / Bus Service", category: "Transport", label: "Transport / Bus Service" },
-  { name: "Laboratory & Practical Fees", category: "Development", label: "Laboratory & Practical Fees" },
-  { name: "Excursion & Field Trip", category: "Excursion", label: "Excursion & Field Trip" },
-  { name: "Development & Maintenance Levy", category: "Development", label: "Development & Maintenance Levy" },
-  { name: "CUSTOM", category: "Other", label: "Custom / Other Fee (Specify below)" },
+export interface PresetFeeOption {
+  name: string;
+  category: FeeCategory;
+  label: string;
+  group: "Standard" | "Others";
+  allowExternal?: boolean;
+}
+
+export const STANDARD_FEE_OPTIONS: PresetFeeOption[] = [
+  // Standard Academic & School Fees
+  { name: "Tuition / School Fees", category: "Tuition", label: "Tuition / School Fees", group: "Standard" },
+  { name: "Notebook", category: "Books", label: "Notebook", group: "Standard" },
+  { name: "Textbooks", category: "Books", label: "Textbooks", group: "Standard" },
+  { name: "School Uniform", category: "Uniform", label: "School Uniform", group: "Standard" },
+  { name: "Sport Wears", category: "PTA", label: "Sport Wears", group: "Standard" },
+  { name: "Transport / Bus Service", category: "Transport", label: "Transport / Bus Service", group: "Standard" },
+  { name: "Laboratory & Practical Fees", category: "Development", label: "Laboratory & Practical Fees", group: "Standard" },
+  { name: "Excursion & Field Trip", category: "Excursion", label: "Excursion & Field Trip", group: "Standard" },
+];
+
+export const OTHER_FEE_OPTIONS: PresetFeeOption[] = [
+  // Others (Miscellaneous & External Revenues)
+  { name: "Badge fee", category: "Other", label: "Badge fee", group: "Others" },
+  { name: "Certificate and testimonials", category: "Other", label: "Certificate and testimonials", group: "Others", allowExternal: true },
+  { name: "Admission form fees", category: "Other", label: "Admission form fees", group: "Others", allowExternal: true },
+  { name: "Examination fees", category: "Other", label: "Examination fees", group: "Others" },
+  { name: "Sale of scrapped assets", category: "Other", label: "Sale of scrapped assets", group: "Others", allowExternal: true },
+  { name: "Hall rent", category: "Other", label: "Hall rent", group: "Others", allowExternal: true },
+  { name: "Jamb center fees", category: "Other", label: "Jamb center fees", group: "Others", allowExternal: true },
+  { name: "Alfurqan clinic fees", category: "Other", label: "Alfurqan clinic fees", group: "Others", allowExternal: true },
+  { name: "CUSTOM", category: "Other", label: "Custom / Other Fee (Specify below)", group: "Others", allowExternal: true },
+];
+
+export const PRESET_FEE_OPTIONS: PresetFeeOption[] = [
+  ...STANDARD_FEE_OPTIONS,
+  ...OTHER_FEE_OPTIONS,
 ];
 
 interface ReceiptModalProps {
@@ -59,6 +86,11 @@ export function ReceiptModal({
   // Depositor / Payer state (pre-filled with student's parent by default, but customizable)
   const [depositorName, setDepositorName] = useState(preselectedStudent?.parentName || "");
   const [depositorPhone, setDepositorPhone] = useState(preselectedStudent?.parentPhone || "");
+
+  // Walk-in / External payer state (for Hall rent, scrap, jamb, clinic, admission forms, etc.)
+  const [isExternalPayer, setIsExternalPayer] = useState(false);
+  const [externalPayerName, setExternalPayerName] = useState("");
+  const [externalCategory, setExternalCategory] = useState("");
 
   // Payment form state
   const [paymentMethod, setPaymentMethod] = useState<
@@ -183,10 +215,28 @@ export function ReceiptModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudent) {
-      setErrorMessage("Please select a student first.");
+
+    const isAnyExternalFee = items.some((it) => {
+      const match = PRESET_FEE_OPTIONS.find((p) => p.name === it.name);
+      return match?.allowExternal;
+    });
+
+    const effectivelyExternal = isExternalPayer || (!selectedStudent && isAnyExternalFee);
+
+    if (!selectedStudent && !effectivelyExternal) {
+      setErrorMessage("Please select a student or enter an external payer name.");
       return;
     }
+
+    const payerName = effectivelyExternal
+      ? (externalPayerName.trim() || depositorName.trim() || searchQuery.trim())
+      : selectedStudent?.fullName || "";
+
+    if (!payerName) {
+      setErrorMessage("Please enter the customer / payer's full name.");
+      return;
+    }
+
     if (totalAmount <= 0) {
       setErrorMessage("Total payment amount must be greater than zero.");
       return;
@@ -200,14 +250,17 @@ export function ReceiptModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: selectedStudent.id,
+          studentId: selectedStudent?.id || null,
+          studentName: payerName,
+          studentClass: selectedStudent ? selectedStudent.class : (externalCategory.trim() || "General"),
+          regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
           amountPaid: totalAmount,
           paymentMethod,
           bankName: receivingBank,
           date: receivingDate,
           bankReference,
-          depositorName: depositorName.trim() || selectedStudent.parentName,
-          depositorPhone: depositorPhone.trim() || selectedStudent.parentPhone,
+          depositorName: depositorName.trim() || payerName,
+          depositorPhone: depositorPhone.trim() || (selectedStudent ? selectedStudent.parentPhone : ""),
           items,
           notes,
         }),
@@ -287,13 +340,97 @@ export function ReceiptModal({
             </div>
           )}
 
-          {/* STEP 1: Select Student */}
+          {/* STEP 1: Select Student or External Payer */}
           <div>
-            <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 mb-2">
-              1. Student Selection
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
+                1. {isExternalPayer ? "External Payer Details" : "Student Selection"}
+              </label>
 
-            {selectedStudent ? (
+              {/* Mode Switcher */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExternalPayer(false);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    !isExternalPayer
+                      ? "bg-[#075E54] text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExternalPayer(true);
+                    setSelectedStudent(null);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    isExternalPayer
+                      ? "bg-[#075E54] text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  External Payer
+                </button>
+              </div>
+            </div>
+
+            {isExternalPayer ? (
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <UserCheck className="h-4 w-4 text-amber-700" />
+                    <span>External payment (no student account required)</span>
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+                    Customer / Payer Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={externalPayerName}
+                    onChange={(e) => {
+                      setExternalPayerName(e.target.value);
+                      if (!depositorName) setDepositorName(e.target.value);
+                    }}
+                    placeholder="Type name (e.g. Alhaji Musa, Bello Sani, JAMB Candidate, Clinic Patient)"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+                      Payer Phone (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={depositorPhone}
+                      onChange={(e) => setDepositorPhone(e.target.value)}
+                      placeholder="e.g. 08012345678"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+                      Category / Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={externalCategory}
+                      onChange={(e) => setExternalCategory(e.target.value)}
+                      placeholder="e.g. Hall Rent, Scrap Buyer, Applicant"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : selectedStudent ? (
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#075E54] to-[#128C7E] text-white flex items-center justify-center font-bold text-sm shrink-0">
@@ -344,6 +481,11 @@ export function ReceiptModal({
                           setItems([
                             { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
                           ]);
+                        } else if (searchQuery.trim()) {
+                          setIsExternalPayer(true);
+                          setExternalPayerName(searchQuery.trim());
+                          if (!depositorName) setDepositorName(searchQuery.trim());
+                          setSearchQuery("");
                         }
                       }
                     }}
@@ -355,6 +497,27 @@ export function ReceiptModal({
                 {isSearching && (
                   <div className="py-2.5 px-3 flex items-center justify-center">
                     <div className="h-4 w-4 border-2 border-[#075E54] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+
+                {searchQuery.trim() && !isSearching && searchResults.length === 0 && (
+                  <div className="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                    <span className="text-xs text-amber-900 font-medium">
+                      Student not registered in database?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExternalPayer(true);
+                        setExternalPayerName(searchQuery.trim());
+                        if (!depositorName) setDepositorName(searchQuery.trim());
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }}
+                      className="px-2.5 py-1 text-xs font-black bg-[#075E54] hover:bg-[#128C7E] text-white rounded-lg cursor-pointer"
+                    >
+                      Use as External Payer
+                    </button>
                   </div>
                 )}
 
@@ -437,7 +600,7 @@ export function ReceiptModal({
               <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
                 2. Fee Items Breakdown
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
                   onClick={() => handleAddItem("Tuition", "Tuition / School Fees", 0)}
@@ -447,14 +610,21 @@ export function ReceiptModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Books", "Notebook / Textbooks", 0)}
+                  onClick={() => handleAddItem("Books", "Notebook", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
-                  + Notebook / Textbooks
+                  + Notebook
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem("Uniform", "School Uniform (2 Sets)", 0)}
+                  onClick={() => handleAddItem("Books", "Textbooks", 0)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                >
+                  + Textbooks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddItem("Uniform", "School Uniform", 0)}
                   className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
                   + Uniform
@@ -466,27 +636,78 @@ export function ReceiptModal({
                 >
                   + Sport Wears
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAddItem("Other", "CUSTOM", 0);
+                    if (!selectedStudent) setIsExternalPayer(true);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 cursor-pointer"
+                >
+                  + Other Fee
+                </button>
               </div>
             </div>
 
             <div className="space-y-2.5 border border-slate-200 rounded-2xl p-3 bg-slate-50/50">
               {items.map((item, idx) => {
-                const isCustom = !PRESET_FEE_OPTIONS.some(
-                  (p) => p.name !== "CUSTOM" && p.name === item.name
-                );
+                const isStandard = STANDARD_FEE_OPTIONS.some((p) => p.name === item.name);
+                const isOtherPreset = OTHER_FEE_OPTIONS.some((p) => p.name === item.name && p.name !== "CUSTOM");
+                const isCustom = !isStandard && !isOtherPreset;
+                const isOther = isOtherPreset || isCustom;
 
                 return (
                   <div
                     key={idx}
-                    className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2 transition-all"
+                    className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5 transition-all"
                   >
-                    <div className="flex items-center gap-2">
-                      {/* Fee Dropdown Box */}
-                      <div className="flex-1 min-w-[180px]">
+                    <div className="flex flex-col md:flex-row md:items-end gap-2.5">
+                      {/* Dropdown 1: Standard Fees */}
+                      <div className="flex-1 min-w-[160px]">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                          Standard Fees
+                        </label>
                         <select
-                          value={isCustom ? "CUSTOM" : item.name}
+                          value={isStandard ? item.name : ""}
                           onChange={(e) => {
                             const val = e.target.value;
+                            if (!val) return;
+                            const found = STANDARD_FEE_OPTIONS.find((p) => p.name === val);
+                            if (found) {
+                              setItems((prev) =>
+                                prev.map((it, i) =>
+                                  i === idx
+                                    ? { ...it, name: found.name, category: found.category }
+                                    : it
+                                )
+                              );
+                            }
+                          }}
+                          className={`w-full h-11 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                            isStandard
+                              ? "border-[#075E54] bg-emerald-50/50 text-slate-900 ring-2 ring-[#075E54]/20"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                          }`}
+                        >
+                          <option value="">-- Select Standard Fee --</option>
+                          {STANDARD_FEE_OPTIONS.map((opt) => (
+                            <option key={opt.name} value={opt.name}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Dropdown 2: Others */}
+                      <div className="flex-1 min-w-[160px]">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-amber-800 mb-1">
+                          Others
+                        </label>
+                        <select
+                          value={isOther ? (isCustom ? "CUSTOM" : item.name) : ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (!val) return;
                             if (val === "CUSTOM") {
                               setItems((prev) =>
                                 prev.map((it, i) =>
@@ -499,8 +720,16 @@ export function ReceiptModal({
                                     : it
                                 )
                               );
+                              if (!selectedStudent) {
+                                setIsExternalPayer(true);
+                                if (searchQuery.trim() && !externalPayerName) {
+                                  setExternalPayerName(searchQuery.trim());
+                                  if (!depositorName) setDepositorName(searchQuery.trim());
+                                  setSearchQuery("");
+                                }
+                              }
                             } else {
-                              const found = PRESET_FEE_OPTIONS.find((p) => p.name === val);
+                              const found = OTHER_FEE_OPTIONS.find((p) => p.name === val);
                               if (found) {
                                 setItems((prev) =>
                                   prev.map((it, i) =>
@@ -509,13 +738,25 @@ export function ReceiptModal({
                                       : it
                                   )
                                 );
+                                if (found.allowExternal && !selectedStudent) {
+                                  setIsExternalPayer(true);
+                                  if (searchQuery.trim() && !externalPayerName) {
+                                    setExternalPayerName(searchQuery.trim());
+                                    if (!depositorName) setDepositorName(searchQuery.trim());
+                                    setSearchQuery("");
+                                  }
+                                }
                               }
                             }
                           }}
-                          className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] focus:border-[#075E54] cursor-pointer"
+                          className={`w-full h-11 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                            isOther
+                              ? "border-amber-600 bg-amber-50/50 text-slate-900 ring-2 ring-amber-600/20"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                          }`}
                         >
-                          <option value="" disabled>-- Select Fee Purpose --</option>
-                          {PRESET_FEE_OPTIONS.map((opt) => (
+                          <option value="">-- Others (Select Fee) --</option>
+                          {OTHER_FEE_OPTIONS.map((opt) => (
                             <option key={opt.name} value={opt.name}>
                               {opt.label}
                             </option>
@@ -523,30 +764,37 @@ export function ReceiptModal({
                         </select>
                       </div>
 
-                      {/* Fee Amount */}
-                      <div className="relative w-36 sm:w-44 shrink-0">
-                        <span className="absolute left-3 top-2.5 text-sm text-slate-400 font-mono font-bold">
-                          ₦
-                        </span>
-                        <input
-                          type="number"
-                          value={item.amount || ""}
-                          onChange={(e) => handleUpdateItemAmount(idx, Number(e.target.value))}
-                          placeholder="Amount"
-                          className="w-full h-11 pl-7 pr-3 rounded-xl border border-slate-200 text-sm font-mono font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-                        />
-                      </div>
+                      {/* Fee Amount & Trash Button */}
+                      <div className="flex items-end gap-2 shrink-0">
+                        <div className="w-32 sm:w-36">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                            Amount
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-3 text-xs sm:text-sm text-slate-400 font-mono font-bold">
+                              ₦
+                            </span>
+                            <input
+                              type="number"
+                              value={item.amount || ""}
+                              onChange={(e) => handleUpdateItemAmount(idx, Number(e.target.value))}
+                              placeholder="0.00"
+                              className="w-full h-11 pl-7 pr-3 rounded-xl border border-slate-200 text-sm font-mono font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+                            />
+                          </div>
+                        </div>
 
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(idx)}
-                        disabled={items.length === 1}
-                        className="p-2 text-slate-400 hover:text-rose-600 disabled:opacity-20 cursor-pointer transition-colors shrink-0"
-                        title="Remove item"
-                      >
-                        <Trash2 className="h-4.5 w-4.5" />
-                      </button>
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(idx)}
+                          disabled={items.length === 1}
+                          className="h-11 px-2.5 text-slate-400 hover:text-rose-600 disabled:opacity-20 cursor-pointer transition-colors flex items-center justify-center shrink-0"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-4.5 w-4.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Custom description field if 'Custom / Other Fee' is selected or non-preset name */}
@@ -580,7 +828,11 @@ export function ReceiptModal({
                   onClick={() =>
                     setItems((prev) => [
                       ...prev,
-                      { name: "Tuition / School Fees", category: "Tuition", amount: 0 },
+                      {
+                        name: isExternalPayer ? "Hall rent" : "Tuition / School Fees",
+                        category: isExternalPayer ? "Other" : "Tuition",
+                        amount: 0,
+                      },
                     ])
                   }
                   className="w-full py-2.5 px-3 border border-dashed border-slate-300 hover:border-[#075E54] hover:bg-emerald-50/40 text-slate-600 hover:text-[#075E54] rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
