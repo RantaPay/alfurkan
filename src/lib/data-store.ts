@@ -381,6 +381,100 @@ export async function getStudentReceipts(studentId: string): Promise<Receipt[]> 
   return receipts.map(formatReceipt);
 }
 
+export interface CheckDuplicateInput {
+  studentName?: string;
+  regNumber?: string;
+  amountPaid: number;
+  date?: string;
+  items?: { name: string }[];
+}
+
+export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<Receipt | null> {
+  const reg = (input.regNumber || "").trim();
+  const name = (input.studentName || "").trim().toLowerCase();
+  const amount = Number(input.amountPaid) || 0;
+  if (amount <= 0) return null;
+
+  // Format date for comparison
+  let receiptDateObj = new Date();
+  if (input.date) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+      const [y, m, d] = input.date.split("-").map(Number);
+      receiptDateObj = new Date(y, m - 1, d, 12, 0, 0);
+    } else {
+      const parsed = new Date(input.date);
+      if (!isNaN(parsed.getTime())) receiptDateObj = parsed;
+    }
+  }
+
+  const formattedDate = receiptDateObj.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const isoDate = input.date ? input.date.split("T")[0] : receiptDateObj.toISOString().split("T")[0];
+
+  const defaultFeeName = "tuition / school fees";
+  const inputItemNames = (
+    input.items && input.items.length > 0
+      ? input.items.map((it) => it.name.trim().toLowerCase())
+      : [defaultFeeName]
+  )
+    .filter(Boolean)
+    .sort()
+    .join(", ");
+
+  const studentConditions: any[] = [];
+  if (reg && reg !== "N/A") {
+    studentConditions.push({ regNumber: { equals: reg, mode: "insensitive" } });
+  } else if (name) {
+    studentConditions.push({ studentName: { equals: name, mode: "insensitive" } });
+  }
+
+  if (studentConditions.length === 0) return null;
+
+  const candidateReceipts = await prisma.receipt.findMany({
+    where: {
+      isVoided: false,
+      amountPaid: amount,
+      OR: studentConditions,
+    },
+    include: { items: true },
+    orderBy: { timestamp: "desc" },
+  });
+
+  for (const r of candidateReceipts) {
+    const rIsoDate = r.timestamp instanceof Date ? r.timestamp.toISOString().split("T")[0] : "";
+    const rDateObj = r.timestamp instanceof Date ? r.timestamp : new Date(r.timestamp);
+    const rFormattedDate = !isNaN(rDateObj.getTime())
+      ? rDateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+      : "";
+
+    const isSameDate =
+      r.date.trim().toLowerCase() === formattedDate.trim().toLowerCase() ||
+      r.date.trim().toLowerCase() === (input.date || "").trim().toLowerCase() ||
+      (isoDate && rIsoDate === isoDate) ||
+      (rFormattedDate && rFormattedDate.toLowerCase() === formattedDate.toLowerCase());
+
+    if (!isSameDate) continue;
+
+    const rItemNames = (
+      r.items && r.items.length > 0
+        ? r.items.map((it) => it.name.trim().toLowerCase())
+        : [defaultFeeName]
+    )
+      .filter(Boolean)
+      .sort()
+      .join(", ");
+
+    if (inputItemNames === rItemNames) {
+      return formatReceipt(r);
+    }
+  }
+
+  return null;
+}
+
 export interface CreateReceiptInput {
   studentId?: string | null;
   studentName?: string;
