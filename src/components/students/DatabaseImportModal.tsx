@@ -35,7 +35,6 @@ export function DatabaseImportModal({
   onImportSuccess,
 }: DatabaseImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [wipeExistingData, setWipeExistingData] = useState<boolean>(true);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -79,7 +78,6 @@ export function DatabaseImportModal({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("mode", "preview");
-      formData.append("wipeExistingData", wipeExistingData ? "true" : "false");
 
       const res = await fetch("/api/students/import", {
         method: "POST",
@@ -108,7 +106,6 @@ export function DatabaseImportModal({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("mode", "execute");
-      formData.append("wipeExistingData", wipeExistingData ? "true" : "false");
 
       const res = await fetch("/api/students/import", {
         method: "POST",
@@ -310,6 +307,14 @@ export function DatabaseImportModal({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Financial Protection Guarantee Notice */}
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-900 font-semibold">
+                <ShieldCheck className="h-4 w-4 text-[#075E54] shrink-0" />
+                <span>
+                  <strong>Safe Sync Guaranteed:</strong> Importing or updating students will never delete past receipts, payment balances, or audit histories.
+                </span>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">

@@ -1657,8 +1657,8 @@ export default function SettingsPage() {
             </div>
           )}
 
-              {/* Bottom Save Bar */}
-              <div className="flex items-center justify-end pt-4 pb-12 border-t border-slate-200">
+          {/* Bottom Save Bar */}
+          <div className="flex items-center justify-end pt-4 pb-12 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => handleSaveSettings()}

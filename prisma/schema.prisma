@@ -74,7 +74,7 @@ model Receipt {
   id                String        @id @default(uuid())
   receiptNumber     String        @unique
   studentId         String?
-  student           Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student           Student?      @relation(fields: [studentId], references: [id], onDelete: SetNull)
   regNumber         String
   studentName       String
   studentClass      String
