@@ -73,6 +73,16 @@ export function standardizeClassName(sheetName: string, title?: string): string 
     return `Pre-Nursery ${arm}`;
   }
 
+  // Pre-Basic
+  if (
+    combined.includes("PREBASIC") ||
+    combined.includes("PRE-BASIC") ||
+    combined.includes("PRE BASIC") ||
+    /^PB\b/i.test(sheetName)
+  ) {
+    return `Pre-Basic ${arm}`;
+  }
+
   // Nursery 1
   if (combined.includes("NURSERY ONE") || combined.includes("NURSERY 1") || /^N\s*1/i.test(sheetName)) {
     return `Nursery 1 ${arm}`;
@@ -253,6 +263,21 @@ export function getBillForClass(
     return lowerClass.startsWith(lvl) || normClass.startsWith(normLvl);
   });
   if (prefixMatch) return prefixMatch.totalBill;
+
+  // 4. Handle "PB" alias for Pre-Basic
+  if (
+    normClass === "pb" ||
+    normClass.startsWith("pba") ||
+    normClass.startsWith("pbb") ||
+    normClass.startsWith("pbc") ||
+    normClass.startsWith("pbd")
+  ) {
+    const pbMatch = feeStructure.find((f) => {
+      const lvl = f.classLevel.toLowerCase();
+      return lvl.includes("pre-basic") || lvl.includes("pre basic") || lvl === "pb";
+    });
+    if (pbMatch) return pbMatch.totalBill;
+  }
 
   return 0;
 }

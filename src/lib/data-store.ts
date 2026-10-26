@@ -305,6 +305,7 @@ export async function getDistinctClassLevels(): Promise<string[]> {
     if (l.includes("pre-nursery")) return 1;
     if (l.includes("nursery 1")) return 2;
     if (l.includes("nursery 2")) return 3;
+    if (l.includes("pre-basic") || l.includes("pre basic") || l === "pb" || l.startsWith("pb ") || l.startsWith("pb-")) return 4;
     if (l.includes("basic 1")) return 11;
     if (l.includes("basic 2")) return 12;
     if (l.includes("basic 3")) return 13;
@@ -1228,6 +1229,7 @@ const PROMOTION_LEVEL_ORDER = [
   "Pre-Nursery",
   "Nursery 1",
   "Nursery 2",
+  "Pre-Basic",
   "Basic 1",
   "Basic 2",
   "Basic 3",
@@ -1246,6 +1248,7 @@ const PROMOTION_NEXT_LEVEL_MAP: Record<string, string> = {
   "Pre-Nursery": "Nursery 1",
   "Nursery 1": "Nursery 2",
   "Nursery 2": "Basic 1",
+  "Pre-Basic": "Basic 1",
   "Basic 1": "Basic 2",
   "Basic 2": "Basic 3",
   "Basic 3": "Basic 4",

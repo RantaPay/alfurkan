@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { formatNaira } from "@/lib/utils";
+import { getBillForClass } from "@/lib/student-importer";
 import {
   X,
   UserPlus,
@@ -19,6 +20,7 @@ const CLASS_OPTIONS = [
   "Pre-Nursery A", "Pre-Nursery B",
   "Nursery 1 A", "Nursery 1 B", "Nursery 1 C", "Nursery 1 D",
   "Nursery 2 A", "Nursery 2 B", "Nursery 2 C",
+  "Pre-Basic A", "Pre-Basic B", "Pre-Basic C", "Pre-Basic D",
   "Basic 1 A", "Basic 1 B", "Basic 1 C",
   "Basic 2 A", "Basic 2 B", "Basic 2 C",
   "Basic 3 A", "Basic 3 B", "Basic 3 C",
@@ -47,9 +49,55 @@ export function AddStudentModal({
   const [parentEmail, setParentEmail] = useState("");
   const [totalTermBill, setTotalTermBill] = useState(0);
   const [regNumber, setRegNumber] = useState("");
+  const [feeStructure, setFeeStructure] = useState<any[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Dynamic class options incorporating any custom classes from fee structure
+  const classOptions = useMemo(() => {
+    const list = [...CLASS_OPTIONS];
+    if (feeStructure.length > 0) {
+      feeStructure.forEach((f: any) => {
+        const lvl = (f.classLevel || "").trim();
+        if (!lvl) return;
+        const normLvl = lvl.replace(/[^a-z0-9]/gi, "").toLowerCase();
+        const exists = list.some((opt) => {
+          const normOpt = opt.replace(/[^a-z0-9]/gi, "").toLowerCase();
+          return normOpt.startsWith(normLvl) || normLvl.startsWith(normOpt);
+        });
+        if (!exists) {
+          list.push(`${lvl} A`, `${lvl} B`, `${lvl} C`);
+        }
+      });
+    }
+    return list;
+  }, [feeStructure]);
+
+  // Load fee structure from settings on open and auto-populate bill
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/settings")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.school?.feeStructure) {
+            setFeeStructure(data.school.feeStructure);
+            setTotalTermBill((prev) => (prev === 0 ? getBillForClass(studentClass, data.school.feeStructure) : prev));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  const handleClassChange = (newClass: string) => {
+    setStudentClass(newClass);
+    if (feeStructure.length > 0) {
+      const bill = getBillForClass(newClass, feeStructure);
+      if (bill > 0) {
+        setTotalTermBill(bill);
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -99,6 +147,9 @@ export function AddStudentModal({
     setParentEmail("");
     setRegNumber("");
     setMessage(null);
+    if (feeStructure.length > 0) {
+      setTotalTermBill(getBillForClass(studentClass, feeStructure));
+    }
   };
 
   return (
@@ -171,10 +222,10 @@ export function AddStudentModal({
                 <label className="block font-bold text-slate-800 mb-1.5">Class</label>
                 <select
                   value={studentClass}
-                  onChange={(e) => setStudentClass(e.target.value)}
+                  onChange={(e) => handleClassChange(e.target.value)}
                   className="w-full h-11 px-3 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
                 >
-                  {CLASS_OPTIONS.map((c) => (
+                  {classOptions.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>

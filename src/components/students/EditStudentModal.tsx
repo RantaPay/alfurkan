@@ -32,6 +32,7 @@ const CLASS_LEVELS = [
   "Pre-Nursery",
   "Nursery 1",
   "Nursery 2",
+  "Pre-Basic",
   "Basic 1",
   "Basic 2",
   "Basic 3",
@@ -100,6 +101,10 @@ export function EditStudentModal({
       if (matchedLevel) {
         setClassLevel(matchedLevel);
         const remainder = trimmed.slice(matchedLevel.length).trim();
+        setClassArm(remainder || "A");
+      } else if (/^pb\b/i.test(trimmed) || trimmed.toLowerCase().startsWith("pre basic") || trimmed.toLowerCase().startsWith("pre-basic")) {
+        setClassLevel("Pre-Basic");
+        const remainder = trimmed.replace(/^(pb|pre\s*[- ]?\s*basic)\s*/i, "").trim();
         setClassArm(remainder || "A");
       } else {
         const parts = trimmed.split(" ");

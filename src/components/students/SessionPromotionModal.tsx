@@ -29,6 +29,7 @@ const LEVEL_FLOW = [
   { from: "Pre-Nursery", to: "Nursery 1", color: "from-pink-500/10 to-rose-500/10 border-pink-200" },
   { from: "Nursery 1", to: "Nursery 2", color: "from-rose-500/10 to-orange-500/10 border-rose-200" },
   { from: "Nursery 2", to: "Basic 1", color: "from-orange-500/10 to-amber-500/10 border-orange-200" },
+  { from: "Pre-Basic", to: "Basic 1", color: "from-amber-500/10 to-yellow-500/10 border-amber-200" },
   { from: "Basic 1", to: "Basic 2", color: "from-amber-500/10 to-yellow-500/10 border-amber-200" },
   { from: "Basic 2", to: "Basic 3", color: "from-yellow-500/10 to-lime-500/10 border-yellow-200" },
   { from: "Basic 3", to: "Basic 4", color: "from-lime-500/10 to-emerald-500/10 border-lime-200" },
