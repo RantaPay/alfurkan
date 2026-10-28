@@ -1,32 +1,30 @@
 "use client";
+import { Dialog } from "@/components/ui/dialog";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { ReceiptDocument } from "@/components/receipts/ReceiptDocument";
 import { Receipt, SchoolProfile } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
 import {
-  Printer,
+  AlertCircle,
+  AlertTriangle,
   ArrowLeft,
-  MessageSquare,
-  Share2,
+  Ban,
   CheckCircle2,
   Download,
-  AlertCircle,
-  Building2,
-  Ban,
-  AlertTriangle,
-  Lock,
   Loader2,
-  X,
-  ShieldAlert,
+  MessageSquare,
+  Printer,
   ScrollText,
+  Share2,
+  ShieldAlert,
+  X
 } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ReceiptViewPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params?.id as string;
 
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -78,10 +76,6 @@ export default function ReceiptViewPage() {
 
     fetchReceipt();
   }, [id]);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handlePrintThermal = () => {
     setActiveFormat("thermal");
@@ -181,7 +175,7 @@ export default function ReceiptViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-slate-100 flex items-center justify-center p-4">
         <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -189,10 +183,10 @@ export default function ReceiptViewPage() {
 
   if (error || !receipt) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-md w-full text-center space-y-4">
+      <div className="min-h-dvh bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm max-w-md w-full text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-rose-500 mx-auto" />
-          <h2 className="text-lg font-black text-slate-900">Receipt Not Found</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Receipt Not Found</h2>
           <p className="text-xs text-slate-500">
             The requested school receipt could not be found.
           </p>
@@ -216,10 +210,10 @@ export default function ReceiptViewPage() {
   )}`;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 py-8 px-4 sm:px-6">
+    <div className="min-h-dvh bg-slate-100 text-slate-900 py-8 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Top Floating Action Bar (Hidden during print) */}
-        <div className="print:hidden bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-md border border-slate-200/90 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-40">
+        <div className="print:hidden bg-white/95 backdrop-blur-md rounded-lg p-4 shadow-md border border-slate-200/90 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-40">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -229,11 +223,11 @@ export default function ReceiptViewPage() {
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
             <div className="h-4 w-px bg-slate-200" />
-            <span className={`font-mono text-sm font-black ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
+            <span className={`font-mono text-sm font-semibold ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
               {receipt.receiptNumber}
             </span>
             {receipt.isVoided && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-200">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
                 VOIDED
               </span>
             )}
@@ -245,7 +239,7 @@ export default function ReceiptViewPage() {
               href={parentWaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-white px-4 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
                 receipt.isVoided ? "bg-slate-500 hover:bg-slate-600 opacity-80" : "bg-[#25D366] hover:bg-[#1EBE5D]"
               }`}
             >
@@ -258,7 +252,7 @@ export default function ReceiptViewPage() {
               type="button"
               disabled={isDownloadingPdf}
               onClick={handleDownloadPdf}
-              className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-4 py-2.5 rounded-xl text-sm font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="bg-[#075E54] hover:bg-[#128C7E] active:translate-y-px text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               title="Download high-resolution .pdf document"
             >
               {isDownloadingPdf ? (
@@ -314,7 +308,7 @@ export default function ReceiptViewPage() {
                   setVoidError("");
                   setIsVoidModalOpen(true);
                 }}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Cancel receipt and reverse student payment"
               >
                 <Ban className="h-4 w-4 text-rose-600" />
@@ -331,7 +325,7 @@ export default function ReceiptViewPage() {
 
         {/* Void Success Notification Toast */}
         {voidSuccess && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in duration-200">
+          <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in duration-200">
             <CheckCircle2 className="h-5 w-5 text-rose-600 shrink-0" />
             <span>
               Receipt {receipt.receiptNumber} has been successfully voided. Student balance has been automatically adjusted.
@@ -356,11 +350,11 @@ export default function ReceiptViewPage() {
       {/* Void Confirmation Modal */}
       {isVoidModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 text-slate-900 space-y-4">
+          <Dialog label="Cancel receipt" onClose={() => { if (!isVoiding) setIsVoidModalOpen(false); }} className="bg-white rounded-xl border border-slate-200 shadow-lg max-w-md w-full p-6 text-slate-900 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2 text-rose-700">
                 <ShieldAlert className="h-5 w-5" />
-                <h3 className="text-base font-black">Void Receipt</h3>
+                <h3 className="text-base font-semibold">Void Receipt</h3>
               </div>
               <button
                 type="button"
@@ -371,7 +365,7 @@ export default function ReceiptViewPage() {
               </button>
             </div>
 
-            <div className="bg-rose-50 p-4 rounded-2xl border border-rose-200 text-rose-900 text-xs space-y-1.5">
+            <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 text-rose-900 text-xs space-y-1.5">
               <div className="font-bold flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
                 <span>Payment Reversal Warning</span>
@@ -445,14 +439,14 @@ export default function ReceiptViewPage() {
                 <button
                   type="submit"
                   disabled={isVoiding}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Ban className="h-4 w-4" />
                   <span>{isVoiding ? "Voiding..." : "Confirm Void"}</span>
                 </button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
     </div>

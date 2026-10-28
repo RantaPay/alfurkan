@@ -1,14 +1,15 @@
 "use client";
+import { Dialog } from "@/components/ui/dialog";
 
-import { useState, useEffect, useMemo } from "react";
-import { formatNaira } from "@/lib/utils";
 import { getBillForClass } from "@/lib/student-importer";
+import { formatNaira } from "@/lib/utils";
 import {
-  X,
-  UserPlus,
-  CheckCircle2,
   AlertCircle,
+  CheckCircle2,
+  UserPlus,
+  X,
 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -74,6 +75,9 @@ export function AddStudentModal({
     return list;
   }, [feeStructure]);
 
+  const studentClassRef = useRef(studentClass);
+  useEffect(() => { studentClassRef.current = studentClass; }, [studentClass]);
+
   // Load fee structure from settings on open and auto-populate bill
   useEffect(() => {
     if (isOpen) {
@@ -82,7 +86,7 @@ export function AddStudentModal({
         .then((data) => {
           if (data.success && data.school?.feeStructure) {
             setFeeStructure(data.school.feeStructure);
-            setTotalTermBill((prev) => (prev === 0 ? getBillForClass(studentClass, data.school.feeStructure) : prev));
+            setTotalTermBill((prev) => (prev === 0 ? getBillForClass(studentClassRef.current, data.school.feeStructure) : prev));
           }
         })
         .catch(() => {});
@@ -155,20 +159,20 @@ export function AddStudentModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
-      onClick={onClose}
+      onClick={(event) => { if (event.target === event.currentTarget && !(isSubmitting)) onClose(); }}
     >
-      <div
-        className="relative flex flex-col w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh]"
+      <Dialog label="Add student" onClose={() => { if (!(isSubmitting)) onClose(); }}
+        className="relative flex flex-col w-full max-w-xl bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden my-auto max-h-[92dvh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-[#075E54] text-white px-6 py-5 flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
+            <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
               <UserPlus className="h-5 w-5 text-emerald-300" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black tracking-tight">Enroll Student</h2>
+              <h2 className="text-base sm:text-lg font-semibold tracking-tight">Enroll Student</h2>
               <p className="text-xs text-emerald-100 font-medium">
                 Add a new student to the official school register
               </p>
@@ -176,7 +180,7 @@ export function AddStudentModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            aria-label="Close add student" onClick={onClose}
             className="p-2 rounded-xl hover:bg-white/10 text-white transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
@@ -187,7 +191,7 @@ export function AddStudentModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {message && (
             <div
-              className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+              className={`p-3.5 rounded-lg text-xs font-bold flex items-center gap-2 ${
                 message.type === "success"
                   ? "bg-emerald-50 border border-emerald-200 text-emerald-900"
                   : "bg-rose-50 border border-rose-200 text-rose-900"
@@ -207,7 +211,7 @@ export function AddStudentModal({
               <label className="block font-bold text-slate-800 mb-1.5">
                 Student Full Name <span className="text-rose-500">*</span>
               </label>
-              <input
+              <input aria-label="Student Full Name"
                 type="text"
                 required
                 value={fullName}
@@ -220,7 +224,7 @@ export function AddStudentModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block font-bold text-slate-800 mb-1.5">Class</label>
-                <select
+                <select aria-label="Class"
                   value={studentClass}
                   onChange={(e) => handleClassChange(e.target.value)}
                   className="w-full h-11 px-3 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
@@ -265,7 +269,7 @@ export function AddStudentModal({
                 <label className="block font-bold text-slate-800 mb-1.5">
                   Parent / Guardian Name
                 </label>
-                <input
+                <input aria-label="Parent / Guardian Name"
                   type="text"
                   value={parentName}
                   onChange={(e) => setParentName(e.target.value)}
@@ -278,7 +282,7 @@ export function AddStudentModal({
                 <label className="block font-bold text-slate-800 mb-1.5">
                   Parent Phone Number
                 </label>
-                <input
+                <input aria-label="Parent Phone Number"
                   type="tel"
                   value={parentPhone}
                   onChange={(e) => setParentPhone(e.target.value)}
@@ -293,7 +297,7 @@ export function AddStudentModal({
                 <label className="block font-bold text-slate-800 mb-1.5">
                   Term Bill Amount (₦)
                 </label>
-                <input
+                <input aria-label="Term Bill Amount (₦)"
                   type="number"
                   value={totalTermBill}
                   onChange={(e) => setTotalTermBill(Number(e.target.value) || 0)}
@@ -308,7 +312,7 @@ export function AddStudentModal({
                 <label className="block font-bold text-slate-800 mb-1.5">
                   Admission / Reg Number <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
-                <input
+                <input aria-label="Admission / Reg Number"
                   type="text"
                   value={regNumber}
                   onChange={(e) => setRegNumber(e.target.value)}
@@ -321,7 +325,7 @@ export function AddStudentModal({
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={onClose}
+                aria-label="Close add student" onClick={onClose}
                 className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 Cancel
@@ -329,14 +333,14 @@ export function AddStudentModal({
               <button
                 type="submit"
                 disabled={isSubmitting || !fullName.trim()}
-                className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-50 text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs flex items-center gap-2"
+                className="bg-[#075E54] hover:bg-[#128C7E] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md transition-all cursor-pointer text-xs flex items-center gap-2"
               >
                 {isSubmitting ? "Enrolling..." : "Enroll Student"}
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </Dialog>
     </div>
   );
 }

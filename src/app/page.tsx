@@ -1,165 +1,59 @@
 "use client";
+import { InlineNotice, LoadingRows } from "@/components/ui/feedback";
+import { PaymentStatus } from "@/components/ui/payment-status";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { SidebarLayout } from "@/components/layout/SidebarLayout";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { QuickStudentSearch } from "@/components/dashboard/QuickStudentSearch";
+import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
-import { Student, Receipt } from "@/lib/types";
-import { formatNaira } from "@/lib/utils";
-import {
-  Receipt as ReceiptIcon,
-  TrendingUp,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  ArrowRight,
-  ExternalLink,
-  Printer,
-  MessageSquare,
-  Users,
-  Search,
-  Sparkles,
-  UserPlus,
-  Upload,
-  Database,
-  Eye,
-  EyeOff,
-} from "lucide-react";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
 import { DatabaseImportModal } from "@/components/students/DatabaseImportModal";
-import { AuthGuard } from "@/components/auth/AuthGuard";
+import { PageHeader } from "@/components/ui/page-header";
+import { useDashboard } from "@/features/dashboard/useDashboard";
+import { formatNaira } from "@/lib/utils";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  MessageSquare,
+  Receipt as ReceiptIcon,
+  TrendingUp,
+  Upload,
+  UserPlus
+} from "lucide-react";
+import Link from "next/link";
+
 
 export default function DashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<Student | null>(null);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [receiptFilter, setReceiptFilter] = useState<"ALL" | "FULL" | "PARTIAL">("ALL");
-  const [hideSensitive, setHideSensitive] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("alfurqan_hide_sensitive_figures");
-    if (saved !== null) {
-      setHideSensitive(saved === "true");
-    }
-  }, []);
-
-  const toggleSensitive = () => {
-    setHideSensitive((prev) => {
-      const nextVal = !prev;
-      localStorage.setItem("alfurqan_hide_sensitive_figures", String(nextVal));
-      return nextVal;
-    });
-  };
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [recRes, repRes] = await Promise.all([
-        fetch("/api/receipts?limit=15"),
-        fetch("/api/reports"),
-      ]);
-      const recData = await recRes.json();
-      const repData = await repRes.json();
-
-      if (recData.success) {
-        setReceipts(recData.receipts);
-      }
-      if (repData.success) {
-        setStats(repData.summary);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleOpenIssueModal = (student?: Student) => {
-    if (student) {
-      setSelectedStudentForReceipt(student);
-    } else {
-      setSelectedStudentForReceipt(null);
-    }
-    setIsModalOpen(true);
-  };
-
-  const filteredReceipts = receipts.filter((r) => {
-    if (receiptFilter === "ALL") return true;
-    return r.paymentStatus === receiptFilter;
-  });
-
+  const form = useDashboard();
+  const { error, isModalOpen, setIsModalOpen, isAddStudentOpen, setIsAddStudentOpen, isImportModalOpen, setIsImportModalOpen, selectedStudentForReceipt, stats, loading, receiptFilter, setReceiptFilter, hideSensitive, toggleSensitive, loadData, handleOpenIssueModal, filteredReceipts } = form;
   return (
     <AuthGuard>
       <SidebarLayout onOpenIssueModal={() => handleOpenIssueModal()}>
-        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Hero Section & Quick Receipt Generator Launcher */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#0b6e63] to-[#043e37] p-6 sm:p-10 text-white shadow-xl shadow-emerald-950/10">
-          <div className="relative z-10 max-w-3xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-bold border border-white/20 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-[#FFB21D]" />
-                <span>Official Bursary &amp; Accounts Portal</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsImportModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold border border-white/25 transition-all cursor-pointer shadow-xs"
-                  title="Upload student list spreadsheet"
-                >
-                  <Upload className="h-3.5 w-3.5 text-[#FFB21D]" />
-                  <span>Upload Students</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsAddStudentOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 text-xs font-semibold border border-white/15 transition-all cursor-pointer"
-                  title="Enroll a single student"
-                >
-                  <UserPlus className="h-3.5 w-3.5 text-emerald-200" />
-                  <span>Enroll Student</span>
-                </button>
-              </div>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-              Alfurqan Digital Receipts &amp; Bursary Portal
-            </h1>
-            <p className="text-emerald-100/90 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
-              Search students by admission number, record school fee payments, and issue receipts.
-            </p>
-
-            {/* Prominent Quick Student Search Bar */}
-            <div className="mt-6 pt-2">
-              <QuickStudentSearch
-                onSelectStudent={(student) => handleOpenIssueModal(student)}
-              />
-            </div>
+        <main className="app-page space-y-8">
+        {error && <InlineNotice onRetry={loadData}>{error}</InlineNotice>}
+        <PageHeader title="Overview" description="Record payments and keep track of school accounts." actions={<>
+          <button type="button" className="button-secondary" onClick={() => setIsImportModalOpen(true)}><Upload className="h-4 w-4" />Import students</button>
+          <button type="button" className="button-secondary" onClick={() => setIsAddStudentOpen(true)}><UserPlus className="h-4 w-4" />Add student</button>
+        </>} />
+        <section className="panel p-5 sm:p-6" aria-labelledby="record-payment-heading">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+            <div><h2 id="record-payment-heading" className="text-lg font-semibold text-slate-900">Record a payment</h2><p className="mt-1 text-sm text-slate-500">Find a student or start a receipt for an external payer.</p></div>
+            <button type="button" className="button-accent" onClick={() => handleOpenIssueModal()}><ReceiptIcon className="h-4 w-4" />Issue receipt</button>
           </div>
-
-          {/* Decorative ambient badge */}
-          <div className="absolute right-6 -bottom-10 opacity-10 pointer-events-none select-none text-9xl font-black">
-            AIA
-          </div>
-        </div>
+          <QuickStudentSearch onSelectStudent={handleOpenIssueModal} />
+        </section>
 
         {/* Financial Metrics Header & Sensitive Masking Toggle */}
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-slate-800 uppercase tracking-wider">
-                Financial Key Metrics
+              <span className="text-sm font-semibold text-slate-800  tracking-normal">
+                This term
               </span>
               <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
                 Active Term
@@ -195,14 +89,14 @@ export default function DashboardPage() {
           {/* 4 Financial Key Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {/* Total Collections */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs  transition-shadow">
               <div className="flex items-center justify-between text-slate-500 mb-3">
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600">Collected Revenue</span>
+                <span className="text-xs sm:text-sm font-bold  tracking-normal text-slate-600">Total collected</span>
                 <div className="h-9 w-9 rounded-xl bg-emerald-50 text-[#075E54] flex items-center justify-center">
                   <TrendingUp className="h-4.5 w-4.5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+              <div className="text-2xl sm:text-3xl font-semibold text-slate-900 font-mono tracking-tight">
                 {hideSensitive ? "₦ * * * * * *" : stats ? formatNaira(stats.collectedRevenue) : "₦0"}
               </div>
               <div className="text-xs font-semibold text-emerald-700 mt-1.5 flex items-center gap-1">
@@ -212,31 +106,31 @@ export default function DashboardPage() {
             </div>
 
             {/* Full Payments (Cleared Students) */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs  transition-shadow">
               <div className="flex items-center justify-between text-slate-500 mb-3">
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600">Paid In Full (Cleared)</span>
+                <span className="text-xs sm:text-sm font-bold  tracking-normal text-slate-600">Paid in full</span>
                 <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <CheckCircle2 className="h-4.5 w-4.5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
+              <div className="text-2xl sm:text-3xl font-semibold text-slate-900 font-mono">
                 {hideSensitive ? "* *" : (stats?.fullPaymentCount || 0)}{" "}
                 <span className="text-sm font-bold text-slate-400">Students</span>
               </div>
               <div className="text-xs font-semibold text-emerald-700 mt-1.5">
-                100% Cleared
+                No outstanding balance
               </div>
             </div>
 
             {/* Partial Payment Debtors */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs  transition-shadow">
               <div className="flex items-center justify-between text-slate-500 mb-3">
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600">Part Payment Debtors</span>
+                <span className="text-xs sm:text-sm font-bold  tracking-normal text-slate-600">Part paid</span>
                 <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                   <Clock className="h-4.5 w-4.5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-amber-900 font-mono">
+              <div className="text-2xl sm:text-3xl font-semibold text-amber-900 font-mono">
                 {hideSensitive ? "* *" : (stats?.partialPaymentCount || 0)}{" "}
                 <span className="text-sm font-bold text-slate-400">Students</span>
               </div>
@@ -246,14 +140,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Unpaid */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs  transition-shadow">
               <div className="flex items-center justify-between text-slate-500 mb-3">
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600">Unpaid</span>
+                <span className="text-xs sm:text-sm font-bold  tracking-normal text-slate-600">Unpaid</span>
                 <div className="h-9 w-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
                   <AlertTriangle className="h-4.5 w-4.5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-rose-900 font-mono">
+              <div className="text-2xl sm:text-3xl font-semibold text-rose-900 font-mono">
                 {hideSensitive ? "* *" : (stats?.unpaidCount || 0)}{" "}
                 <span className="text-sm font-bold text-slate-400">Students</span>
               </div>
@@ -268,10 +162,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Receipts Section with Filter Pills */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 sm:p-7">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5 sm:p-7">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
             <div>
-              <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
                 <span>Recent Issued Receipts</span>
                 <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
                   {filteredReceipts.length}
@@ -282,8 +176,8 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Filter Pills: All, Full Payment, Part Payment */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-fit">
+            {/* Filter Pills: All, Full Payment, Part paid */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg w-fit">
               <button
                 type="button"
                 onClick={() => setReceiptFilter("ALL")}
@@ -317,16 +211,16 @@ export default function DashboardPage() {
                 }`}
               >
                 <Clock className="h-4 w-4" />
-                <span>Part Payment</span>
+                <span>Part paid</span>
               </button>
             </div>
           </div>
 
           {/* Receipts Table */}
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="min-w-[52rem] w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="text-slate-500 font-bold uppercase text-xs tracking-wider border-b border-slate-100">
+                <tr className="text-slate-500 font-bold  text-xs tracking-normal border-b border-slate-100">
                   <th className="py-3 px-3">Receipt No</th>
                   <th className="py-3 px-3">Student & Class</th>
                   <th className="py-3 px-3">Status Badge</th>
@@ -338,13 +232,7 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr>
-                    <td colSpan={7} className="py-20 text-center">
-                      <div className="flex items-center justify-center py-6">
-                        <div className="h-10 w-10 border-4 border-[#075E54] border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    </td>
-                  </tr>
+                  <tr><td colSpan={7} className="px-5 py-3"><LoadingRows label="Loading receipts" /></td></tr>
                 ) : filteredReceipts.length > 0 ? (
                   filteredReceipts.map((receipt) => {
                     const isFull = receipt.paymentStatus === "FULL";
@@ -354,7 +242,7 @@ export default function DashboardPage() {
                         <td className="py-3.5 px-3">
                           <Link
                             href={`/receipts/${receipt.id}`}
-                            className="font-mono font-black text-[#075E54] hover:underline text-sm"
+                            className="font-mono font-semibold text-[#075E54] hover:underline text-sm"
                           >
                             {receipt.receiptNumber}
                           </Link>
@@ -373,25 +261,10 @@ export default function DashboardPage() {
                         </td>
 
                         <td className="py-3.5 px-3">
-                          {receipt.isVoided ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                              <span>VOIDED</span>
-                            </span>
-                          ) : isFull ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>PAID IN FULL</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200">
-                              <Clock className="h-3.5 w-3.5 text-amber-600" />
-                              <span>PART PAYMENT</span>
-                            </span>
-                          )}
+                          <PaymentStatus status={receipt.paymentStatus} voided={receipt.isVoided} />
                         </td>
 
-                        <td className="py-3.5 px-3 font-mono font-black text-slate-900 text-sm sm:text-base">
+                        <td className="py-3.5 px-3 font-mono font-semibold text-slate-900 text-sm sm:text-base">
                           {hideSensitive ? "₦ * * * * *" : formatNaira(receipt.amountPaid)}
                         </td>
 
@@ -439,7 +312,7 @@ export default function DashboardPage() {
                         <ReceiptIcon className="h-8 w-8 text-slate-300 mx-auto" />
                         <p className="font-bold text-slate-700">No receipts issued yet</p>
                         <p className="text-xs text-slate-400">
-                          Search for a student above or click "Issue Receipt" to record a fee payment.
+                          Search for a student above or click &quot;Issue receipt&quot; to record a fee payment.
                         </p>
                       </div>
                     </td>

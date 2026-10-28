@@ -1,26 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { useApiResource } from "@/features/shared/useApiResource";
+import { useAuth } from "@/lib/auth-context";
+import type { SchoolProfile } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { BarChart3, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Receipt, Settings, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-import {
-  LayoutDashboard,
-  Receipt,
-  BarChart3,
-  Users,
-  Settings,
-  PlusCircle,
-  ShieldCheck,
-  LogOut,
-  Menu,
-  X,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Database,
-  QrCode,
-  Sparkles,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -30,338 +18,83 @@ interface SidebarLayoutProps {
   logoUrl?: string;
 }
 
-export function SidebarLayout({
-  children,
-  onOpenIssueModal,
-  schoolName = "Alfurqan International Academy",
-  currentTerm = "1st Term 2026/2027",
-  logoUrl = "/logo.png",
-}: SidebarLayoutProps) {
+const navigation = [
+  { label: "Accounts", items: [
+    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Receipts", href: "/receipts", icon: Receipt },
+    { name: "Reports", href: "/reports", icon: BarChart3 },
+    { name: "Students", href: "/students", icon: Users },
+  ] },
+  { label: "Administration", items: [{ name: "Settings", href: "/settings", icon: Settings }] },
+];
+
+function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  return <nav aria-label="Main navigation" className="space-y-7 px-3 py-6">
+    {navigation.map((group) => <div key={group.label}>
+      <p className="mb-2 px-3 text-[11px] font-medium tracking-wide text-slate-400">{group.label}</p>
+      <ul className="space-y-1">{group.items.map(({ name, href, icon: Icon }) => {
+        const active = href === "/" ? pathname === href : pathname.startsWith(href);
+        return <li key={href}><Link href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors", active ? "bg-emerald-50 font-semibold text-[#075E54]" : "font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900")}><Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />{name}</Link></li>;
+      })}</ul>
+    </div>)}
+  </nav>;
+}
+
+export function SidebarLayout({ children, onOpenIssueModal, schoolName: providedSchoolName, currentTerm: providedTerm, logoUrl: providedLogo }: SidebarLayoutProps) {
+  const { data } = useApiResource<{ school: SchoolProfile }>("/api/settings");
+  const schoolName = providedSchoolName || data?.school.name || "Alfurqan International Academy";
+  const currentTerm = providedTerm || (data?.school ? `${data.school.currentTerm} · ${data.school.currentSession}` : "Loading academic period…");
+  const logoUrl = providedLogo || data?.school.logoUrl || "/logo.png";
   const router = useRouter();
   const { user, logout } = useAuth();
-
-  // Desktop sidebar open/collapse state (default expanded)
   const [isDesktopOpen, setIsDesktopOpen] = useState(true);
-
-  // Mobile sidebar slide-out drawer state (default closed)
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  // Navigation Items (Vertical in Sidebar)
-  const navGroups = [
-    {
-      group: "BURSARY & ACCOUNTS",
-      items: [
-        { name: "Dashboard", href: "/", icon: LayoutDashboard },
-        { name: "Receipts", href: "/receipts", icon: Receipt },
-        { name: "Debtor Reports", href: "/reports", icon: BarChart3 },
-        { name: "Students", href: "/students", icon: Users },
-      ],
-    },
-    {
-      group: "ADMINISTRATION",
-      items: [
-        { name: "School Settings", href: "/settings", icon: Settings },
-      ],
-    },
-  ];
-
-  // Auto-close mobile drawer upon navigation
   useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
-
-  // Lock body scroll when mobile drawer is open
-  useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMobileOpen]);
-
-  // Close mobile drawer on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMobileOpen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setIsMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
   }, []);
-
-  const handleToggleSidebar = () => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-      setIsDesktopOpen((prev) => !prev);
-    } else {
-      setIsMobileOpen((prev) => !prev);
-    }
-  };
-
   const handleIssueClick = () => {
     setIsMobileOpen(false);
-    if (onOpenIssueModal) {
-      onOpenIssueModal();
-    } else {
-      router.push("/?action=issue");
-    }
+    if (onOpenIssueModal) onOpenIssueModal();
+    else router.push("/?action=issue");
   };
+  const initials = user?.name.split(" ").filter(Boolean).map((name) => name[0]).slice(0, 2).join("").toUpperCase() || "AF";
 
-  const staffInitials = user?.name
-    ? user.name
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "AF";
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
-      {/* ========================================================= */}
-      {/* 1. STICKY TOP HEADER (Global Navigation & Branding)       */}
-      {/* ========================================================= */}
-      <header className="sticky top-0 z-40 w-full h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs print:hidden">
-        <div className="w-full px-4 sm:px-6 flex items-center justify-between h-full">
-          {/* Left: Sidebar Toggle + School Crest & Name */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            {/* Sidebar Collapse / Slide-Out Toggle Button */}
-            <button
-              type="button"
-              onClick={handleToggleSidebar}
-              className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
-              title={isDesktopOpen ? "Collapse sidebar" : "Expand sidebar"}
-              aria-label="Toggle navigation sidebar"
-            >
-              <Menu className="h-5 w-5 lg:hidden" />
-              <span className="hidden lg:inline-flex items-center">
-                {isDesktopOpen ? (
-                  <PanelLeftClose className="h-5 w-5" />
-                ) : (
-                  <PanelLeftOpen className="h-5 w-5 text-[#075E54]" />
-                )}
-              </span>
-            </button>
-
-            {/* School Crest Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="h-10 w-10 rounded-2xl border border-slate-200 p-0.5 bg-white shadow-xs group-hover:scale-105 transition-all overflow-hidden flex items-center justify-center shrink-0">
-                <img src={logoUrl || "/logo.png"} alt={schoolName} className="h-full w-full object-contain" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1.5 font-black text-slate-900 text-base sm:text-lg leading-tight">
-                  <span className="line-clamp-1">{schoolName}</span>
-                  <ShieldCheck className="h-4.5 w-4.5 text-[#075E54] shrink-0" />
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs font-medium text-slate-500 hidden sm:inline">
-                    Bursary &amp; Accounts
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{currentTerm}</span>
-                  </span>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Right: Issue New Receipt + Staff Profile & Logout */}
-          <div className="flex items-center gap-3">
-            {/* Primary Action: Issue New Receipt */}
-            <button
-              type="button"
-              onClick={handleIssueClick}
-              className="bg-[#FFB21D] hover:bg-[#EAA315] active:scale-95 text-slate-950 font-black text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <PlusCircle className="h-4.5 w-4.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">Issue New Receipt</span>
-              <span className="sm:hidden">Issue</span>
-            </button>
-
-            {/* Staff User Profile Card */}
-            {user ? (
-              <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-                <div className="h-9 w-9 rounded-full bg-[#075E54] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                  {staffInitials}
-                </div>
-
-                <div className="hidden sm:block text-left">
-                  <div className="text-sm font-black text-slate-900 leading-tight">
-                    {user.name.split(" ")[0]} {user.name.split(" ").slice(-1)[0]}
-                  </div>
-                  <div className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
-                    {user.role}
-                  </div>
-                </div>
-
-                {/* Logout Button */}
-                <button
-                  type="button"
-                  onClick={() => logout()}
-                  title="Sign Out of Portal"
-                  className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ml-1"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all"
-              >
-                Login
-              </Link>
-            )}
-          </div>
+  return <div className="min-h-dvh bg-[#F8FAFC] text-slate-900">
+    <a className="skip-link print:hidden" href="#main-content">Skip to content</a>
+    <header className="sticky top-0 z-40 h-17 border-b border-slate-200 border-t-[3px] border-t-[#075E54] bg-white print:hidden">
+      <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <button type="button" onClick={() => setIsMobileOpen(true)} aria-label="Open navigation" aria-expanded={isMobileOpen} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 lg:hidden"><Menu className="h-5 w-5" /></button>
+          <button type="button" onClick={() => setIsDesktopOpen((open) => !open)} aria-label={isDesktopOpen ? "Collapse navigation" : "Expand navigation"} aria-expanded={isDesktopOpen} className="hidden rounded-md p-2 text-slate-500 hover:bg-slate-100 lg:block">{isDesktopOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</button>
+          <Link href="/" className="flex min-w-0 items-center gap-3"><img src={logoUrl || "/logo.png"} alt={schoolName} className="h-9 w-9 shrink-0 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900"><span className="hidden sm:inline">{schoolName}</span><span className="sm:hidden">Alfurqan Pay</span></p><p className="mt-0.5 text-[11px] text-slate-500">School accounts</p></div></Link>
         </div>
-      </header>
-
-      {/* ========================================================= */}
-      {/* 2. BODY CONTAINER: SIDEBAR + MAIN CONTENT                */}
-      {/* ========================================================= */}
-      <div className="flex-1 flex relative">
-        {/* ------------------------------------------------------- */}
-        {/* A. MOBILE BACKDROP (When drawer is open on mobile)      */}
-        {/* ------------------------------------------------------- */}
-        {isMobileOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs lg:hidden transition-opacity duration-300 animate-in fade-in"
-            onClick={() => setIsMobileOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
-        {/* ------------------------------------------------------- */}
-        {/* B. MOBILE SLIDE-OUT DRAWER (Slides in from Left)        */}
-        {/* ------------------------------------------------------- */}
-        <aside
-          className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white flex flex-col border-r border-slate-200/90 shadow-2xl lg:hidden transform transition-transform duration-300 ease-in-out print:hidden ${
-            isMobileOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-          aria-label="Mobile Navigation"
-        >
-          {/* Mobile Drawer Header */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl border border-slate-200 p-0.5 bg-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
-                <img src={logoUrl || "/logo.png"} alt={schoolName} className="h-full w-full object-contain" />
-              </div>
-              <span className="font-black text-slate-900 text-xs uppercase tracking-wide">
-                Cashier & Accounts Menu
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsMobileOpen(false)}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Mobile Navigation Links */}
-          {/* Mobile Navigation Links */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-6">
-            {navGroups.map((group) => (
-              <div key={group.group} className="space-y-1.5">
-                <div className="px-3.5 text-xs font-black text-slate-400 uppercase tracking-widest">
-                  {group.group}
-                </div>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
-
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setIsMobileOpen(false)}
-                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
-                        isActive
-                          ? "bg-[#075E54] text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                        <span>{item.name}</span>
-                      </div>
-                      {isActive && <span className="h-2 w-2 rounded-full bg-emerald-300" />}
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-        </aside>
-
-        {/* ------------------------------------------------------- */}
-        {/* C. DESKTOP PERMANENT / COLLAPSIBLE SIDEBAR             */}
-        {/* ------------------------------------------------------- */}
-        <aside
-          className={`hidden lg:flex flex-col fixed top-16 bottom-0 left-0 z-30 w-64 bg-white border-r border-slate-200/90 shadow-xs transition-transform duration-300 ease-in-out print:hidden ${
-            isDesktopOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-          aria-label="Desktop Navigation Sidebar"
-        >
-          {/* Vertical Navigation Links */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-7">
-            {navGroups.map((group) => (
-              <div key={group.group} className="space-y-1.5">
-                <div className="px-3.5 text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
-                  {group.group}
-                </div>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
-
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold transition-all ${
-                        isActive
-                          ? "bg-[#075E54] text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                        <span>{item.name}</span>
-                      </div>
-                      {isActive && <span className="h-2 w-2 rounded-full bg-emerald-300" />}
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-        </aside>
-
-        {/* ------------------------------------------------------- */}
-        {/* D. MAIN CONTENT AREA                                    */}
-        {/* ------------------------------------------------------- */}
-        <div
-          className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out print:pl-0 ${
-            isDesktopOpen ? "lg:pl-64" : "lg:pl-0"
-          }`}
-        >
-          <div className="flex-1 w-full">{children}</div>
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+          <button type="button" onClick={handleIssueClick} className="button-accent"><Plus className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Issue receipt</span><span className="sm:hidden">Receipt</span></button>
+          {user ? <div className="flex items-center gap-2.5 sm:border-l sm:border-slate-200 sm:pl-5">
+            <span className="hidden h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-xs font-semibold text-[#075E54] sm:flex">{initials}</span>
+            <div className="hidden xl:block"><p className="text-sm font-medium">{user.name}</p><p className="text-[11px] text-slate-500">{user.role}</p></div>
+            <button type="button" onClick={() => logout()} aria-label="Sign out" title="Sign out" className="rounded-md p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-700"><LogOut className="h-4 w-4" /></button>
+          </div> : <Link href="/login" className="text-sm font-medium text-[#075E54]">Sign in</Link>}
         </div>
       </div>
+    </header>
+    {isMobileOpen && <Dialog label="Navigation" onClose={() => setIsMobileOpen(false)} className="fixed inset-0 z-50 bg-slate-950/40 lg:hidden" onClick={() => setIsMobileOpen(false)}>
+      <aside className="flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-lg" onClick={(event) => event.stopPropagation()}>
+        <div className="flex h-17 items-center justify-between border-b border-slate-200 px-5"><span className="text-sm font-semibold">Alfurqan Pay</span><button type="button" onClick={() => setIsMobileOpen(false)} aria-label="Close navigation" className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+        <div className="flex-1 overflow-y-auto"><NavigationLinks onNavigate={() => setIsMobileOpen(false)} /></div>
+        <p className="border-t border-slate-200 px-6 py-4 text-xs text-slate-500">{currentTerm}</p>
+      </aside>
+    </Dialog>}
+    <div className="flex">
+      <aside inert={!isDesktopOpen} aria-label="Sidebar" className={cn("fixed bottom-0 left-0 top-17 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white transition-transform duration-200 print:hidden lg:flex", !isDesktopOpen && "-translate-x-full")}>
+        <div className="flex-1 overflow-y-auto"><NavigationLinks /></div>
+        <div className="border-t border-slate-100 px-6 py-5"><p className="text-[11px] text-slate-400">Academic period</p><p className="mt-1 text-xs font-medium text-slate-600">{currentTerm}</p></div>
+      </aside>
+      <div id="main-content" tabIndex={-1} className={cn("min-w-0 flex-1 outline-none transition-[padding] duration-200 print:pl-0", isDesktopOpen && "lg:pl-60")}>{children}</div>
     </div>
-  );
+  </div>;
 }

@@ -1,25 +1,23 @@
 "use client";
+import { ConfirmationDialog, useConfirmation } from "@/components/ui/confirmation";
+import { Dialog } from "@/components/ui/dialog";
+import { InlineNotice } from "@/components/ui/feedback";
 
-import { useState, useEffect } from "react";
-import { Student, ClassFeeConfig, ConcessionCategoryConfig } from "@/lib/types";
-import { formatNaira } from "@/lib/utils";
-import {
-  X,
-  UserCheck,
-  RotateCcw,
-  AlertCircle,
-  CheckCircle2,
-  GraduationCap,
-  Sparkles,
-  Save,
-  Tag,
-  Trash2,
-} from "lucide-react";
 import {
   calculateStudentBill,
-  detectStudentCategory,
   DEFAULT_CONCESSIONS,
+  detectStudentCategory,
 } from "@/lib/student-importer";
+import { ClassFeeConfig, ConcessionCategoryConfig, Student } from "@/lib/types";
+import { formatNaira } from "@/lib/utils";
+import {
+  GraduationCap,
+  Save,
+  Sparkles,
+  Trash2,
+  X
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface EditStudentModalProps {
   isOpen: boolean;
@@ -46,22 +44,59 @@ const CLASS_LEVELS = [
   "SS 2",
   "SS 3",
 ];
-const CLASS_ARMS = ["A", "B", "C", "D", "Diamond", "Gold", "Science", "Arts", "Commercial"];
 
-export function EditStudentModal({
+
+export function EditStudentModal(props: EditStudentModalProps) {
+  return props.isOpen && props.student ? <StudentEditor key={props.student.id} {...props} student={props.student} /> : null;
+}
+
+function initialClass(student: Student) {
+  let classLevel = "JSS 1", classArm = "Diamond";
+      const trimmed = (student.class || "").trim();
+      const matchedLevel = CLASS_LEVELS.find((lvl) => trimmed.toLowerCase().startsWith(lvl.toLowerCase()));
+      if (matchedLevel) {
+        classLevel = (matchedLevel);
+        const remainder = trimmed.slice(matchedLevel.length).trim();
+        classArm = (remainder || "A");
+      } else if (/^pb\b/i.test(trimmed) || trimmed.toLowerCase().startsWith("pre basic") || trimmed.toLowerCase().startsWith("pre-basic")) {
+        classLevel = ("Pre-Basic");
+        const remainder = trimmed.replace(/^(pb|pre\s*[- ]?\s*basic)\s*/i, "").trim();
+        classArm = (remainder || "A");
+      } else {
+        const parts = trimmed.split(" ");
+        if (parts.length >= 2) {
+          const potentialLevel = `${parts[0]} ${parts[1]}`;
+          if (CLASS_LEVELS.includes(potentialLevel)) {
+            classLevel = (potentialLevel);
+            classArm = (parts.slice(2).join(" ") || "A");
+          } else {
+            classLevel = (parts[0]);
+            classArm = (parts.slice(1).join(" ") || "A");
+          }
+        } else {
+          classLevel = (trimmed || "Basic 1");
+          classArm = ("A");
+        }
+      }
+  return { classLevel, classArm };
+}
+
+function StudentEditor({
   isOpen,
   onClose,
   student,
   onStudentUpdated,
-}: EditStudentModalProps) {
-  const [fullName, setFullName] = useState("");
-  const [classLevel, setClassLevel] = useState("JSS 1");
-  const [classArm, setClassArm] = useState("Diamond");
-  const [isRepeating, setIsRepeating] = useState(false);
-  const [totalTermBill, setTotalTermBill] = useState(0);
-  const [parentName, setParentName] = useState("");
-  const [parentPhone, setParentPhone] = useState("");
-  const [parentEmail, setParentEmail] = useState("");
+}: EditStudentModalProps & { student: Student }) {
+  const { confirmation, requestConfirmation } = useConfirmation();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [fullName, setFullName] = useState(student.fullName);
+  const [classLevel, setClassLevel] = useState(() => initialClass(student).classLevel);
+  const [classArm, setClassArm] = useState(() => initialClass(student).classArm);
+  const [isRepeating, setIsRepeating] = useState(!!student.isRepeating);
+  const [totalTermBill, setTotalTermBill] = useState(student.totalTermBill);
+  const [parentName, setParentName] = useState(student.parentName || "");
+  const [parentPhone, setParentPhone] = useState(student.parentPhone || "");
+  const [parentEmail, setParentEmail] = useState(student.parentEmail || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feeSchedule, setFeeSchedule] = useState<ClassFeeConfig[]>([]);
@@ -86,44 +121,6 @@ export function EditStudentModal({
     }
   }, [isOpen]);
 
-  // Pre-populate student state
-  useEffect(() => {
-    if (student) {
-      setFullName(student.fullName);
-      setIsRepeating(!!student.isRepeating);
-      setTotalTermBill(student.totalTermBill);
-      setParentName(student.parentName);
-      setParentPhone(student.parentPhone);
-      setParentEmail(student.parentEmail || "");
-
-      const trimmed = (student.class || "").trim();
-      const matchedLevel = CLASS_LEVELS.find((lvl) => trimmed.toLowerCase().startsWith(lvl.toLowerCase()));
-      if (matchedLevel) {
-        setClassLevel(matchedLevel);
-        const remainder = trimmed.slice(matchedLevel.length).trim();
-        setClassArm(remainder || "A");
-      } else if (/^pb\b/i.test(trimmed) || trimmed.toLowerCase().startsWith("pre basic") || trimmed.toLowerCase().startsWith("pre-basic")) {
-        setClassLevel("Pre-Basic");
-        const remainder = trimmed.replace(/^(pb|pre\s*[- ]?\s*basic)\s*/i, "").trim();
-        setClassArm(remainder || "A");
-      } else {
-        const parts = trimmed.split(" ");
-        if (parts.length >= 2) {
-          const potentialLevel = `${parts[0]} ${parts[1]}`;
-          if (CLASS_LEVELS.includes(potentialLevel)) {
-            setClassLevel(potentialLevel);
-            setClassArm(parts.slice(2).join(" ") || "A");
-          } else {
-            setClassLevel(parts[0]);
-            setClassArm(parts.slice(1).join(" ") || "A");
-          }
-        } else {
-          setClassLevel(trimmed || "Basic 1");
-          setClassArm("A");
-        }
-      }
-    }
-  }, [student]);
 
   if (!isOpen || !student) return null;
 
@@ -175,10 +172,10 @@ export function EditStudentModal({
         onStudentUpdated();
         onClose();
       } else {
-        alert("Failed to update student: " + (data.error || "Unknown error"));
+        setErrorMessage("Failed to update student: " + (data.error || "Unknown error"));
       }
-    } catch (err) {
-      alert("Network error updating student.");
+    } catch {
+      setErrorMessage("Network error updating student.");
     } finally {
       setIsSubmitting(false);
     }
@@ -186,7 +183,7 @@ export function EditStudentModal({
 
   const handleDelete = async () => {
     if (!student) return;
-    if (!window.confirm(`Are you sure you want to delete ${student.fullName}? This cannot be undone.`)) {
+    if (!await requestConfirmation(`Are you sure you want to delete ${student.fullName}? This cannot be undone.`)) {
       return;
     }
     setIsDeleting(true);
@@ -199,10 +196,10 @@ export function EditStudentModal({
         onStudentUpdated();
         onClose();
       } else {
-        alert("Failed to delete student: " + (data.error || "Unknown error"));
+        setErrorMessage("Failed to delete student: " + (data.error || "Unknown error"));
       }
-    } catch (err) {
-      alert("Network error deleting student.");
+    } catch {
+      setErrorMessage("Network error deleting student.");
     } finally {
       setIsDeleting(false);
     }
@@ -210,7 +207,9 @@ export function EditStudentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <Dialog label="Edit student" onClose={() => { if (!(isSubmitting || isDeleting)) onClose(); }} className="bg-white rounded-xl max-w-lg w-full max-h-[92dvh] shadow-lg border border-slate-200 overflow-x-hidden overflow-y-auto">
+
+        {errorMessage && <InlineNotice>{errorMessage}</InlineNotice>}
         {/* Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
@@ -218,7 +217,7 @@ export function EditStudentModal({
               <GraduationCap className="h-5 w-5" />
             </span>
             <div>
-              <h3 className="text-base font-black text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900">
                 Edit Student &amp; Class Placement
               </h3>
               <p className="text-xs text-slate-500 font-mono">{student.regNumber}</p>
@@ -226,7 +225,7 @@ export function EditStudentModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            disabled={isSubmitting || isDeleting} aria-label="Close edit student" onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
           >
             <X className="h-5 w-5" />
@@ -237,10 +236,10 @@ export function EditStudentModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
           {/* Full Name */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+            <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
               Student Full Name
             </label>
-            <input
+            <input aria-label="Student Full Name"
               type="text"
               required
               value={fullName}
@@ -251,7 +250,7 @@ export function EditStudentModal({
 
           {/* Special Category Tag Selector */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+            <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
               Category Tag
             </label>
             <div className="flex flex-wrap gap-2">
@@ -316,13 +315,13 @@ export function EditStudentModal({
           {/* Class Placement: Level & Arm */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
                 Class Level
               </label>
-              <select
+              <select aria-label="Class Level"
                 value={classLevel}
                 onChange={(e) => setClassLevel(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-300 font-black text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
+                className="w-full h-11 px-3 rounded-xl border border-slate-300 font-semibold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
               >
                 {CLASS_LEVELS.map((lvl) => (
                   <option key={lvl} value={lvl}>
@@ -333,10 +332,10 @@ export function EditStudentModal({
             </div>
 
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
                 Class Arm / Stream
               </label>
-              <input
+              <input aria-label="Class Arm / Stream"
                 type="text"
                 value={classArm}
                 placeholder="e.g. Diamond, Science, Arts, A, B"
@@ -348,7 +347,7 @@ export function EditStudentModal({
 
           {/* Repeating Student Toggle Card */}
           <div
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            className={`p-4 rounded-lg border transition-all cursor-pointer ${
               isRepeating
                 ? "border-amber-400 bg-amber-50/70 ring-1 ring-amber-400"
                 : "border-slate-200 bg-slate-50/50 hover:bg-slate-50"
@@ -363,7 +362,7 @@ export function EditStudentModal({
                 className="mt-1 h-4.5 w-4.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
               />
               <div>
-                <span className="font-black text-slate-900 block text-sm">
+                <span className="font-semibold text-slate-900 block text-sm">
                   Mark as Repeating Student (Retained in Class)
                 </span>
                 <span className="text-xs text-slate-600 block mt-0.5">
@@ -376,7 +375,7 @@ export function EditStudentModal({
           {/* Term Fee Bill */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-800">
+              <label className="block text-xs font-semibold  tracking-normal text-slate-800">
                 Total Term Bill (₦)
               </label>
               <button
@@ -394,7 +393,7 @@ export function EditStudentModal({
               required
               value={totalTermBill}
               onChange={(e) => setTotalTermBill(Number(e.target.value) || 0)}
-              className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+              className="w-full h-11 px-3.5 rounded-xl border border-slate-300 font-mono font-semibold text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-[#075E54]"
             />
             <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
               <span>Current Paid: {formatNaira(student.totalPaid)}</span>
@@ -410,10 +409,10 @@ export function EditStudentModal({
           {/* Parent Details */}
           <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
                 Parent / Guardian Name
               </label>
-              <input
+              <input aria-label="Parent / Guardian Name"
                 type="text"
                 required
                 value={parentName}
@@ -422,10 +421,10 @@ export function EditStudentModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-1.5">
+              <label className="block text-xs font-semibold  tracking-normal text-slate-800 mb-1.5">
                 Parent Phone
               </label>
-              <input
+              <input aria-label="Parent Phone"
                 type="text"
                 required
                 value={parentPhone}
@@ -434,6 +433,10 @@ export function EditStudentModal({
               />
             </div>
           </div>
+
+          <label className="field-label">Parent email (optional)
+            <input type="email" className="field-control mt-1.5" value={parentEmail} onChange={event => setParentEmail(event.target.value)} />
+          </label>
 
           {/* Actions */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
@@ -450,7 +453,7 @@ export function EditStudentModal({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
+                disabled={isSubmitting || isDeleting} aria-label="Close edit student" onClick={onClose}
                 className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
               >
                 Cancel
@@ -458,7 +461,7 @@ export function EditStudentModal({
               <button
                 type="submit"
                 disabled={isSubmitting || isDeleting}
-                className="bg-[#075E54] hover:bg-[#128C7E] active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="bg-[#075E54] hover:bg-[#128C7E] active:translate-y-px text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 <span>{isSubmitting ? "Saving..." : "Save"}</span>
@@ -466,7 +469,8 @@ export function EditStudentModal({
             </div>
           </div>
         </form>
-      </div>
+      </Dialog>
+      <ConfirmationDialog {...confirmation} />
     </div>
   );
 }

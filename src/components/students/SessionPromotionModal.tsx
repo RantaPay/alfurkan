@@ -1,22 +1,21 @@
 "use client";
+import { Dialog } from "@/components/ui/dialog";
+import { InlineNotice } from "@/components/ui/feedback";
 
-import { useState, useMemo } from "react";
 import { Student } from "@/lib/types";
 import {
-  X,
-  GraduationCap,
-  Sparkles,
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  AlertTriangle,
-  RotateCcw,
-  Search,
   ChevronDown,
   ChevronUp,
+  GraduationCap,
+  Search,
+  Sparkles,
   Users,
-  ShieldCheck,
-  Check,
+  X
 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 interface SessionPromotionModalProps {
   isOpen: boolean;
@@ -44,22 +43,6 @@ const LEVEL_FLOW = [
   { from: "SS 3", to: "Graduated Alumni", color: "from-amber-500/10 to-orange-500/10 border-amber-200" },
 ];
 
-export function SessionPromotionModal({
-  isOpen,
-  onClose,
-  students,
-  onPromotionComplete,
-}: SessionPromotionModalProps) {
-  const [targetSession, setTargetSession] = useState("2027/2028 Academic Session");
-  const [confirmed, setConfirmed] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showRosterPreview, setShowRosterPreview] = useState(false);
-  const [previewSearch, setPreviewSearch] = useState("");
-  const [successResult, setSuccessResult] = useState<{
-    updatedCount: number;
-    breakdown?: Record<string, number>;
-  } | null>(null);
-
   // Complete list of levels ordered from earliest to graduating
   const ALL_LEVELS = [
     "Pre-Nursery", "Nursery 1", "Nursery 2",
@@ -75,6 +58,24 @@ export function SessionPromotionModal({
     }
     return className.split(" ")[0] || "Other";
   };
+
+
+export function SessionPromotionModal({
+  isOpen,
+  onClose,
+  students,
+  onPromotionComplete,
+}: SessionPromotionModalProps) {
+  const [errorMessage, setErrorMessage] = useState("");
+  const [targetSession, setTargetSession] = useState("2027/2028 Academic Session");
+  const [confirmed, setConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRosterPreview, setShowRosterPreview] = useState(false);
+  const [previewSearch, setPreviewSearch] = useState("");
+  const [successResult, setSuccessResult] = useState<{
+    updatedCount: number;
+    breakdown?: Record<string, number>;
+  } | null>(null);
 
   // Helper to calculate target class name
   const getNextClassName = (current: string) => {
@@ -166,10 +167,10 @@ export function SessionPromotionModal({
         });
         onPromotionComplete();
       } else {
-        alert("Failed to auto-promote students: " + (data.error || "Unknown error"));
+        setErrorMessage("Failed to auto-promote students: " + (data.error || "Unknown error"));
       }
     } catch {
-      alert("Network error while executing auto-promotion.");
+      setErrorMessage("Network error while executing auto-promotion.");
     } finally {
       setIsSubmitting(false);
     }
@@ -183,11 +184,13 @@ export function SessionPromotionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      <Dialog label="Promote students" onClose={() => { if (!(isSubmitting)) onClose(); }} className="bg-white rounded-xl max-w-3xl w-full max-h-[92dvh] flex flex-col shadow-lg border border-slate-200 overflow-hidden">
+
+        {errorMessage && <InlineNotice>{errorMessage}</InlineNotice>}
         {/* Header */}
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-emerald-100 text-[#075E54]">
+            <span className="p-2.5 rounded-lg bg-emerald-100 text-[#075E54]">
               <GraduationCap className="h-6 w-6" />
             </span>
             <div>
@@ -228,7 +231,7 @@ export function SessionPromotionModal({
               </div>
 
               {/* Repeating Students Instruction */}
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-left max-w-xl mx-auto space-y-1.5">
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-left max-w-xl mx-auto space-y-1.5">
                 <div className="flex items-center gap-2 text-amber-900 font-semibold text-sm">
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                   What about repeating students?
@@ -251,9 +254,9 @@ export function SessionPromotionModal({
             /* Default Promotion View */
             <>
               {/* Session Banner */}
-              <div className="p-4 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="p-4 rounded-lg bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
                 <div className="space-y-1">
-                  <span className="text-[11px] font-semibold tracking-wider uppercase text-emerald-400">
+                  <span className="text-[11px] font-semibold tracking-normal  text-emerald-400">
                     Academic Year Rollover
                   </span>
                   <div className="flex items-center gap-2.5 text-base font-bold">
@@ -275,8 +278,8 @@ export function SessionPromotionModal({
 
               {/* Class Movement Matrix */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center justify-between">
-                  <span>Class Progression Matrix</span>
+                <h4 className="text-xs font-bold  tracking-normal text-slate-500 mb-3 flex items-center justify-between">
+                  <span>Class progression</span>
                   <span className="text-slate-400 font-normal">
                     Total Active Students: {activePromotableStudents.length}
                   </span>
@@ -287,7 +290,7 @@ export function SessionPromotionModal({
                     return (
                       <div
                         key={flow.from}
-                        className={`p-3 rounded-2xl border bg-gradient-to-br ${flow.color} flex flex-col justify-between`}
+                        className={`p-3 rounded-lg border bg-slate-50 border-slate-200 flex flex-col justify-between`}
                       >
                         <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
                           <span className="bg-white/80 px-2 py-0.5 rounded-lg border border-slate-200">
@@ -300,7 +303,7 @@ export function SessionPromotionModal({
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">Promoting:</span>
-                          <span className="font-extrabold text-slate-900 text-sm">{count}</span>
+                          <span className="font-semibold text-slate-900 text-sm">{count}</span>
                         </div>
                       </div>
                     );
@@ -309,12 +312,12 @@ export function SessionPromotionModal({
               </div>
 
               {/* Repeating Students Guidance Card */}
-              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/80 flex items-start gap-3">
+              <div className="p-4 rounded-lg bg-amber-50/90 border border-amber-200/80 flex items-start gap-3">
                 <span className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
                   <AlertTriangle className="h-5 w-5" />
                 </span>
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-amber-900  tracking-normal">
                     How Repeating Students Work
                   </h4>
                   <p className="text-xs text-amber-800 leading-relaxed">
@@ -326,7 +329,7 @@ export function SessionPromotionModal({
               </div>
 
               {/* Collapsible Student Roster Preview */}
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setShowRosterPreview(!showRosterPreview)}
@@ -382,7 +385,7 @@ export function SessionPromotionModal({
               </div>
 
               {/* Confirmation Checkbox */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-start gap-3">
                 <input
                   type="checkbox"
                   id="confirmPromotion"
@@ -427,7 +430,7 @@ export function SessionPromotionModal({
             </button>
           </div>
         )}
-      </div>
+      </Dialog>
     </div>
   );
 }
