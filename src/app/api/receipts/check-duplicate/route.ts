@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findDuplicateReceipt } from "@/lib/data-store";
+import { isPaymentPeriod } from "@/lib/fee-ledger";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    if (body.term !== undefined && !isPaymentPeriod(body.term)) {
+      return NextResponse.json({ success: false, error: "Select a valid payment period." }, { status: 400 });
+    }
     const duplicate = await findDuplicateReceipt({
       studentName: body.studentName,
       regNumber: body.regNumber,
       amountPaid: Number(body.amountPaid),
       date: body.date,
       items: body.items || [],
+      term: body.term,
+      session: typeof body.session === "string" ? body.session : undefined,
     });
 
     if (duplicate) {

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { getReceipts, createReceipt, getReceiptByNumber } from "@/lib/data-store";
+import { getReceipts, createReceipt, getReceiptByNumber, getStudentReceipts } from "@/lib/data-store";
+import { isPaymentPeriod } from "@/lib/fee-ledger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const receiptNumber = searchParams.get("number");
+    const studentId = searchParams.get("studentId");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : undefined;
 
     if (receiptNumber) {
@@ -13,6 +15,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: false, error: "Receipt not found" }, { status: 404 });
       }
       return NextResponse.json({ success: true, receipt });
+    }
+
+    if (studentId) {
+      const receipts = await getStudentReceipts(studentId);
+      return NextResponse.json({ success: true, count: receipts.length, receipts });
     }
 
     const receipts = await getReceipts(limit);
@@ -41,6 +48,9 @@ export async function POST(request: Request) {
     } = body;
 
     const finalPayerName = (body.studentName || depositorName || payerName || "").trim();
+    if (body.term !== undefined && !isPaymentPeriod(body.term)) {
+      return NextResponse.json({ success: false, error: "Select a valid payment period." }, { status: 400 });
+    }
     if ((!studentId && !finalPayerName) || !amountPaid || Number(amountPaid) <= 0) {
       return NextResponse.json(
         { success: false, error: "Payer Name / Student and a valid payment amount are required." },
@@ -61,6 +71,7 @@ export async function POST(request: Request) {
       depositorName: depositorName || payerName || undefined,
       depositorPhone: depositorPhone || payerPhone || undefined,
       items: items || [],
+      term: body.term,
       notes,
     });
 

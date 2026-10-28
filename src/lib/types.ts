@@ -55,6 +55,9 @@ export interface ReceiptItem {
   category: FeeCategory;
   amount: number;
   description?: string;
+  chargeAmount?: number;
+  chargeBalance?: number;
+  paymentTerm?: string;
 }
 
 export interface Receipt {

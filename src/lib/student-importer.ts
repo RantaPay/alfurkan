@@ -283,6 +283,60 @@ export function getBillForClass(
 }
 
 /**
+ * Breaks a student's current term bill into independently paid fee categories.
+ * Special-category rates represent the tuition/school-fees obligation; configured
+ * books, uniform, and sports-wear charges remain separate obligations.
+ */
+export function getStudentFeeObligations(
+  fullName: string,
+  className: string,
+  feeStructure?: {
+    classLevel: string;
+    tuitionFee?: number;
+    booksFee?: number;
+    uniformFee?: number;
+    sportsWearFee?: number;
+    ptaLevy?: number;
+    totalBill: number;
+  }[],
+  concessions?: Partial<ConcessionCategoryConfig>,
+  fallbackBill = 0
+): Record<"Tuition" | "Books" | "Uniform" | "PTA", number> {
+  const normalizedClass = (className || "").trim().toLowerCase();
+  const baseClass = normalizedClass.replace(/\s+[-–]?[A-Za-z0-9]$/i, "").trim();
+  const config = normalizedClass ? feeStructure?.find((fee) => {
+    const level = String(fee?.classLevel || "").trim().toLowerCase();
+    if (!level) return false;
+    return level === normalizedClass || level === baseClass;
+  }) ?? feeStructure?.find((fee) => {
+    const level = String(fee?.classLevel || "").trim().toLowerCase();
+    if (!level) return false;
+    return normalizedClass.startsWith(`${level} `);
+  }) : undefined;
+
+  const category = detectStudentCategory(fullName);
+  const specialTuition = category !== "REGULAR"
+    ? calculateStudentBill(fullName, className, feeStructure, concessions)
+    : 0;
+  if (category === "ADF") {
+    return { Tuition: Math.max(0, specialTuition), Books: 0, Uniform: 0, PTA: 0 };
+  }
+  const books = Math.max(0, Number(config?.booksFee) || 0);
+  const uniform = Math.max(0, Number(config?.uniformFee) || 0);
+  const sportsWear = Math.max(0, Number(config?.sportsWearFee ?? config?.ptaLevy) || 0);
+  const tuition = category !== "REGULAR" ? specialTuition
+    : fallbackBill > 0 ? Math.max(0, fallbackBill - books - uniform - sportsWear)
+    : Number(config?.tuitionFee) || 0;
+
+  return {
+    Tuition: Math.max(0, Number(tuition) || 0),
+    Books: books,
+    Uniform: uniform,
+    PTA: sportsWear,
+  };
+}
+
+/**
  * Infer gender from name and class characteristics
  */
 export function inferGender(fullName: string, className: string): "Male" | "Female" {

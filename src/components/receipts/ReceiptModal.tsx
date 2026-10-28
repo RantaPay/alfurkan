@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Student, ReceiptItem, FeeCategory, ClassFeeConfig } from "@/lib/types";
-import { getBillForClass } from "@/lib/student-importer";
+import { Student, Receipt, ReceiptItem, FeeCategory, ClassFeeConfig, ConcessionCategoryConfig } from "@/lib/types";
+import { getStudentFeeObligations } from "@/lib/student-importer";
 import { formatNaira } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { PAYMENT_PERIODS, isPaymentPeriod, type PaymentPeriod } from "@/lib/fee-ledger";
+import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod, type TermPeriod } from "@/lib/payment-period";
 import {
   X,
   Search,
@@ -53,6 +55,7 @@ export const OTHER_FEE_OPTIONS: PresetFeeOption[] = [
   { name: "Hall rent", category: "Other", label: "Hall rent", group: "Others", allowExternal: true },
   { name: "Jamb center fees", category: "Other", label: "Jamb center fees", group: "Others", allowExternal: true },
   { name: "Alfurqan clinic fees", category: "Other", label: "Alfurqan clinic fees", group: "Others", allowExternal: true },
+  { name: "Previous Term Debt", category: "Other", label: "Debt (Previous Term)", group: "Others" },
   { name: "CUSTOM", category: "Other", label: "Custom / Other Fee (Specify below)", group: "Others", allowExternal: true },
 ];
 
@@ -139,6 +142,15 @@ export function ReceiptModal({
     { id: string; bankName: string; accountNumber: string; isDefault?: boolean }[]
   >([]);
   const [feeStructure, setFeeStructure] = useState<ClassFeeConfig[]>([]);
+  const [concessions, setConcessions] = useState<ConcessionCategoryConfig | undefined>(undefined);
+  const [activeTerm, setActiveTerm] = useState<TermPeriod>("1st Term");
+  const [activeSession, setActiveSession] = useState("");
+  const [paymentPeriod, setPaymentPeriod] = useState<PaymentPeriod>("1st Term");
+  const [paidLedger, setPaidLedger] = useState<{
+    studentId: string;
+    session: string;
+    receipts: Receipt[];
+  } | null>(null);
 
   // Reset receiving date to today and load bank accounts whenever modal opens
   useEffect(() => {
@@ -151,6 +163,10 @@ export function ReceiptModal({
             if (d.school?.feeStructure && Array.isArray(d.school.feeStructure)) {
               setFeeStructure(d.school.feeStructure);
             }
+            setConcessions(d.school?.concessions);
+            setActiveTerm(isTermPeriod(d.school?.currentTerm) ? d.school.currentTerm : "1st Term");
+            setPaymentPeriod(isPaymentPeriod(d.school?.currentTerm) ? d.school.currentTerm : "1st Term");
+            setActiveSession((d.school?.currentSession || "").replace(/\bAcademic\s*/gi, "").trim());
             if (d.school?.bankAccounts && d.school.bankAccounts.length > 0) {
               setConfiguredBanks(d.school.bankAccounts);
               const def = d.school.bankAccounts.find((b: any) => b.isDefault) || d.school.bankAccounts[0];
@@ -165,6 +181,23 @@ export function ReceiptModal({
         .catch(() => {});
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const studentId = selectedStudent?.id;
+    if (!studentId) return;
+
+    fetch(`/api/receipts?studentId=${encodeURIComponent(studentId)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled || !data.success) return;
+        const receipts = (data.receipts || []).filter((receipt: Receipt) => receipt.session === activeSession);
+        setPaidLedger({ studentId, session: activeSession, receipts });
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [selectedStudent?.id, activeSession, isOpen]);
 
   // Live search for students
   useEffect(() => {
@@ -195,18 +228,31 @@ export function ReceiptModal({
 
   // Calculate total amount from items
   const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const isLedgerReady = !selectedStudent || (
+    paidLedger?.studentId === selectedStudent.id &&
+    paidLedger.session === activeSession
+  );
+  const priorReceipts = isLedgerReady && selectedStudent ? paidLedger?.receipts || [] : [];
 
-  // Calculate what the new balance will be
-  const currentTotalPaid = selectedStudent?.totalPaid || 0;
-  const newCumulativeTotal = currentTotalPaid + totalAmount;
-  const studentTotalBill = selectedStudent
-    ? selectedStudent.totalTermBill > 0
-      ? selectedStudent.totalTermBill
-      : getBillForClass(selectedStudent.class, feeStructure)
-    : 0;
-  const projectedBalance = selectedStudent
-    ? Math.max(0, studentTotalBill - newCumulativeTotal)
-    : 0;
+  // Preview the same category-specific allocation the server will persist.
+  const obligations = selectedStudent
+    ? getStudentFeeObligations(
+        selectedStudent.fullName,
+        selectedStudent.class,
+        feeStructure,
+        concessions,
+        selectedStudent.totalTermBill
+      )
+    : { Tuition: 0, Books: 0, Uniform: 0, PTA: 0 };
+  const currentLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentPeriod, activeTerm);
+  const projectedItems = allocatePeriodItems(items, paymentPeriod, activeTerm, obligations, priorReceipts);
+  const projectedLedger = calculatePeriodFeeBalance(obligations, [
+    ...priorReceipts, { term: paymentPeriod, amountPaid: totalAmount, items: projectedItems },
+  ], paymentPeriod, activeTerm);
+  const studentTotalBill = currentLedger.totalBill;
+  const currentAllocatedTotal = currentLedger.totalPaid;
+  const currentBalance = currentLedger.balanceRemaining;
+  const projectedBalance = projectedLedger.balanceRemaining;
   const willBeFull = studentTotalBill > 0 && projectedBalance === 0;
 
   const handleAddItem = (category: FeeCategory, defaultName: string, defaultAmount: number) => {
@@ -267,6 +313,8 @@ export function ReceiptModal({
             regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
             amountPaid: totalAmount,
             date: receivingDate,
+            term: selectedStudent ? paymentPeriod : activeTerm,
+            session: activeSession,
             items,
           }),
         });
@@ -296,6 +344,7 @@ export function ReceiptModal({
           studentClass: selectedStudent ? selectedStudent.class : (externalCategory.trim() || "General"),
           regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
           amountPaid: totalAmount,
+          term: selectedStudent ? paymentPeriod : activeTerm,
           paymentMethod,
           bankName: receivingBank,
           date: receivingDate,
@@ -611,25 +660,52 @@ export function ReceiptModal({
             )}
           </div>
 
+          {!isExternalPayer && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div>
+                <label htmlFor="receipt-payment-period" className="text-xs font-bold text-slate-800">Payment period</label>
+                <p className="text-[11px] text-slate-500">{activeSession}</p>
+              </div>
+              <select
+                id="receipt-payment-period"
+                value={paymentPeriod}
+                disabled={!activeSession || isSubmitting || isCheckingDuplicate}
+                onChange={(event) => {
+                  if (isPaymentPeriod(event.target.value)) {
+                    setPaymentPeriod(event.target.value);
+                    setDetectedDuplicate(null);
+                  }
+                }}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#075E54] cursor-pointer"
+              >
+                {PAYMENT_PERIODS.map((period) => <option key={period} value={period}>{period}</option>)}
+              </select>
+            </div>
+          )}
+
+          {!isExternalPayer && paymentPeriod === "Whole Session" && (
+            <p className="text-[11px] text-slate-500 -mt-2">Covers tuition for all three terms. Other fee items are recorded separately for {activeTerm.toLowerCase()}.</p>
+          )}
+
           {/* Student Debt & Invoice Overview Card */}
           {selectedStudent && (
             <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex items-center justify-between text-xs sm:text-sm">
               <div>
-                <span className="text-slate-500">Total Term Bill:</span>
+                <span className="text-slate-500">{paymentPeriod === "Whole Session" ? "Session Bill:" : "Term Bill:"}</span>
                 <strong className="text-slate-900 font-mono ml-1.5 font-bold">
-                  {formatNaira(selectedStudent.totalTermBill)}
+                  {formatNaira(studentTotalBill)}
                 </strong>
               </div>
               <div>
                 <span className="text-slate-500">Paid So Far:</span>
                 <strong className="text-slate-900 font-mono ml-1.5 font-bold">
-                  {formatNaira(selectedStudent.totalPaid)}
+                  {formatNaira(currentAllocatedTotal)}
                 </strong>
               </div>
               <div>
                 <span className="text-slate-500">Current Debt:</span>
                 <strong className="text-amber-800 font-mono font-black ml-1.5">
-                  {formatNaira(selectedStudent.balanceRemaining)}
+                  {formatNaira(currentBalance)}
                 </strong>
               </div>
             </div>
@@ -995,7 +1071,9 @@ export function ReceiptModal({
                 />
                 <div>
                   <div className="text-sm font-black">
-                    {willBeFull ? (
+                    {!isLedgerReady ? (
+                      <span className="text-slate-600">CHECKING PAYMENT HISTORY…</span>
+                    ) : willBeFull ? (
                       <span className="text-emerald-900 uppercase">
                         RECEIPT BADGE: 🟢 FULL PAYMENT (CLEARED)
                       </span>
@@ -1006,12 +1084,18 @@ export function ReceiptModal({
                     )}
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
-                    {willBeFull
-                      ? "Outstanding balance will become ₦0.00. Student is granted full clearance."
+                    {!isLedgerReady ? "Please wait for the payment history for this period." : willBeFull
+                      ? `The selected ${paymentPeriod.toLowerCase()} payment will be cleared.`
                       : `Outstanding balance remaining will be ${formatNaira(
                           projectedBalance
                         )}.`}
                   </div>
+                  {isLedgerReady && obligations.Tuition > 0 && (
+                    <div className="text-xs font-semibold text-amber-900 mt-1">
+                      School fees paid now: {formatNaira(items.filter((item) => item.category === "Tuition").reduce((sum, item) => sum + item.amount, 0))}
+                      {" • "}School fees remaining: {formatNaira(projectedLedger.balances.Tuition)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

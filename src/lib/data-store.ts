@@ -1,4 +1,6 @@
 import QRCode from "qrcode";
+import { isPaymentPeriod, type PaymentPeriod } from "./fee-ledger";
+import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod } from "./payment-period";
 import { prisma } from "./prisma";
 import {
   Student,
@@ -15,8 +17,8 @@ import {
 import { Prisma } from "@prisma/client";
 import {
   DEFAULT_CONCESSIONS,
-  calculateStudentBill,
-  detectStudentCategory,
+  getBillForClass,
+  getStudentFeeObligations,
 } from "./student-importer";
 
 export const DEFAULT_USERS: StaffUser[] = [];
@@ -120,6 +122,9 @@ function formatReceipt(r: any): Receipt {
       category: it.category,
       amount: Number(it.amount),
       description: it.description || undefined,
+      chargeAmount: it.chargeAmount == null ? undefined : Number(it.chargeAmount),
+      chargeBalance: it.chargeBalance == null ? undefined : Number(it.chargeBalance),
+      paymentTerm: it.paymentTerm || undefined,
     })),
     term: r.term,
     session: r.session,
@@ -387,6 +392,8 @@ export interface CheckDuplicateInput {
   regNumber?: string;
   amountPaid: number;
   date?: string;
+  term?: string;
+  session?: string;
   items?: { name: string }[];
 }
 
@@ -418,7 +425,7 @@ export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<
   const defaultFeeName = "tuition / school fees";
   const inputItemNames = (
     input.items && input.items.length > 0
-      ? input.items.map((it) => it.name.trim().toLowerCase())
+      ? Array.from(new Set(input.items.map((it) => it.name.trim().toLowerCase())))
       : [defaultFeeName]
   )
     .filter(Boolean)
@@ -438,6 +445,8 @@ export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<
     where: {
       isVoided: false,
       amountPaid: amount,
+      ...(input.term ? { term: input.term } : {}),
+      ...(input.session ? { session: input.session } : {}),
       OR: studentConditions,
     },
     include: { items: true },
@@ -461,7 +470,7 @@ export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<
 
     const rItemNames = (
       r.items && r.items.length > 0
-        ? r.items.map((it) => it.name.trim().toLowerCase())
+        ? Array.from(new Set(r.items.map((it) => it.name.trim().toLowerCase())))
         : [defaultFeeName]
     )
       .filter(Boolean)
@@ -492,10 +501,34 @@ export interface CreateReceiptInput {
   payerPhone?: string;
   items: ReceiptItem[];
   notes?: string;
+  term?: PaymentPeriod;
 }
 
 export async function createReceipt(input: CreateReceiptInput): Promise<Receipt> {
+  if (input.items != null && !Array.isArray(input.items)) {
+    throw new Error("Receipt items must be an array");
+  }
+  const receiptItems = input.items?.length
+    ? input.items
+    : [{ name: "Tuition / School Fees", category: "Tuition" as const, amount: input.amountPaid }];
+  if (!Number.isFinite(input.amountPaid) || input.amountPaid <= 0) {
+    throw new Error("Payment amount must be a positive number");
+  }
+  if (!Array.isArray(receiptItems) || receiptItems.some((item) =>
+    !item || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0 ||
+    typeof item.name !== "string" || !item.name.trim() ||
+    !["Tuition", "Books", "Uniform", "PTA", "Transport", "Excursion", "Development", "Other"].includes(item.category)
+  )) {
+    throw new Error("Receipt items must have a name and a valid non-negative amount");
+  }
+  const itemTotal = receiptItems.reduce((sum, item) => sum + Number(item.amount), 0);
+  if (Math.abs(itemTotal - input.amountPaid) > 0.01) {
+    throw new Error("Receipt item amounts must equal the total amount paid");
+  }
+
   return await prisma.$transaction(async (tx) => {
+    // Serialize receipt numbering and balance changes across application instances.
+    await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(hashtext('alfurqan-receipt-ledger'))`;
     // 1. Fetch student if studentId is provided, or prepare external payer
     const student = input.studentId
       ? await tx.student.findUnique({
@@ -534,28 +567,52 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     );
     const parentEmail = student?.parentEmail || null;
 
-    let effectiveBill = student ? (student.totalTermBill || 0) : input.amountPaid;
-    const schoolAny = school as any;
-    if (student && effectiveBill === 0 && schoolAny?.feeStructureJson && detectStudentCategory(student.fullName) !== "ADF") {
-      try {
-        const fees = JSON.parse(schoolAny.feeStructureJson);
-        const concessions = schoolAny.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : DEFAULT_CONCESSIONS;
-        const configuredBill = calculateStudentBill(student.fullName, student.class, fees, concessions);
-        if (configuredBill > 0) {
-          effectiveBill = configuredBill;
-        }
-      } catch {}
-    }
-
-    const prevTotalPaid = student ? (student.totalPaid || 0) : 0;
-    const newTotalPaid = student ? prevTotalPaid + input.amountPaid : input.amountPaid;
-    const newBalanceRemaining = student ? Math.max(0, effectiveBill - newTotalPaid) : 0;
-    const paymentStatus: "FULL" | "PARTIAL" =
-      newBalanceRemaining === 0 ? "FULL" : "PARTIAL";
-
-    const currentTerm = school?.currentTerm || "1st Term";
+    const currentTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
+    const paymentTerm = input.term ?? currentTerm;
+    if (!isPaymentPeriod(paymentTerm)) throw new Error("Select a valid payment period");
     const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
     const accountantName = school?.accountantName || "Aminu S. Boro";
+
+    const schoolAny = school as any;
+    let feeStructure: ClassFeeConfig[] = [];
+    let concessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+    try {
+      const parsedFees = schoolAny?.feeStructureJson ? JSON.parse(schoolAny.feeStructureJson) : [];
+      feeStructure = Array.isArray(parsedFees) ? parsedFees : [];
+      const parsedConcessions = schoolAny?.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : null;
+      concessions = parsedConcessions && typeof parsedConcessions === "object"
+        ? { ...DEFAULT_CONCESSIONS, ...parsedConcessions }
+        : DEFAULT_CONCESSIONS;
+    } catch {
+      // Keep the legacy bill as the tuition fallback if settings JSON is malformed.
+    }
+
+    const obligations = student
+      ? getStudentFeeObligations(
+          student.fullName,
+          student.class,
+          feeStructure,
+          concessions,
+          student.totalTermBill || 0
+        )
+      : { Tuition: 0, Books: 0, Uniform: 0, PTA: 0 };
+    const priorReceipts = student
+      ? await tx.receipt.findMany({
+          where: { studentId: student.id, session: currentSession, isVoided: false },
+          include: { items: true },
+        })
+      : [];
+    const allocatedItems = allocatePeriodItems(receiptItems, paymentTerm, currentTerm, obligations, priorReceipts);
+    const projectedReceipts = [...priorReceipts, { term: paymentTerm, amountPaid: input.amountPaid, items: allocatedItems }];
+    const previousLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentTerm, currentTerm);
+    const nextBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, paymentTerm, currentTerm);
+    const effectiveBill = student ? nextBalance.totalBill : input.amountPaid;
+    const previousTotalPaid = previousLedger.totalPaid;
+    const newTotalPaid = student ? nextBalance.totalPaid : input.amountPaid;
+    const newBalanceRemaining = student ? nextBalance.balanceRemaining : 0;
+    const paymentStatus: "FULL" | "PARTIAL" = student
+      ? nextBalance.status === "FULL" ? "FULL" : "PARTIAL"
+      : "FULL";
 
     // 3. Generate sequential receipt number in format session/counter (e.g. 2026-27/0001)
     const sessionCode = formatSessionCode(currentSession);
@@ -607,22 +664,20 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     const securityHash = `AIA-HASH-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const defaultNotes = `${paymentStatus === "FULL" ? "Full payment cleared" : "Partial payment recorded"}. Verified by Accounts.`;
 
-    const receiptItemsData =
-      input.items && input.items.length > 0
-        ? input.items.map((it) => ({
-            name: it.name,
-            category: it.category,
-            amount: Number(it.amount),
-            description: it.description || null,
-          }))
-        : [
-            {
-              name: "Tuition / School Fees",
-              category: "Tuition",
-              amount: Number(input.amountPaid),
-              description: null,
-            },
-          ];
+    const receiptItemsData = allocatedItems.map((it) => {
+      const category = it.category as keyof typeof obligations;
+      const due = obligations[category];
+      const itemTerm = isTermPeriod(it.paymentTerm) ? it.paymentTerm : currentTerm;
+      const lineBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, itemTerm, currentTerm);
+      return {
+        name: it.name.trim(),
+        category: it.category,
+        amount: Number(it.amount),
+        description: it.description || null,
+        paymentTerm: itemTerm,
+        ...(student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
+      };
+    });
 
     // 5. Create Receipt in PostgreSQL
     const createdReceipt = await tx.receipt.create({
@@ -637,14 +692,14 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         parentEmail,
         amountPaid: input.amountPaid,
         totalTermBill: effectiveBill,
-        previousTotalPaid: prevTotalPaid,
+        previousTotalPaid,
         newTotalPaid,
         balanceRemaining: newBalanceRemaining,
         paymentStatus,
         paymentMethod: input.paymentMethod,
         bankReference: input.bankReference?.trim() || `TRF/NIP/${Date.now().toString().slice(-6)}`,
         bankName: (input as any).bankName || school?.bankName || "",
-        term: currentTerm,
+        term: paymentTerm,
         session: currentSession,
         date: formattedDate,
         timestamp: receiptDateObj,
@@ -662,14 +717,15 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     });
 
     // 6. Update student balance in PostgreSQL (if registered student)
-    if (student) {
+    if (student && allocatedItems.some((item) => item.paymentTerm === currentTerm)) {
+      const currentLedger = calculatePeriodFeeBalance(obligations, projectedReceipts, currentTerm, currentTerm);
       await tx.student.update({
         where: { id: student.id },
         data: {
-          totalTermBill: effectiveBill,
-          totalPaid: newTotalPaid,
-          balanceRemaining: newBalanceRemaining,
-          status: effectiveBill === 0 ? "UNPAID" : newBalanceRemaining === 0 ? "FULL" : "PARTIAL",
+          totalTermBill: currentLedger.totalBill,
+          totalPaid: currentLedger.totalPaid,
+          balanceRemaining: currentLedger.balanceRemaining,
+          status: currentLedger.status,
           lastPaymentDate: isoDateString,
         },
       });
@@ -847,6 +903,7 @@ export async function getSchoolProfile(): Promise<SchoolProfile> {
 }
 
 export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { feeRevisionNote?: string }): Promise<SchoolProfile> {
+  const previousSchool = await prisma.schoolProfile.findUnique({ where: { id: "default" } });
   const { bankAccounts, feeStructure, feeScheduleHistory, feeRevisionNote, concessions, ...rest } = updates;
   const prismaData: any = { ...rest };
 
@@ -917,7 +974,8 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
 
   const isFeeUpdate = feeStructure !== undefined;
   const isConcessionUpdate = concessions !== undefined;
-  if (isFeeUpdate || isConcessionUpdate) {
+  const periodChanged = previousSchool?.currentTerm !== updated.currentTerm || previousSchool?.currentSession !== updated.currentSession;
+  if (isFeeUpdate || isConcessionUpdate || periodChanged) {
     let activeFees: ClassFeeConfig[] = [];
     if (feeStructure !== undefined && Array.isArray(feeStructure)) {
       activeFees = feeStructure;
@@ -944,20 +1002,41 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
         class: true,
         totalPaid: true,
         totalTermBill: true,
+        balanceRemaining: true,
+        status: true,
       },
     });
 
+    const activeTermReceipts = await prisma.receipt.findMany({
+      where: {
+        session: updated.currentSession.replace(/\bAcademic\s*/gi, "").trim(),
+        isVoided: false,
+        studentId: { not: null },
+      },
+      include: { items: true },
+    });
+    const receiptsByStudent = new Map<string, typeof activeTermReceipts>();
+    for (const receipt of activeTermReceipts) {
+      if (!receipt.studentId) continue;
+      const list = receiptsByStudent.get(receipt.studentId) || [];
+      list.push(receipt);
+      receiptsByStudent.set(receipt.studentId, list);
+    }
+
     const updateOps: Promise<any>[] = [];
     for (const s of allStudents) {
-      const targetBill = calculateStudentBill(s.fullName, s.class, activeFees, activeConcessions);
-      if (s.totalTermBill !== targetBill) {
-        const bal = Math.max(0, targetBill - s.totalPaid);
-        const status = targetBill === 0 ? "FULL" : bal === 0 ? "FULL" : s.totalPaid > 0 ? "PARTIAL" : "UNPAID";
+      const revisedBill = getBillForClass(s.class, activeFees) || s.totalTermBill;
+      const obligations = getStudentFeeObligations(s.fullName, s.class, activeFees, activeConcessions, revisedBill);
+      const activeTerm = isTermPeriod(updated.currentTerm) ? updated.currentTerm : "1st Term";
+      const ledger = calculatePeriodFeeBalance(obligations, receiptsByStudent.get(s.id) || [], activeTerm, activeTerm);
+      const { totalBill: targetBill, totalPaid: paid, balanceRemaining: bal, status } = ledger;
+      if (s.totalTermBill !== targetBill || s.totalPaid !== paid || s.balanceRemaining !== bal || s.status !== status) {
         updateOps.push(
           prisma.student.update({
             where: { id: s.id },
             data: {
               totalTermBill: targetBill,
+              totalPaid: paid,
               balanceRemaining: bal,
               status,
             },
@@ -1113,13 +1192,39 @@ export async function updateStudent(
   if (updates.parentPhone !== undefined) dataToUpdate.parentPhone = updates.parentPhone.trim();
   if (updates.parentEmail !== undefined) dataToUpdate.parentEmail = updates.parentEmail?.trim() || null;
 
-  if (updates.totalTermBill !== undefined) {
-    const newBill = Number(updates.totalTermBill);
-    dataToUpdate.totalTermBill = newBill;
-    const newBalance = Math.max(0, newBill - current.totalPaid);
-    dataToUpdate.balanceRemaining = newBalance;
-    dataToUpdate.status = newBalance === 0 ? "FULL" : current.totalPaid > 0 ? "PARTIAL" : "UNPAID";
+  const school = await prisma.schoolProfile.findUnique({ where: { id: "default" } });
+  const schoolAny = school as any;
+  let feeStructure: ClassFeeConfig[] = [];
+  let concessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+  try {
+    const parsedFees = schoolAny?.feeStructureJson ? JSON.parse(schoolAny.feeStructureJson) : [];
+    feeStructure = Array.isArray(parsedFees) ? parsedFees : [];
+    const parsedConcessions = schoolAny?.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : null;
+    concessions = parsedConcessions && typeof parsedConcessions === "object"
+      ? { ...DEFAULT_CONCESSIONS, ...parsedConcessions }
+      : DEFAULT_CONCESSIONS;
+  } catch {
+    // Use the saved student bill as fallback if settings JSON is malformed.
   }
+  const nextName = updates.fullName?.trim() || current.fullName;
+  const nextClass = updates.class?.trim() || current.class;
+  const fallbackBill = updates.totalTermBill === undefined
+    ? current.totalTermBill
+    : Number(updates.totalTermBill) || 0;
+  const obligations = getStudentFeeObligations(nextName, nextClass, feeStructure, concessions, fallbackBill);
+  const newBill = Object.values(obligations).reduce((sum, amount) => sum + amount, 0);
+  const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
+  const currentTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
+  const currentReceipts = await prisma.receipt.findMany({
+    where: { studentId: id, session: currentSession, isVoided: false },
+    include: { items: true },
+  });
+  const ledger = calculatePeriodFeeBalance(obligations, currentReceipts, currentTerm, currentTerm);
+  const { totalPaid: newPaid, balanceRemaining: newBalance } = ledger;
+  dataToUpdate.totalTermBill = newBill;
+  dataToUpdate.totalPaid = newPaid;
+  dataToUpdate.balanceRemaining = newBalance;
+  dataToUpdate.status = ledger.status;
 
   const updated = await prisma.student.update({
     where: { id },
@@ -1328,6 +1433,7 @@ export async function voidReceipt(
   voidedBy?: string
 ): Promise<Receipt> {
   return await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(hashtext('alfurqan-receipt-ledger'))`;
     const receipt = await tx.receipt.findUnique({
       where: { id: receiptId },
       include: { items: true },
@@ -1364,22 +1470,44 @@ export async function voidReceipt(
         })
       : null;
 
-    if (student) {
+    if (student && receipt.session === (school?.currentSession || "").replace(/\bAcademic\s*/gi, "").trim()) {
       const activeReceipts = await tx.receipt.findMany({
         where: {
           studentId: student.id,
+          session: receipt.session,
           isVoided: false,
         },
+        include: { items: true },
       });
 
-      const newTotalPaid = activeReceipts.reduce((sum, r) => sum + r.amountPaid, 0);
-      const newBalanceRemaining = Math.max(0, student.totalTermBill - newTotalPaid);
-      const newStatus =
-        newBalanceRemaining === 0 ? "FULL" : newTotalPaid > 0 ? "PARTIAL" : "UNPAID";
+      const schoolAny = school as any;
+      let feeStructure: ClassFeeConfig[] = [];
+      let concessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+      try {
+        const parsedFees = schoolAny?.feeStructureJson ? JSON.parse(schoolAny.feeStructureJson) : [];
+        feeStructure = Array.isArray(parsedFees) ? parsedFees : [];
+        const parsedConcessions = schoolAny?.concessionsJson ? JSON.parse(schoolAny.concessionsJson) : null;
+        concessions = parsedConcessions && typeof parsedConcessions === "object"
+          ? { ...DEFAULT_CONCESSIONS, ...parsedConcessions }
+          : DEFAULT_CONCESSIONS;
+      } catch {
+        // Fall back to the student's stored bill if settings JSON is malformed.
+      }
+      const obligations = getStudentFeeObligations(
+        student.fullName,
+        student.class,
+        feeStructure,
+        concessions,
+        student.totalTermBill || 0
+      );
+      const activeTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
+      const ledger = calculatePeriodFeeBalance(obligations, activeReceipts, activeTerm, activeTerm);
+      const { totalBill, totalPaid: newTotalPaid, balanceRemaining: newBalanceRemaining, status: newStatus } = ledger;
 
       await tx.student.update({
         where: { id: student.id },
         data: {
+          totalTermBill: totalBill,
           totalPaid: newTotalPaid,
           balanceRemaining: newBalanceRemaining,
           status: newStatus,

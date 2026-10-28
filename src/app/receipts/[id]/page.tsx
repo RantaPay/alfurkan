@@ -208,7 +208,7 @@ export default function ReceiptViewPage() {
     );
   }
 
-  const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+  const isFull = receipt.paymentStatus === "FULL";
 
   // WhatsApp Pre-composed Message for parent
   const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
@@ -377,7 +377,7 @@ export default function ReceiptViewPage() {
                 <span>Payment Reversal Warning</span>
               </div>
               <p className="leading-relaxed">
-                Voiding receipt <strong className="font-mono">{receipt.receiptNumber}</strong> will reverse the payment of <strong className="font-mono">{formatNaira(receipt.amountPaid)}</strong> for <strong>{receipt.studentName}</strong>. Their balance will increase back to the unpaid amount.
+                Voiding receipt <strong className="font-mono">{receipt.receiptNumber}</strong> will reverse the payment of <strong className="font-mono">{formatNaira(receipt.amountPaid)}</strong> for <strong>{receipt.studentName}</strong> in the term(s) covered by this receipt.
               </p>
             </div>
 

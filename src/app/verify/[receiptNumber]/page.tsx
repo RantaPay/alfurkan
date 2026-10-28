@@ -125,7 +125,7 @@ export default function VerifyReceiptPage() {
 
                   {/* Status Badge */}
                   <div className="text-center">
-                    {receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0 ? (
+                    {receipt.paymentStatus === "FULL" ? (
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/20">
                         <CheckCircle2 className="h-5 w-5" />
                         <span>CLEARED • FULL PAYMENT</span>

@@ -347,7 +347,7 @@ export default function DashboardPage() {
                   </tr>
                 ) : filteredReceipts.length > 0 ? (
                   filteredReceipts.map((receipt) => {
-                    const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+                    const isFull = receipt.paymentStatus === "FULL";
 
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">

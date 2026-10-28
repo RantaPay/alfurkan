@@ -119,6 +119,9 @@ model ReceiptItem {
   category    String
   amount      Float
   description String?
+  chargeAmount Float?
+  chargeBalance Float?
+  paymentTerm String?
 
   @@index([receiptId])
 }

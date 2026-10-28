@@ -49,7 +49,7 @@ export default function ReceiptsPage() {
 
   const filtered = receipts.filter((r) => {
     let matchesStatus = true;
-    if (statusFilter === "FULL") matchesStatus = !r.isVoided && (r.paymentStatus === "FULL" || r.balanceRemaining === 0);
+    if (statusFilter === "FULL") matchesStatus = !r.isVoided && r.paymentStatus === "FULL";
     else if (statusFilter === "PARTIAL") matchesStatus = !r.isVoided && (r.paymentStatus === "PARTIAL" && r.balanceRemaining > 0);
     else if (statusFilter === "VOIDED") matchesStatus = !!r.isVoided;
 
@@ -198,7 +198,7 @@ export default function ReceiptsPage() {
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((receipt) => {
-                    const isFull = receipt.paymentStatus === "FULL" || receipt.balanceRemaining === 0;
+                    const isFull = receipt.paymentStatus === "FULL";
 
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
