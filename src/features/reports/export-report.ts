@@ -52,156 +52,199 @@ export function exportReportCSV({ students, classFilter, bankFilter, statusFilte
 }
 
 
-export async function exportReportPDF({ students, summary, school, classFilter, bankFilter, statusFilter, term }: ReportExport) {
+const reportStatusLabels: Record<string, string> = {
+  ALL: "All payment statuses",
+  FULL: "Paid in full",
+  PARTIAL: "Partially paid",
+  UNPAID: "Unpaid",
+};
+
+/** Build school account statements independently of the download action. */
+export async function createReportPDF({ students, summary, school, classFilter, bankFilter, statusFilter, term }: ReportExport) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a4",
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  const brand: [number, number, number] = [7, 94, 84];
+  const ink: [number, number, number] = [30, 41, 59];
+  const muted: [number, number, number] = [100, 116, 139];
+  const border: [number, number, number] = [218, 225, 231];
+  const generatedAt = new Date();
+  const date = generatedAt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const time = generatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const schoolName = school?.name || "Alfurqan International Academy";
+  const session = school?.currentSession || "Session not specified";
+  const channel = bankFilter === "ALL" ? "All collection channels" : bankFilter;
+  const classLabel = classFilter === "ALL" ? "All classes" : classFilter;
+  const statusLabel = reportStatusLabels[statusFilter] || "All payment statuses";
+  const amount = (value: number) => Number(value || 0).toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
+  const title = "Fee collection statement";
+  const institutionLines = doc.setFontSize(13).splitTextToSize(schoolName, contentWidth - 65) as string[];
+  const headerBottom = 16 + Math.max(0, institutionLines.length - 1) * 5;
+  const detailY = headerBottom + 13;
+  const summaryY = detailY + 21;
+  const tableY = summaryY + 27;
 
-  const formatPdfCurrency = (amount: number) => {
-    return "NGN " + (Number(amount) || 0).toLocaleString();
+  doc.setProperties({ title: `${title} - ${channel}`, subject: `${term} | ${session}`, author: schoolName, creator: "Alfurqan Pay" });
+
+  const drawHeader = (firstPage: boolean) => {
+    doc.setFillColor(...brand);
+    doc.rect(margin, 9, 11, 1.2, "F");
+    doc.setTextColor(...brand);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text(institutionLines, margin, 16);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text("School accounts", pageWidth - margin, 15, { align: "right" });
+    doc.text(`Issued: ${date}  ${time}`, pageWidth - margin, 20, { align: "right" });
+    if (firstPage) {
+      const contact = [school?.address, school?.phone, school?.email].filter(Boolean).join("  |  ");
+      if (contact) doc.text(doc.splitTextToSize(contact, contentWidth - 65), margin, headerBottom + 5);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(17);
+      doc.setTextColor(...ink);
+      doc.text(title, margin, detailY);
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...ink);
+      doc.text(`${title} | Continued`, margin, headerBottom + 7);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...muted);
+      doc.text(doc.splitTextToSize(`${channel}  |  ${term}  |  ${session}`, contentWidth), margin, headerBottom + 12);
+    }
   };
 
-  // Header: School Name & Motto
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.setTextColor(7, 94, 84);
-  doc.text(school?.name || "ALFURQAN INTERNATIONAL ACADEMY", 14, 15);
-
-  doc.setFontSize(9);
-  doc.setTextColor(70, 70, 70);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    `${school?.motto || "Knowledge & Guidance"} • ${school?.address || "Along Dass Road, Bauchi State"}`,
-    14,
-    21
-  );
-
-  // Title & Generation Metadata
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(20, 20, 20);
-  const activeSession = school?.currentSession || "2026/2027";
-  doc.text(`Fee Collection & Debtor Report — ${term} (${activeSession})`, 14, 29);
-
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  const dateStr = new Date().toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+  drawHeader(true);
+  doc.setDrawColor(...border);
+  doc.setLineWidth(0.25);
+  doc.line(margin, detailY + 4, pageWidth - margin, detailY + 4);
+  doc.setFontSize(8);
+  const metadata = [
+    ["Collection channel", channel],
+    ["Academic period", `${term} | ${session}`],
+    ["Class / Payment status", `${classLabel} | ${statusLabel}`],
+  ];
+  metadata.forEach(([label, value], index) => {
+    const y = detailY + 9 + index * 4.5;
+    doc.setTextColor(...muted);
+    doc.setFont("helvetica", "normal");
+    doc.text(label, margin, y);
+    doc.setTextColor(...ink);
+    doc.setFont("helvetica", "bold");
+    doc.text(value, margin + 42, y, { maxWidth: contentWidth - 42 });
   });
-  const statusLabel =
-    statusFilter === "ALL"
-      ? "All Students"
-      : statusFilter === "FULL"
-        ? "Full Payment (Cleared)"
-        : statusFilter === "PARTIAL"
-          ? "Part Payment Debtors"
-          : "Unpaid Defaulters";
-  doc.text(
-    `Generated on: ${dateStr} • Filters: Class [${classFilter === "ALL" ? "All Classes" : classFilter}], Bank [${bankFilter === "ALL" ? "All Banks" : bankFilter}], Status [${statusLabel}]`,
-    14,
-    34
-  );
 
-  // Summary Box Banner
-  doc.setFillColor(245, 247, 248);
-  doc.roundedRect(14, 37, 269, 13, 2, 2, "F");
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-
-  const billedStr = formatPdfCurrency(summary?.expectedRevenue || 0);
-  const paidStr = formatPdfCurrency(summary?.collectedRevenue || 0);
-  const debtStr = formatPdfCurrency(summary?.outstandingDebt || 0);
-  const countStr = `${students.length} Students`;
-
-  doc.text(`Total Billed: ${billedStr}`, 18, 45);
-  doc.text(`Total Collected: ${paidStr}`, 80, 45);
-  doc.setTextColor(180, 40, 40);
-  doc.text(`Outstanding Debt: ${debtStr}`, 155, 45);
-  doc.setTextColor(30, 30, 30);
-  doc.text(`Total Records: ${countStr}`, 235, 45);
-
-  // Prepare table rows
-  const tableBody = students.map((s, idx) => [
-    String(idx + 1),
-    s.fullName,
-    s.regNumber,
-    s.class,
-    s.parentName ? `${s.parentName} (${s.parentPhone || ""})` : s.parentPhone || "—",
-    s.totalTermBill > 0 ? formatPdfCurrency(s.totalTermBill) : "—",
-    s.totalPaid > 0 ? formatPdfCurrency(s.totalPaid) : "—",
-    s.totalTermBill === 0 ? "—" : s.balanceRemaining > 0 ? formatPdfCurrency(s.balanceRemaining) : "₦0",
-    s.totalTermBill === 0 ? "Nil" : s.status === "FULL" ? "CLEARED" : s.status === "PARTIAL" ? "PARTIAL" : "UNPAID",
-    s.paymentBank || "—",
-  ]);
+  // Retain the supplied report figures and their existing calculation rules.
+  doc.setFillColor(245, 248, 248);
+  doc.rect(margin, summaryY, contentWidth, 20, "F");
+  const metrics = [
+    ["Fees assessed (NGN)", amount(summary?.expectedRevenue || 0)],
+    [bankFilter === "ALL" ? "Payments recorded (NGN)" : "Channel collections (NGN)", amount(summary?.collectedRevenue || 0)],
+    ["Outstanding balance (NGN)", amount(summary?.outstandingDebt || 0)],
+    ["Student accounts", String(students.length)],
+  ];
+  metrics.forEach(([label, value], index) => {
+    const x = margin + index * contentWidth / 4 + 4;
+    if (index) {
+      doc.setDrawColor(...border);
+      doc.line(x - 4, summaryY + 4, x - 4, summaryY + 16);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(label, x, summaryY + 6);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...ink);
+    doc.text(value, x, summaryY + 13);
+  });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("Currency: Nigerian naira (NGN). Student account balances include recorded payments across all collection channels.", margin, summaryY + 25);
 
   autoTable(doc, {
-    startY: 53,
-    head: [
-      [
-        "#",
-        "Student Name",
-        "Admission No",
-        "Class",
-        "Parent & Phone",
-        "Term Bill",
-        "Paid to Date",
-        "Balance Due",
-        "Status",
-        "Bank",
-      ],
-    ],
-    body: tableBody,
-    headStyles: {
-      fillColor: [7, 94, 84],
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-      fontSize: 8,
-    },
+    startY: tableY,
+    margin: { top: headerBottom + 18, bottom: 22, left: margin, right: margin },
+    tableWidth: contentWidth,
+    theme: "plain",
+    showHead: "everyPage",
+    rowPageBreak: "avoid",
+    head: [["No.", "Student name", "Admission no.", "Class", "Parent / Guardian", "Fees assessed\n(NGN)", "Payments to date\n(NGN)", "Balance due\n(NGN)", "Payment status", "Collection channel(s)"]],
+    body: students.map((student, index) => [
+      String(index + 1).padStart(2, "0"),
+      student.fullName,
+      student.regNumber,
+      student.class,
+      [student.parentName, student.parentPhone].filter(Boolean).join("\n") || "-",
+      amount(student.totalTermBill),
+      amount(student.totalPaid),
+      student.totalTermBill === 0 ? "-" : amount(Math.max(0, student.balanceRemaining)),
+      student.totalTermBill === 0 ? "No fee assessed" : reportStatusLabels[student.status] || student.status,
+      student.paymentBank && student.paymentBank !== "—" ? student.paymentBank : "-",
+    ]),
     styles: {
-      fontSize: 8,
-      cellPadding: 2,
+      font: "helvetica",
+      fontSize: 7.5,
+      textColor: ink,
+      cellPadding: { top: 2, bottom: 2, left: 2.2, right: 2.2 },
+      minCellHeight: 9,
       valign: "middle",
+      overflow: "linebreak",
+      lineWidth: { bottom: 0.15 },
+      lineColor: border,
     },
+    headStyles: { fillColor: brand, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7, minCellHeight: 11 },
+    alternateRowStyles: { fillColor: [247, 249, 250] },
     columnStyles: {
-      0: { cellWidth: 8, halign: "center" },
-      1: { cellWidth: 45, fontStyle: "bold" },
-      2: { cellWidth: 24, fontStyle: "bold" },
-      3: { cellWidth: 20 },
-      4: { cellWidth: 50 },
-      5: { cellWidth: 26, halign: "right" },
-      6: { cellWidth: 26, halign: "right" },
-      7: { cellWidth: 26, halign: "right", fontStyle: "bold" },
-      8: { cellWidth: 22, halign: "center" },
-      9: { cellWidth: 22 },
+      0: { cellWidth: 9, halign: "center", textColor: muted },
+      1: { cellWidth: 43, fontStyle: "bold" },
+      2: { cellWidth: 23 },
+      3: { cellWidth: 19 },
+      4: { cellWidth: 42, fontSize: 7 },
+      5: { cellWidth: 27, halign: "right", font: "courier" },
+      6: { cellWidth: 27, halign: "right", font: "courier" },
+      7: { cellWidth: 27, halign: "right", font: "courier", fontStyle: "bold" },
+      8: { cellWidth: 25, fontSize: 7 },
+      9: { cellWidth: 27, fontSize: 7 },
     },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252],
-    },
-    didDrawPage: (data) => {
-      const pageCount = doc.getNumberOfPages();
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(130, 130, 130);
-      doc.text(
-        `Alfurqan International Academy • Debtor Report • Page ${data.pageNumber} of ${pageCount} • Bursary & Accounts`,
-        14,
-        202
-      );
+    willDrawPage: (data) => { if (data.pageNumber > 1) drawHeader(false); },
+    didParseCell: (data) => {
+      if (data.section === "head" && [5, 6, 7].includes(data.column.index)) data.cell.styles.halign = "right";
     },
   });
 
-  const safeClass = classFilter.replace(/\s+/g, "_");
-  const safeTerm = term.replace(/\s+/g, "_");
-  doc.save(
-    `AlFurqan_${safeClass}_Debtor_Report_${safeTerm}_${new Date().toISOString().split("T")[0]}.pdf`
-  );
+  // Add page counts after all rows have been laid out, so every page uses the final total.
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page++) {
+    doc.setPage(page);
+    doc.setDrawColor(...border);
+    doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...muted);
+    doc.text("School accounts | Fee collection statement", margin, pageHeight - 11);
+    doc.text(`Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - 11, { align: "right" });
+    doc.setFontSize(6.5);
+    doc.text(`Prepared by: ${school?.accountantName || "Accounts Office"}`, margin, pageHeight - 7);
+    doc.text(`${students.length} student accounts | ${date}`, pageWidth - margin, pageHeight - 7, { align: "right" });
+  }
+  return doc;
+}
 
+export async function exportReportPDF(report: ReportExport) {
+  const doc = await createReportPDF(report);
+  const safePart = (value: string) => value.replace(/[^a-z0-9-]+/gi, "_").replace(/^_|_$/g, "");
+  const bank = report.bankFilter === "ALL" ? "All_Channels" : safePart(report.bankFilter);
+  doc.save(`Alfurqan_Fee_Collection_Statement_${bank}_${safePart(report.classFilter)}_${safePart(report.term)}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
