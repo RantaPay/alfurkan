@@ -355,7 +355,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         term: paymentTerm,
         session: currentSession,
         date: formattedDate,
-        timestamp: receiptDateObj,
+        timestamp: now,
         issuedBy: accountantName,
         qrCodeDataUrl,
         securityHash,

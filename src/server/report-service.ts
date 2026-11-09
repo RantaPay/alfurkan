@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { buildAccountReport, type ReportQuery, type ReportStudentSource } from "@/lib/report-query";
 import {
   ReportSummary
 } from "@/lib/types";
@@ -135,4 +136,48 @@ export async function getReportData(
     students: students.map(formatStudent),
     school,
   };
+}
+
+/** Filtered accounts report. Reads records and returns a view. It does not write. */
+export async function getAccountReport(query: ReportQuery) {
+  const school = await getSchoolProfile();
+  const students = await prisma.student.findMany({
+    include: {
+      receipts: {
+        where: { isVoided: false },
+        include: { items: true },
+        orderBy: { timestamp: "desc" },
+      },
+    },
+    orderBy: { fullName: "asc" },
+  });
+  const source: ReportStudentSource[] = students.map((student) => ({
+    id: student.id,
+    regNumber: student.regNumber,
+    fullName: student.fullName,
+    className: student.class,
+    parentName: student.parentName,
+    parentPhone: student.parentPhone,
+    totalTermBill: student.totalTermBill,
+    receipts: student.receipts.map((receipt) => ({
+      id: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      amountPaid: receipt.amountPaid,
+      date: receipt.date,
+      timestamp: receipt.timestamp.toISOString(),
+      term: receipt.term,
+      session: receipt.session,
+      isVoided: receipt.isVoided,
+      paymentMethod: receipt.paymentMethod,
+      bankName: receipt.bankName,
+      items: receipt.items.map((item) => ({
+        name: item.name,
+        category: item.category,
+        amount: item.amount,
+        paymentTerm: item.paymentTerm,
+      })),
+    })),
+  }));
+  const report = buildAccountReport(source, school, query);
+  return { summary: report.summary, students: report.rows, options: report.options, applied: report.applied, school };
 }

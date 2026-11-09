@@ -18,7 +18,7 @@ export function ConcessionsSection({ form }: Props) {
             <span>Special Category Fees</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-            Set fees for students with special category tags (SR, YR, ADF, and Dual).
+            Set fees for students with special category tags. BoT uses the same class rates as SR and YR.
           </p>
         </div>
       </div>
@@ -27,7 +27,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* Pre-Nursery / Nursery / Pre-Basic (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            Pre-Nursery &amp; Nursery (SR / YR)
+            Pre-Nursery &amp; Nursery (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
@@ -51,7 +51,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* Basic 1 - 6 (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            Basic 1 - 6 (SR / YR)
+            Basic 1 - 6 (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
@@ -75,7 +75,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* JSS 1 - 2 (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            JSS 1 - 2 (SR / YR)
+            JSS 1 - 2 (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
@@ -99,7 +99,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* JSS 3 (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            JSS 3 (SR / YR)
+            JSS 3 (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
@@ -123,7 +123,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* SS 1 (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            SS 1 (SR / YR)
+            SS 1 (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>
@@ -147,7 +147,7 @@ export function ConcessionsSection({ form }: Props) {
         {/* SS 2 - 3 (SR or YR) */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
           <label className="block text-xs font-semibold  text-slate-700">
-            SS 2 - 3 (SR / YR)
+            SS 2 - 3 (SR / YR / BoT)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-xs font-mono font-bold text-slate-400">₦</span>

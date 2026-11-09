@@ -31,7 +31,7 @@ export default function ReportsPage() {
               Reports
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Track fee collections, identify outstanding balances, and filter reports by class or bank account
+              Filter by term, class, arm, fee, bank, and payment dates. Downloads use the same result.
             </p>
           </div>
 

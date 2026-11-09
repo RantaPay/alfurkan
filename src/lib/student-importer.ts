@@ -152,7 +152,7 @@ export const DEFAULT_CONCESSIONS: ConcessionCategoryConfig = {
   adf: 0,
 };
 
-export function detectStudentCategory(fullName: string): "ADF" | "DUAL_SR_YR" | "SR" | "YR" | "REGULAR" {
+export function detectStudentCategory(fullName: string): "ADF" | "DUAL_SR_YR" | "SR" | "YR" | "BOT" | "REGULAR" {
   if (!fullName) return "REGULAR";
   const upper = fullName.toUpperCase();
   if (/\bADF\b/.test(upper) || /\(ADF\)/.test(upper)) {
@@ -162,6 +162,7 @@ export function detectStudentCategory(fullName: string): "ADF" | "DUAL_SR_YR" | 
   if (hasDual) return "DUAL_SR_YR";
   if (/\bSR\b/.test(upper) || /\(SR\)/.test(upper)) return "SR";
   if (/\bYR\b/.test(upper) || /\(YR\)/.test(upper)) return "YR";
+  if (/\bBOT\b/.test(upper) || /\(BOT\)/.test(upper)) return "BOT";
   return "REGULAR";
 }
 
@@ -186,7 +187,7 @@ export function calculateStudentBill(
     return Number(conf.dualSrYr) || 0;
   }
 
-  if (category === "SR" || category === "YR") {
+  if (category === "SR" || category === "YR" || category === "BOT") {
     const c = (className || "").toLowerCase();
     if (
       c.includes("pre-nursery") ||

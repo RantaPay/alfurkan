@@ -1,7 +1,21 @@
-import type { ReportSummary, SchoolProfile, Student } from "@/lib/types";
-export type ReportExport = { students: Student[]; summary: ReportSummary | null; school: SchoolProfile | null; classFilter: string; bankFilter: string; statusFilter: string; term: string };
+import type { ReportStudentRow } from "@/lib/report-query";
+import type { ReportSummary, SchoolProfile } from "@/lib/types";
+export type ReportExport = {
+  students: ReportStudentRow[];
+  summary: ReportSummary | null;
+  school: SchoolProfile | null;
+  classFilter: string;
+  armFilter: string;
+  bankFilter: string;
+  statusFilter: string;
+  feeFilter: string;
+  term: string;
+  fromDate: string;
+  toDate: string;
+  session: string;
+};
 // Export to CSV Function
-export function exportReportCSV({ students, classFilter, bankFilter, statusFilter, term }: ReportExport) {
+export function exportReportCSV({ students, classFilter, armFilter, bankFilter, statusFilter, feeFilter, term, fromDate, toDate }: ReportExport) {
   if (!students.length) return;
 
   const headers = [
@@ -10,23 +24,25 @@ export function exportReportCSV({ students, classFilter, bankFilter, statusFilte
     "Class",
     "Parent Name",
     "Parent Phone",
+    "Receipt Numbers",
     "Receiving Bank",
-    "Total Term Bill (NGN)",
-    "Total Paid (NGN)",
+    "Received In Filter (NGN)",
+    "Term Bill (NGN)",
     "Outstanding Debt (NGN)",
     "Payment Status",
     "Last Payment Date",
   ];
 
   const rows = students.map((s) => [
-    `"${s.fullName}"`,
+    `"${s.fullName.replace(/"/g, "\"\"")}"`,
     `"${s.regNumber}"`,
     `"${s.class}"`,
-    `"${s.parentName}"`,
+    `"${(s.parentName || "").replace(/"/g, "\"\"")}"`,
     `"${s.parentPhone}"`,
-    `"${s.paymentBank || 'N/A'}"`,
+    `"${s.receipts.map((receipt) => receipt.receiptNumber).join("; ")}"`,
+    `"${s.paymentBank || "N/A"}"`,
+    s.receivedAmount,
     s.totalTermBill,
-    s.totalPaid,
     s.balanceRemaining,
     s.status,
     s.lastPaymentDate || "N/A",
@@ -44,7 +60,7 @@ export function exportReportCSV({ students, classFilter, bankFilter, statusFilte
   const safeBank = bankFilter.replace(/\s+/g, "_");
   link.setAttribute(
     "download",
-    `AlFurqan_${safeClass}_${safeBank}_${statusFilter}_Report_${term.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`
+    `AlFurqan_${safeClass}_${armFilter}_${safeBank}_${feeFilter.replace(/\s+/g, "_")}_${statusFilter}_${term.replace(/\s+/g, "_")}_${fromDate || "start"}_${toDate || "end"}_${new Date().toISOString().split("T")[0]}.csv`
   );
   document.body.appendChild(link);
   link.click();
@@ -60,7 +76,7 @@ const reportStatusLabels: Record<string, string> = {
 };
 
 /** Build school account statements independently of the download action. */
-export async function createReportPDF({ students, summary, school, classFilter, bankFilter, statusFilter, term }: ReportExport) {
+export async function createReportPDF({ students, summary, school, classFilter, armFilter, bankFilter, statusFilter, feeFilter, term, fromDate, toDate, session }: ReportExport) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -76,9 +92,11 @@ export async function createReportPDF({ students, summary, school, classFilter, 
   const date = generatedAt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   const time = generatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const schoolName = school?.name || "Alfurqan International Academy";
-  const session = school?.currentSession || "Session not specified";
+  const sessionLabel = session || school?.currentSession || "Session not specified";
   const channel = bankFilter === "ALL" ? "All collection channels" : bankFilter;
-  const classLabel = classFilter === "ALL" ? "All classes" : classFilter;
+  const classLabel = `${classFilter === "ALL" ? "All classes" : classFilter}${armFilter !== "ALL" ? ` ${armFilter}` : ""}`;
+  const feeLabel = feeFilter === "ALL" ? "All fees" : feeFilter;
+  const dateLabel = fromDate || toDate ? `${fromDate || "start"} to ${toDate || "end"}` : "All payment dates";
   const statusLabel = reportStatusLabels[statusFilter] || "All payment statuses";
   const amount = (value: number) => Number(value || 0).toLocaleString("en-NG", {
     minimumFractionDigits: 2,
@@ -88,10 +106,10 @@ export async function createReportPDF({ students, summary, school, classFilter, 
   const institutionLines = doc.setFontSize(13).splitTextToSize(schoolName, contentWidth - 65) as string[];
   const headerBottom = 16 + Math.max(0, institutionLines.length - 1) * 5;
   const detailY = headerBottom + 13;
-  const summaryY = detailY + 21;
+  const summaryY = detailY + 30;
   const tableY = summaryY + 27;
 
-  doc.setProperties({ title: `${title} - ${channel}`, subject: `${term} | ${session}`, author: schoolName, creator: "Alfurqan Pay" });
+  doc.setProperties({ title: `${title} - ${channel}`, subject: `${term} | ${sessionLabel}`, author: schoolName, creator: "Alfurqan Pay" });
 
   const drawHeader = (firstPage: boolean) => {
     doc.setFillColor(...brand);
@@ -120,7 +138,7 @@ export async function createReportPDF({ students, summary, school, classFilter, 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(...muted);
-      doc.text(doc.splitTextToSize(`${channel}  |  ${term}  |  ${session}`, contentWidth), margin, headerBottom + 12);
+      doc.text(doc.splitTextToSize(`${channel}  |  ${term}  |  ${sessionLabel}`, contentWidth), margin, headerBottom + 12);
     }
   };
 
@@ -131,8 +149,9 @@ export async function createReportPDF({ students, summary, school, classFilter, 
   doc.setFontSize(8);
   const metadata = [
     ["Collection channel", channel],
-    ["Academic period", `${term} | ${session}`],
-    ["Class / Payment status", `${classLabel} | ${statusLabel}`],
+    ["Academic period", `${term} | ${sessionLabel}`],
+    ["Class / arm / status", `${classLabel} | ${statusLabel}`],
+    ["Fee / payment dates", `${feeLabel} | ${dateLabel}`],
   ];
   metadata.forEach(([label, value], index) => {
     const y = detailY + 9 + index * 4.5;
@@ -149,7 +168,7 @@ export async function createReportPDF({ students, summary, school, classFilter, 
   doc.rect(margin, summaryY, contentWidth, 20, "F");
   const metrics = [
     ["Fees assessed (NGN)", amount(summary?.expectedRevenue || 0)],
-    [bankFilter === "ALL" ? "Payments recorded (NGN)" : "Channel collections (NGN)", amount(summary?.collectedRevenue || 0)],
+    ["Received in this filter (NGN)", amount(summary?.collectedRevenue || 0)],
     ["Outstanding balance (NGN)", amount(summary?.outstandingDebt || 0)],
     ["Student accounts", String(students.length)],
   ];
@@ -171,7 +190,7 @@ export async function createReportPDF({ students, summary, school, classFilter, 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(...muted);
-  doc.text("Currency: Nigerian naira (NGN). Student account balances include recorded payments across all collection channels.", margin, summaryY + 25);
+  doc.text("Currency: Nigerian naira (NGN). Received amounts and receipt numbers follow the filters on this statement.", margin, summaryY + 25);
 
   autoTable(doc, {
     startY: tableY,
@@ -180,15 +199,14 @@ export async function createReportPDF({ students, summary, school, classFilter, 
     theme: "plain",
     showHead: "everyPage",
     rowPageBreak: "avoid",
-    head: [["No.", "Student name", "Admission no.", "Class", "Parent / Guardian", "Fees assessed\n(NGN)", "Payments to date\n(NGN)", "Balance due\n(NGN)", "Payment status", "Collection channel(s)"]],
+    head: [["No.", "Student", "Class", "Receipts", "Received\n(NGN)", "Term bill\n(NGN)", "Balance\n(NGN)", "Status", "Bank"]],
     body: students.map((student, index) => [
       String(index + 1).padStart(2, "0"),
-      student.fullName,
-      student.regNumber,
+      `${student.fullName}\n${student.regNumber}`,
       student.class,
-      [student.parentName, student.parentPhone].filter(Boolean).join("\n") || "-",
-      amount(student.totalTermBill),
-      amount(student.totalPaid),
+      student.receipts.map((receipt) => receipt.receiptNumber).join("\n") || "-",
+      amount(student.receivedAmount),
+      student.totalTermBill > 0 ? amount(student.totalTermBill) : "-",
       student.totalTermBill === 0 ? "-" : amount(Math.max(0, student.balanceRemaining)),
       student.totalTermBill === 0 ? "No fee assessed" : reportStatusLabels[student.status] || student.status,
       student.paymentBank && student.paymentBank !== "—" ? student.paymentBank : "-",
@@ -207,20 +225,19 @@ export async function createReportPDF({ students, summary, school, classFilter, 
     headStyles: { fillColor: brand, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7, minCellHeight: 11 },
     alternateRowStyles: { fillColor: [247, 249, 250] },
     columnStyles: {
-      0: { cellWidth: 9, halign: "center", textColor: muted },
-      1: { cellWidth: 43, fontStyle: "bold" },
-      2: { cellWidth: 23 },
-      3: { cellWidth: 19 },
-      4: { cellWidth: 42, fontSize: 7 },
-      5: { cellWidth: 27, halign: "right", font: "courier" },
-      6: { cellWidth: 27, halign: "right", font: "courier" },
-      7: { cellWidth: 27, halign: "right", font: "courier", fontStyle: "bold" },
-      8: { cellWidth: 25, fontSize: 7 },
-      9: { cellWidth: 27, fontSize: 7 },
+      0: { cellWidth: 12, halign: "center", textColor: muted },
+      1: { cellWidth: 48, fontStyle: "bold" },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 36, font: "courier", fontSize: 7 },
+      4: { cellWidth: 28, halign: "right", font: "courier" },
+      5: { cellWidth: 28, halign: "right", font: "courier" },
+      6: { cellWidth: 28, halign: "right", font: "courier", fontStyle: "bold" },
+      7: { cellWidth: 26, fontSize: 7 },
+      8: { cellWidth: 35, fontSize: 7 },
     },
     willDrawPage: (data) => { if (data.pageNumber > 1) drawHeader(false); },
     didParseCell: (data) => {
-      if (data.section === "head" && [5, 6, 7].includes(data.column.index)) data.cell.styles.halign = "right";
+      if (data.section === "head" && [4, 5, 6].includes(data.column.index)) data.cell.styles.halign = "right";
     },
   });
 
@@ -246,5 +263,5 @@ export async function exportReportPDF(report: ReportExport) {
   const doc = await createReportPDF(report);
   const safePart = (value: string) => value.replace(/[^a-z0-9-]+/gi, "_").replace(/^_|_$/g, "");
   const bank = report.bankFilter === "ALL" ? "All_Channels" : safePart(report.bankFilter);
-  doc.save(`Alfurqan_Fee_Collection_Statement_${bank}_${safePart(report.classFilter)}_${safePart(report.term)}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`Alfurqan_Fee_Collection_Statement_${bank}_${safePart(report.classFilter)}_${safePart(report.armFilter)}_${safePart(report.feeFilter)}_${safePart(report.term)}_${report.fromDate || "start"}_${report.toDate || "end"}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

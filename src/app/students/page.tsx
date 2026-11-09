@@ -98,6 +98,7 @@ export default function StudentsPage() {
               <option value="SR">SR</option>
               <option value="YR">YR</option>
               <option value="DUAL">Both SR &amp; YR</option>
+              <option value="BOT">BoT</option>
               <option value="ADF">ADF</option>
             </select>
 

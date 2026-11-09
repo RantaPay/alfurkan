@@ -1,7 +1,7 @@
 import type { Student } from "@/lib/types";
 import { Landmark } from "lucide-react";
 // Helper to style bank badge
-export function BankBadge({ student }: { student: Student }) {
+export function BankBadge({ student }: { student: Pick<Student, "status" | "paidBanks" | "paymentBank"> }) {
   if (student.status === "UNPAID" && (!student.paidBanks || student.paidBanks.length === 0)) {
     return <span className="text-slate-400 font-mono text-xs">—</span>;
   }

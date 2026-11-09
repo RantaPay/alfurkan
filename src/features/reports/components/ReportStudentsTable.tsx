@@ -4,37 +4,24 @@ import { PaymentStatus } from "@/components/ui/payment-status";
 import { BankBadge } from "@/features/reports/BankBadge";
 import { useReport } from "@/features/reports/useReport";
 import { formatNaira } from "@/lib/utils";
-import {
-  Filter
-} from "lucide-react";
-type Props = { form: Pick<ReturnType<typeof useReport>, "classFilter" | "bankFilter" | "statusFilter" | "students" | "loading" | "hideSensitive" | "handleResetFilters"> };
+import { Filter } from "lucide-react";
+import Link from "next/link";
+
+type Props = { form: ReturnType<typeof useReport> };
+
 export function ReportStudentsTable({ form }: Props) {
-  const { classFilter, bankFilter, statusFilter, students, loading, hideSensitive, handleResetFilters } = form;
-  return (<>
-    {/* Detailed Students & Debtors Table */}
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5 sm:p-7 overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            Student Debt &amp; Payments ({students.length} Records)
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Showing {students.length} students {bankFilter !== "ALL" ? `who made payments to ${bankFilter}` : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Class: <strong className="text-slate-800">{classFilter}</strong>
-          </span>
-          <span className="text-slate-300">•</span>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Bank: <strong className="text-emerald-800">{bankFilter}</strong>
-          </span>
-          <span className="text-slate-300">•</span>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Status: <strong className="text-slate-800">{statusFilter}</strong>
-          </span>
-        </div>
+  const { students, loading, hideSensitive, handleResetFilters, paymentSlice } = form;
+  const money = (value: number) => hideSensitive ? "₦ * * * * * *" : formatNaira(value);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
+      <div className="border-b border-slate-100 pb-4">
+        <h2 className="text-lg font-semibold text-slate-900">Students and receipts ({students.length})</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {paymentSlice
+            ? "Received is the money that matches the fee, bank, and dates you selected. Each receipt number opens that receipt."
+            : "Each receipt number opens that receipt, the same way the receipts page does."}
+        </p>
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -42,101 +29,69 @@ export function ReportStudentsTable({ form }: Props) {
           <div className="panel p-6"><LoadingRows label="Loading report" /></div>
         ) : students.length === 0 ? (
           <div className="py-16 text-center">
-            <div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-3 text-slate-400">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
               <Filter className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-semibold text-slate-800">No student records match this filter</h3>
-            <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-              No students in {classFilter !== "ALL" ? classFilter : "any class"} were found for {bankFilter !== "ALL" ? bankFilter : "the selected criteria"}.
-            </p>
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs sm:text-sm font-bold cursor-pointer hover:bg-slate-800 transition-colors"
-            >
-              Reset All Filters
+            <h3 className="text-base font-semibold text-slate-800">No records match this filter</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">Try another class, arm, fee, bank, or date range.</p>
+            <button type="button" onClick={handleResetFilters} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">
+              Reset filters
             </button>
           </div>
         ) : (
-          <table className="min-w-[52rem] w-full text-left text-sm border-collapse">
+          <table className="w-full min-w-[64rem] border-collapse text-left text-sm">
             <thead>
-              <tr className="text-slate-500 font-bold  text-xs tracking-normal border-b border-slate-100">
-                <th className="py-3 px-3">#</th>
-                <th className="py-3 px-3">Student Name</th>
-                <th className="py-3 px-3">Reg No</th>
-                <th className="py-3 px-3">Class</th>
-                <th className="py-3 px-3">Parent Contact</th>
-                <th className="py-3 px-3">Receiving Bank</th>
-                <th className="py-3 px-3 text-right">Term Bill</th>
-                <th className="py-3 px-3 text-right">Paid to Date</th>
-                <th className="py-3 px-3 text-right">Balance Due</th>
-                <th className="py-3 px-3 text-center">Status</th>
+              <tr className="border-b border-slate-100 text-xs font-bold text-slate-500">
+                <th className="px-3 py-3">#</th>
+                <th className="px-3 py-3">Student and receipts</th>
+                <th className="px-3 py-3">Class</th>
+                <th className="px-3 py-3">Bank</th>
+                <th className="px-3 py-3 text-right">Received</th>
+                <th className="px-3 py-3 text-right">Term bill</th>
+                <th className="px-3 py-3 text-right">Balance</th>
+                <th className="px-3 py-3 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {students.map((student, idx) => (
-                <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3 px-3 text-slate-400 font-mono text-xs">{idx + 1}</td>
-
-                  <td className="py-3 px-3 font-bold text-slate-900 text-sm sm:text-base">
-                    {student.fullName}
-                  </td>
-
-                  <td className="py-3 px-3 font-mono font-bold text-slate-700 text-sm">
-                    {student.regNumber}
-                  </td>
-
-                  <td className="py-3 px-3 font-medium text-slate-700 text-sm">
-                    {student.class}
-                  </td>
-
-                  <td className="py-3 px-3 text-slate-600">
-                    <div className="font-medium text-slate-800">{student.parentName}</div>
-                    <div className="text-xs text-slate-400 font-mono">{student.parentPhone}</div>
-                  </td>
-
-                  {/* Receiving Bank Column */}
-                  <td className="py-3 px-3">
-                    <BankBadge student={student} />
-                  </td>
-
-                  <td className="py-3 px-3 text-right font-mono font-bold text-slate-800 text-sm sm:text-base">
-                    {hideSensitive
-                      ? "₦ * * * * * *"
-                      : student.totalTermBill > 0
-                        ? formatNaira(student.totalTermBill)
-                        : "—"}
-                  </td>
-
-                  <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800 text-sm sm:text-base">
-                    {hideSensitive
-                      ? "₦ * * * * * *"
-                      : student.totalPaid > 0
-                        ? formatNaira(student.totalPaid)
-                        : "—"}
-                  </td>
-
-                  <td className="py-3 px-3 text-right font-mono font-bold text-sm sm:text-base">
-                    <span className={student.balanceRemaining > 0 ? "text-amber-700 font-semibold" : "text-slate-400 font-normal"}>
-                      {hideSensitive
-                        ? "₦ * * * * * *"
-                        : student.totalTermBill === 0
-                          ? "—"
-                          : student.balanceRemaining > 0
-                            ? formatNaira(student.balanceRemaining)
-                            : "₦0"}
-                    </span>
-                  </td>
-
-                  <td className="py-3 px-3 text-center">
-                    {student.totalTermBill === 0 ? <span className="text-xs text-slate-500">No fee due</span> : <PaymentStatus status={student.status} />}
-                  </td>
-                </tr>
-              ))}
+              {students.map((student, index) => {
+                const latest = student.receipts[0];
+                return (
+                  <tr key={student.id} className="hover:bg-slate-50/70">
+                    <td className="px-3 py-3 font-mono text-xs text-slate-400">{index + 1}</td>
+                    <td className="px-3 py-3">
+                      {latest ? (
+                        <Link href={`/receipts/${latest.id}`} className="text-sm font-bold text-slate-900 hover:text-[#075E54] hover:underline sm:text-base">
+                          {student.fullName}
+                        </Link>
+                      ) : (
+                        <div className="text-sm font-bold text-slate-900 sm:text-base">{student.fullName}</div>
+                      )}
+                      <div className="font-mono text-xs text-slate-500">{student.regNumber}</div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                        {student.receipts.length ? student.receipts.map((receipt) => (
+                          <Link key={receipt.id} href={`/receipts/${receipt.id}`} className="font-mono text-xs font-semibold text-[#075E54] hover:underline" title={`${receipt.fees} • ${receipt.date}`}>
+                            {receipt.receiptNumber}
+                          </Link>
+                        )) : <span className="text-xs text-slate-400">No receipt in this filter</span>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-sm text-slate-700">{student.class}</td>
+                    <td className="px-3 py-3"><BankBadge student={student} /></td>
+                    <td className="px-3 py-3 text-right font-mono text-sm font-semibold text-emerald-800">{student.receivedAmount > 0 ? money(student.receivedAmount) : "—"}</td>
+                    <td className="px-3 py-3 text-right font-mono text-sm font-bold text-slate-800">{student.totalTermBill > 0 ? money(student.totalTermBill) : "—"}</td>
+                    <td className={`px-3 py-3 text-right font-mono text-sm font-bold ${student.balanceRemaining > 0 ? "text-amber-700" : "text-slate-400"}`}>
+                      {student.totalTermBill === 0 ? "—" : money(student.balanceRemaining)}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {student.totalTermBill === 0 ? <span className="text-xs text-slate-500">No fee due</span> : <PaymentStatus status={student.status} />}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
     </div>
-  </>);
+  );
 }

@@ -35,6 +35,7 @@ export function useStudentsPage() {
       (categoryFilter === "SR" && cat === "SR") ||
       (categoryFilter === "YR" && cat === "YR") ||
       (categoryFilter === "DUAL" && cat === "DUAL_SR_YR") ||
+      (categoryFilter === "BOT" && cat === "BOT") ||
       (categoryFilter === "ADF" && cat === "ADF") ||
       (categoryFilter === "REGULAR" && cat === "REGULAR");
 

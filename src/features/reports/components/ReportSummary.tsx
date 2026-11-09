@@ -5,9 +5,9 @@ import {
   Landmark,
   RotateCcw
 } from "lucide-react";
-type Props = { form: Pick<ReturnType<typeof useReport>, "bankFilter" | "setBankFilter" | "students" | "summary" | "hideSensitive"> };
+type Props = { form: Pick<ReturnType<typeof useReport>, "bankFilter" | "setBankFilter" | "students" | "summary" | "hideSensitive" | "paymentSlice"> };
 export function ReportSummary({ form }: Props) {
-  const { bankFilter, setBankFilter, students, summary, hideSensitive } = form;
+  const { bankFilter, setBankFilter, summary, hideSensitive, paymentSlice } = form;
   return (<>
     {/* 4 KPI Summary Cards */}
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -19,19 +19,19 @@ export function ReportSummary({ form }: Props) {
           {hideSensitive ? "₦ * * * * * *" : summary ? formatNaira(summary.expectedRevenue) : "₦0"}
         </div>
         <div className="text-xs text-slate-500 mt-1">
-          Across {hideSensitive ? "* *" : (summary?.totalStudents || 0)} filtered students
+          Term bills for {hideSensitive ? "* *" : (summary?.totalStudents || 0)} students in this filter
         </div>
       </div>
 
       <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
         <span className="text-xs font-bold  tracking-normal text-emerald-700 block mb-1">
-          Total Collections
+          {paymentSlice ? "Collected in this filter" : "Collected"}
         </span>
         <div className="text-2xl sm:text-3xl font-semibold text-emerald-800 font-mono tracking-tight">
           {hideSensitive ? "₦ * * * * * *" : summary ? formatNaira(summary.collectedRevenue) : "₦0"}
         </div>
         <div className="text-xs font-bold text-emerald-700 mt-1">
-          {hideSensitive ? "**%" : `${summary?.collectionRate || 0}%`} collection rate
+          {paymentSlice ? "Payments that match the fee, bank, and dates" : hideSensitive ? "**%" : `${summary?.collectionRate || 0}% of the term bills`}
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export function ReportSummary({ form }: Props) {
                 Bank Reconciliation & Treasury Breakdown
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Verified collections by receiving bank account • Click any bank card to filter
+                Collections in the current filter. Choose a bank to narrow the report.
               </p>
             </div>
           </div>

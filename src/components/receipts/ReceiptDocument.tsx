@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buildReceiptNarration, formatGeneratedDate, termForPreviousDebt } from "@/lib/receipt-narration";
 import { Receipt, SchoolProfile } from "@/lib/types";
 import { formatNaira, amountInWords } from "@/lib/utils";
 import {
@@ -49,14 +50,16 @@ export function ReceiptDocument({
     .replace(/\bAcademic\s*/gi, "")
     .trim();
 
-  // Formatted date
-  const receiptDate =
-    receipt.date ||
-    new Date(receipt.timestamp).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+  const paymentDate = receipt.date;
+  const issueDate = formatGeneratedDate(receipt.timestamp, paymentDate);
+  const narration = buildReceiptNarration({
+    items: receipt.items?.length
+      ? receipt.items
+      : [{ name: "Tuition / School Fees", category: "Tuition", amount: receipt.amountPaid, chargeBalance: receipt.balanceRemaining }],
+    hasStudent: Boolean(receipt.studentId) && receipt.regNumber !== "N/A",
+    currentTerm: termForPreviousDebt(receipt.term, school?.currentTerm),
+    session: receipt.session,
+  });
 
   const bankDisplayName =
     receipt.bankName ||
@@ -228,7 +231,7 @@ export function ReceiptDocument({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">DATE:</span>
-                <span className="font-bold">{receiptDate}</span>
+                <span className="font-bold">{issueDate}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">TERM:</span>
@@ -282,8 +285,13 @@ export function ReceiptDocument({
               )}
               <div className="flex justify-between">
                 <span className="text-slate-600">PAYMENT DATE:</span>
-                <strong className="font-bold">{receiptDate}</strong>
+                <strong className="font-bold">{paymentDate}</strong>
               </div>
+            </div>
+
+            <div className="py-2 text-[11px]">
+              <span className="text-slate-600">BEING: </span>
+              <strong>{narration}</strong>
             </div>
 
             {/* Itemized Fee Breakdown */}
@@ -391,6 +399,7 @@ export function ReceiptDocument({
             boxShadow: "0 6px 18px -3px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0,0,0,0.03)",
           }}
         >
+          <style>{`@media print { .receipt-alert, .receipt-alert * { color: #b91c1c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
           {/* Subtle Bank-Security Paper Guilloche Border */}
           <div className="absolute inset-1.5 border border-slate-300/80 rounded-lg pointer-events-none" />
           <div className="absolute inset-2.5 border border-dashed border-slate-300/60 rounded-md pointer-events-none" />
@@ -411,7 +420,7 @@ export function ReceiptDocument({
                 REVOKED / VOID
               </div>
               <div className="text-[11px] font-bold text-rose-800 rotate-[-22deg] mt-1.5 bg-white/90 px-3 py-0.5 rounded border border-rose-300 shadow-xs">
-                Cancelled on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : receiptDate} • {receipt.voidReason || "Duplicate Entry"}
+                Cancelled on {receipt.voidedAt ? new Date(receipt.voidedAt).toLocaleDateString() : issueDate} • {receipt.voidReason || "Duplicate Entry"}
               </div>
             </div>
           )}
@@ -458,7 +467,7 @@ export function ReceiptDocument({
                   </span>
                 </div>
                 <div className="text-xs text-slate-600">
-                  Date: <strong className="text-slate-900 underline font-mono text-xs sm:text-sm">{receiptDate}</strong>
+                  Date: <strong className="text-slate-900 underline font-mono text-xs sm:text-sm">{issueDate}</strong>
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium">
                   Term: <strong className="text-slate-800">{receipt.term}</strong> • Session: <strong className="text-slate-800">{displaySession}</strong>
@@ -521,25 +530,8 @@ export function ReceiptDocument({
                   being:
                 </span>
                 <div className="flex-1 border-b border-dotted border-slate-400 pb-0.5 flex flex-wrap items-baseline justify-between gap-1.5">
-                  <span className="text-xs sm:text-[12.5px] font-semibold text-slate-900">
-                    {!receipt.studentId || receipt.regNumber === "N/A" ? (
-                      <>
-                        Payment for{" "}
-                        <strong>
-                          {receipt.items && receipt.items.length > 0
-                            ? receipt.items.map((i) => i.name).join(", ")
-                            : "Official School Services"}
-                        </strong>
-                      </>
-                    ) : (
-                      <>
-                        {receipt.paymentStatus === "FULL" ? "Full Settlement of" : "Part-Payment installment towards"}{" "}
-                        <strong>{receipt.term}, {displaySession}</strong> fees &amp; educational package
-                        {receipt.items && receipt.items.length > 0
-                          ? ` (${receipt.items.map((i) => i.name).join(", ")})`
-                          : ""}
-                      </>
-                    )}
+                  <span className="text-xs sm:text-[13px] font-semibold text-slate-950">
+                    {narration}
                   </span>
                 </div>
               </div>
@@ -554,7 +546,7 @@ export function ReceiptDocument({
                       </div>
                       {item.chargeAmount !== undefined && item.chargeBalance !== undefined && (
                         <div className="text-slate-600">
-                          {item.category === "Tuition" ? "School fees" : item.category} due: {formatNaira(item.chargeAmount)} • Remaining: {formatNaira(item.chargeBalance)}
+                          {item.category === "Tuition" ? "School fees" : item.category} due: {formatNaira(item.chargeAmount)} • <span className="receipt-alert text-xs font-bold text-red-700">Remaining: {formatNaira(item.chargeBalance)}</span>
                         </div>
                       )}
                     </div>
@@ -571,10 +563,10 @@ export function ReceiptDocument({
                   <span><strong>{receipt.parentName}</strong></span>
                   <span className="text-[10.5px] text-slate-600 font-medium">
                     Method: <strong className="text-slate-900">{receipt.paymentMethod}</strong>
-                    {receipt.paymentMethod !== "Cash" && bankDisplayName !== "Cash" ? (
-                      <> • Bank: <strong className="text-slate-900">{bankDisplayName}</strong></>
+                    {receipt.paymentMethod !== "Cash" && bankDisplayName && bankDisplayName !== "Cash" ? (
+                      <> • Bank: <strong className="receipt-alert text-red-700">{bankDisplayName}</strong></>
                     ) : null}
-                    <> • Payment Date: <strong className="text-slate-900">{receiptDate}</strong></>
+                    <> • Payment Date: <strong className="text-slate-900">{paymentDate}</strong></>
                     {receipt.bankReference ? <> • Ref: <strong className="font-mono">{receipt.bankReference}</strong></> : null}
                   </span>
                 </div>
@@ -605,11 +597,9 @@ export function ReceiptDocument({
                         <span>Total Paid to Date:</span>
                         <strong className="font-mono text-slate-900">{formatNaira(receipt.newTotalPaid)}</strong>
                       </div>
-                      <div className={`flex justify-between pt-0.5 border-t border-slate-200 font-black ${
-                        isFullPayment ? "text-emerald-800" : "text-amber-800"
-                      }`}>
-                        <span>Balance Remaining:</span>
-                        <span className="font-mono text-[11px] sm:text-xs">
+                      <div className="receipt-alert flex justify-between pt-1 border-t border-red-200 font-black text-red-700">
+                        <span className="text-sm">Balance Remaining:</span>
+                        <span className="font-mono text-base sm:text-lg">
                           {isFullPayment ? "₦0.00 (NIL / CLEARED)" : formatNaira(receipt.balanceRemaining)}
                         </span>
                       </div>
@@ -647,7 +637,7 @@ export function ReceiptDocument({
                         PAID
                       </text>
                       <text x="70" y="87" textAnchor="middle" className="text-[9px] font-bold fill-current">
-                        {receiptDate}
+                        {issueDate}
                       </text>
                     </svg>
 
@@ -720,7 +710,7 @@ export function ReceiptDocument({
                             {it.paymentTerm && it.paymentTerm !== receipt.term && <span className="block text-xs font-medium text-slate-600">{it.paymentTerm}</span>}
                             {it.chargeAmount !== undefined && it.chargeBalance !== undefined && (
                               <span className="block text-xs font-medium text-slate-500 mt-0.5">
-                                {it.category === "Tuition" ? "School fees" : it.category}: due {formatNaira(it.chargeAmount)}, balance after this payment {formatNaira(it.chargeBalance)}
+                                {it.category === "Tuition" ? "School fees" : it.category}: due {formatNaira(it.chargeAmount)}, <span className="receipt-alert font-bold text-red-700">balance after this payment {formatNaira(it.chargeBalance)}</span>
                               </span>
                             )}
                             {it.description && <span className="block text-xs font-normal text-slate-500 mt-0.5">{it.description}</span>}
@@ -756,10 +746,11 @@ export function ReceiptDocument({
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-sm space-y-1.5">
                   <span className="font-bold text-slate-900 block mb-1">Payment Particulars:</span>
                   <div>Channel: <strong className="text-slate-900">{receipt.paymentMethod}</strong></div>
-                  {receipt.paymentMethod !== "Cash" && bankDisplayName !== "Cash" && (
-                    <div>Bank: <strong className="text-slate-900">{bankDisplayName}</strong></div>
+                  {receipt.paymentMethod !== "Cash" && bankDisplayName && bankDisplayName !== "Cash" && (
+                    <div>Bank: <strong className="receipt-alert text-red-700">{bankDisplayName}</strong></div>
                   )}
-                  <div>Payment Date: <strong className="text-slate-900">{receiptDate}</strong></div>
+                  <div>Being: <strong className="text-slate-900">{narration}</strong></div>
+                  <div>Payment Date: <strong className="text-slate-900">{paymentDate}</strong></div>
                   {receipt.bankReference && (
                     <div>Transaction Ref: <strong className="font-mono text-slate-900">{receipt.bankReference}</strong></div>
                   )}
@@ -782,9 +773,9 @@ export function ReceiptDocument({
                     <span>AMOUNT PAID (THIS RECEIPT):</span>
                     <span className="font-mono text-lg">{formatNaira(receipt.amountPaid)}</span>
                   </div>
-                  <div className="flex justify-between font-black text-slate-950 text-base">
+                  <div className="receipt-alert flex justify-between font-black text-red-700 text-lg">
                     <span>OUTSTANDING BALANCE:</span>
-                    <span className="font-mono">{formatNaira(receipt.balanceRemaining)}</span>
+                    <span className="font-mono text-xl">{formatNaira(receipt.balanceRemaining)}</span>
                   </div>
                 </div>
               </div>

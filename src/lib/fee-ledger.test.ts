@@ -70,6 +70,18 @@ test("regular students retain a manually adjusted total bill", () => {
   assert.equal(calculateFeeBalance(due, {}).totalBill, 100000);
 });
 
+test("BoT uses the same class waiver as SR and YR", () => {
+  const rates = { jss1_2: 30000 };
+  const sr = getStudentFeeObligations("Amina Bello (SR)", "JSS 1 A", schedule, rates, 30000);
+  const yr = getStudentFeeObligations("Amina Bello (YR)", "JSS 1 A", schedule, rates, 30000);
+  const bot = getStudentFeeObligations("Amina Bello (BoT)", "JSS 1 A", schedule, rates, 30000);
+  assert.deepEqual(bot, sr);
+  assert.deepEqual(bot, yr);
+  assert.equal(bot.Tuition, 30000);
+  assert.equal(bot.Books, 27000);
+  assert.notEqual(bot.Tuition, getStudentFeeObligations("Amina Bello", "JSS 1 A", schedule, rates, 105000).Tuition);
+});
+
 test("ADF rates retain their configured exemption or amount", () => {
   assert.equal(calculateFeeBalance(getStudentFeeObligations("Student (ADF)", "JSS 1 A", schedule), {}).totalBill, 0);
   assert.equal(getStudentFeeObligations("Student (ADF)", "JSS 1 A", schedule, { adf: 1000 }).Tuition, 1000);

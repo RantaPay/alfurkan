@@ -132,11 +132,12 @@ function StudentEditor({
     setTotalTermBill(calculated);
   };
 
-  const handleSelectCategory = (cat: "REGULAR" | "SR" | "YR" | "DUAL_SR_YR" | "ADF") => {
-    const clean = fullName.replace(/\s*\((SR|YR|ADF|SR\/YR|YR\/SR)\)\s*/gi, " ").trim();
+  const handleSelectCategory = (cat: "REGULAR" | "SR" | "YR" | "BOT" | "DUAL_SR_YR" | "ADF") => {
+    const clean = fullName.replace(/\s*\((?:SR\/YR|YR\/SR|SR|YR|ADF|BoT)\)\s*/gi, " ").replace(/\s+/g, " ").trim();
     let updatedName = clean;
     if (cat === "SR") updatedName = `${clean} (SR)`;
     else if (cat === "YR") updatedName = `${clean} (YR)`;
+    else if (cat === "BOT") updatedName = `${clean} (BoT)`;
     else if (cat === "DUAL_SR_YR") updatedName = `${clean} (SR/YR)`;
     else if (cat === "ADF") updatedName = `${clean} (ADF)`;
 
@@ -286,6 +287,17 @@ function StudentEditor({
                 }`}
               >
                 (YR)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCategory("BOT")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  currentCategory === "BOT"
+                    ? "bg-[#075E54] text-white border-[#075E54] shadow-xs"
+                    : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
+                }`}
+              >
+                (BoT)
               </button>
               <button
                 type="button"
