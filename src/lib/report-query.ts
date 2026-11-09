@@ -119,6 +119,7 @@ export const STANDARD_FEE_FILTERS = [
   "Hall rent",
   "Jamb center fees",
   "Alfurqan clinic fees",
+  "AHIS",
   "Previous Term Debt",
 ];
 

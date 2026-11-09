@@ -30,6 +30,7 @@ export const OTHER_FEE_OPTIONS: PresetFeeOption[] = [
   { name: "Hall rent", category: "Other", label: "Hall rent", group: "Others", allowExternal: true },
   { name: "Jamb center fees", category: "Other", label: "Jamb center fees", group: "Others", allowExternal: true },
   { name: "Alfurqan clinic fees", category: "Other", label: "Alfurqan clinic fees", group: "Others", allowExternal: true },
+  { name: "AHIS", category: "Other", label: "AHIS", group: "Others" },
   { name: "Previous Term Debt", category: "Other", label: "Debt (Previous Term)", group: "Others" },
   { name: "CUSTOM", category: "Other", label: "Custom / Other Fee (Specify below)", group: "Others", allowExternal: true },
 ];
