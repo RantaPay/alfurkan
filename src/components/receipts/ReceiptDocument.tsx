@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  FileText,
-  ScrollText,
   Printer,
   Sparkles,
 } from "lucide-react";
@@ -26,10 +24,11 @@ interface ReceiptDocumentProps {
 export function ReceiptDocument({
   receipt,
   school,
+  hideActions = false,
   selectedFormat,
   onFormatSelect,
 }: ReceiptDocumentProps) {
-  const [internalFormat, setInternalFormat] = useState<"thermal" | "traditional" | "statement">("thermal");
+  const [internalFormat, setInternalFormat] = useState<"thermal" | "traditional" | "statement">("traditional");
 
   const viewFormat = selectedFormat || internalFormat;
   const setViewFormat = (fmt: "thermal" | "traditional" | "statement") => {
@@ -68,71 +67,49 @@ export function ReceiptDocument({
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto font-sans">
-      {/* Format Selector Bar (Hidden during printing) */}
-      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs p-3 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 pl-1 mr-1">
-            Print Format:
-          </span>
-
-          {/* POS Thermal Printer Option (Requested) */}
-          <button
-            type="button"
-            onClick={() => setViewFormat("thermal")}
-            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              viewFormat === "thermal"
-                ? "bg-[#075E54] text-white shadow-xs ring-2 ring-emerald-500/20"
-                : "text-slate-700 hover:bg-slate-100 border border-slate-200 bg-white"
-            }`}
-          >
-            <Printer className="h-4 w-4" />
-            <span>POS Thermal Roll (80mm)</span>
-            <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-950 hidden md:inline">
-              POS Ready
-            </span>
-          </button>
-
-          {/* Standard Paper Voucher Slip */}
-          <button
-            type="button"
-            onClick={() => setViewFormat("traditional")}
-            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              viewFormat === "traditional"
-                ? "bg-[#075E54] text-white shadow-xs ring-2 ring-emerald-500/20"
-                : "text-slate-700 hover:bg-slate-100 border border-slate-200 bg-white"
-            }`}
-          >
-            <ScrollText className="h-4 w-4" />
-            <span>Standard Slip (A4 / Letter)</span>
-          </button>
-
-          {/* Detailed Statement */}
-          <button
-            type="button"
-            onClick={() => setViewFormat("statement")}
-            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              viewFormat === "statement"
-                ? "bg-[#075E54] text-white shadow-xs ring-2 ring-emerald-500/20"
-                : "text-slate-700 hover:bg-slate-100 border border-slate-200 bg-white"
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            <span>Detailed Statement</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
+      {!hideActions && (
+      <div className="print:hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="tablist" aria-label="Receipt format" className="grid grid-cols-3 rounded-lg bg-slate-100 p-1">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewFormat === "traditional"}
+              onClick={() => setViewFormat("traditional")}
+              className={`rounded-md px-3 py-2 text-sm font-semibold ${viewFormat === "traditional" ? "bg-white text-[#075E54] shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              A4 paper
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewFormat === "thermal"}
+              onClick={() => setViewFormat("thermal")}
+              className={`rounded-md px-3 py-2 text-sm font-semibold ${viewFormat === "thermal" ? "bg-white text-[#075E54] shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              Thermal roll
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewFormat === "statement"}
+              onClick={() => setViewFormat("statement")}
+              className={`rounded-md px-3 py-2 text-sm font-semibold ${viewFormat === "statement" ? "bg-white text-[#075E54] shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              Statement
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => window.print()}
-            className="bg-[#075E54] hover:bg-[#064e46] text-white font-black text-xs sm:text-sm px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 shrink-0"
-            title="Click to print this receipt directly to your printer"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#075E54] px-4 text-sm font-semibold text-white hover:bg-[#128C7E]"
           >
-            <Printer className="h-4 w-4 text-emerald-300" />
-            <span>Print Receipt Now</span>
+            <Printer className="h-4 w-4" />
+            Print
           </button>
         </div>
       </div>
+      )}
 
       {/* ============================================================== */}
       {/* 1. THERMAL POS RECEIPT LAYOUT (80mm Thermal Printer Optimized) */}
@@ -399,7 +376,7 @@ export function ReceiptDocument({
             boxShadow: "0 6px 18px -3px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0,0,0,0.03)",
           }}
         >
-          <style>{`@media print { .receipt-alert, .receipt-alert * { color: #b91c1c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
+          <style>{`@media print { .receipt-alert, .receipt-alert * { color: #b91c1c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .receipt-serial { color: var(--color-rose-700); border-color: var(--color-rose-700); -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
           {/* Subtle Bank-Security Paper Guilloche Border */}
           <div className="absolute inset-1.5 border border-slate-300/80 rounded-lg pointer-events-none" />
           <div className="absolute inset-2.5 border border-dashed border-slate-300/60 rounded-md pointer-events-none" />
@@ -457,12 +434,12 @@ export function ReceiptDocument({
 
               {/* Right: Receipt Serial Number & Date */}
               <div className="shrink-0 text-right space-y-0.5">
-                <div className="inline-block border border-rose-800/80 bg-rose-50 text-rose-900 px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase">
+                <div className="receipt-serial inline-block border border-rose-700 bg-transparent text-rose-700 px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase">
                   ORIGINAL
                 </div>
                 <div className="text-xs text-slate-700 font-bold">
                   No:{" "}
-                  <span className={`font-mono font-black text-sm sm:text-base ${receipt.isVoided ? "line-through text-rose-600" : "text-rose-700"}`}>
+                  <span className={`font-mono font-black text-sm sm:text-base ${receipt.isVoided ? "line-through text-rose-600" : "receipt-serial text-rose-700"}`}>
                     {serialNo}
                   </span>
                 </div>

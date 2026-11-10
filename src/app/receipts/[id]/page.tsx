@@ -14,7 +14,6 @@ import {
   Loader2,
   MessageSquare,
   Printer,
-  ScrollText,
   Share2,
   ShieldAlert,
   X
@@ -33,7 +32,7 @@ export default function ReceiptViewPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [activeFormat, setActiveFormat] = useState<"thermal" | "traditional" | "statement">("thermal");
+  const [activeFormat, setActiveFormat] = useState<"thermal" | "traditional" | "statement">("traditional");
 
   // Voiding State
   const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
@@ -77,22 +76,16 @@ export default function ReceiptViewPage() {
     fetchReceipt();
   }, [id]);
 
-  const handlePrintThermal = () => {
-    setActiveFormat("thermal");
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
-  const handlePrintStandard = () => {
-    setActiveFormat("traditional");
-    setTimeout(() => {
-      window.print();
-    }, 150);
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleDownloadPdf = async () => {
     if (!receipt) return;
+    if (activeFormat === "thermal") {
+      setActiveFormat("traditional");
+      await new Promise((resolve) => window.setTimeout(resolve, 150));
+    }
     const element = document.getElementById("printable-receipt");
     if (!element) return;
 
@@ -212,114 +205,114 @@ export default function ReceiptViewPage() {
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900 py-8 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Top Floating Action Bar (Hidden during print) */}
-        <div className="print:hidden bg-white/95 backdrop-blur-md rounded-lg p-4 shadow-md border border-slate-200/90 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-40">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-sm font-bold"
-            >
-              <ArrowLeft className="h-4.5 w-4.5" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Link>
-            <div className="h-4 w-px bg-slate-200" />
-            <span className={`font-mono text-sm font-semibold ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
-              {receipt.receiptNumber}
-            </span>
-            {receipt.isVoided && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-                VOIDED
+        <div className="print:hidden sticky top-4 z-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2.5 sm:px-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+              <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
+              <span className={`truncate font-mono text-sm font-semibold ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
+                {receipt.receiptNumber}
               </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Share to Parent WhatsApp Button */}
-            <a
-              href={parentWaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                receipt.isVoided ? "bg-slate-500 hover:bg-slate-600 opacity-80" : "bg-[#25D366] hover:bg-[#1EBE5D]"
-              }`}
-            >
-              <MessageSquare className="h-4.5 w-4.5 fill-white" />
-              <span>{receipt.isVoided ? "Send Notice via WA" : "Send to Parent WhatsApp"}</span>
-            </a>
-
-            {/* Direct 1-Click PDF Download Button */}
-            <button
-              type="button"
-              disabled={isDownloadingPdf}
-              onClick={handleDownloadPdf}
-              className="bg-[#075E54] hover:bg-[#128C7E] active:translate-y-px text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              title="Download high-resolution .pdf document"
-            >
-              {isDownloadingPdf ? (
-                <>
-                  <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                  <span>Generating PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="h-4.5 w-4.5" />
-                  <span>Download PDF (.pdf)</span>
-                </>
+              {receipt.isVoided && (
+                <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800">
+                  Voided
+                </span>
               )}
-            </button>
+            </div>
 
-            {/* Direct Thermal POS 80mm Print Button */}
-            <button
-              type="button"
-              onClick={handlePrintThermal}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Print directly to POS Thermal Receipt Printer (80mm Roll)"
-            >
-              <Printer className="h-4 w-4 text-emerald-400" />
-              <span>Print POS Slip (80mm)</span>
-            </button>
-
-            {/* Standard A4 Voucher Print Button */}
-            <button
-              type="button"
-              onClick={handlePrintStandard}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Print standard A4 slip on office desktop printer"
-            >
-              <ScrollText className="h-4 w-4" />
-              <span>Print A4</span>
-            </button>
-
-            {/* Copy Link Button */}
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>{copied ? "Link Copied!" : "Copy Link"}</span>
-            </button>
-
-            {/* Void / Cancel Receipt Trigger */}
-            {!receipt.isVoided ? (
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => {
-                  setVoidError("");
-                  setIsVoidModalOpen(true);
-                }}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Cancel receipt and reverse student payment"
+                onClick={handleCopyLink}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                aria-label={copied ? "Link copied" : "Copy link"}
               >
-                <Ban className="h-4 w-4 text-rose-600" />
-                <span>Void Receipt</span>
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">{copied ? "Copied" : "Copy link"}</span>
               </button>
-            ) : (
-              <span className="text-rose-600 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 rounded-xl">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Cancelled</span>
-              </span>
-            )}
+              {!receipt.isVoided ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVoidError("");
+                    setIsVoidModalOpen(true);
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                  title="Cancel this receipt and reverse the payment"
+                >
+                  <Ban className="h-4 w-4" />
+                  <span>Void</span>
+                </button>
+              ) : (
+                <span className="inline-flex h-9 items-center gap-1.5 px-2.5 text-sm font-semibold text-rose-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Cancelled</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 p-3 min-[840px]:flex-row min-[840px]:items-center min-[840px]:justify-between">
+            <div role="tablist" aria-label="Receipt format" className="grid grid-cols-3 rounded-lg bg-slate-100 p-1 min-[840px]:flex">
+              {([
+                ["traditional", "A4 paper"],
+                ["thermal", "Thermal roll"],
+                ["statement", "Statement"],
+              ] as const).map(([format, label]) => (
+                <button
+                  key={format}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFormat === format}
+                  onClick={() => setActiveFormat(format)}
+                  className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold sm:text-sm ${
+                    activeFormat === format
+                      ? "bg-white text-[#075E54] shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 min-[840px]:flex">
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#075E54] px-3 text-sm font-semibold text-white hover:bg-[#128C7E] min-[840px]:px-4"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </button>
+              <button
+                type="button"
+                disabled={isDownloadingPdf}
+                onClick={handleDownloadPdf}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 min-[840px]:px-4"
+              >
+                {isDownloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span className="sm:hidden">{isDownloadingPdf ? "Saving" : "PDF"}</span>
+                <span className="hidden sm:inline">{isDownloadingPdf ? "Saving PDF" : "Download PDF"}</span>
+              </button>
+              <a
+                href={parentWaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white min-[840px]:px-4 ${
+                  receipt.isVoided ? "bg-slate-500 hover:bg-slate-600" : "bg-[#25D366] hover:bg-[#1EBE5D]"
+                }`}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span className="truncate">{receipt.isVoided ? "Notice" : "WhatsApp"}</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -337,14 +330,10 @@ export default function ReceiptViewPage() {
         <ReceiptDocument
           receipt={receipt}
           school={school || undefined}
+          hideActions
           selectedFormat={activeFormat}
           onFormatSelect={setActiveFormat}
         />
-
-        {/* Print instructions notice (Hidden in print) */}
-        <div className="print:hidden text-center text-xs text-slate-500 py-4">
-          Tip: Click <strong>&quot;Download PDF (.pdf)&quot;</strong> to directly save a high-res PDF copy, or <strong>&quot;Send to Parent WhatsApp&quot;</strong> to forward official clearance to the parent.
-        </div>
       </div>
 
       {/* Void Confirmation Modal */}
