@@ -14,9 +14,9 @@ import {
   EyeOff,
   FileSpreadsheet
 } from "lucide-react";
+import { Suspense } from "react";
 
-
-export default function ReportsPage() {
+function ReportsScreen() {
   const form = useReport();
   const { error, reload, students, hideSensitive, toggleSensitive, handleExportCSV, isDownloadingPdf, handleDownloadPDF } = form;
   return (
@@ -93,5 +93,13 @@ export default function ReportsPage() {
       </main>
       </SidebarLayout>
     </AuthGuard>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<AuthGuard><SidebarLayout><main className="app-page" /></SidebarLayout></AuthGuard>}>
+      <ReportsScreen />
+    </Suspense>
   );
 }

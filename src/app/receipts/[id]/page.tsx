@@ -18,9 +18,29 @@ import {
   ShieldAlert,
   X
 } from "lucide-react";
+import { returnLabel, safeReturnPath } from "@/lib/return-path";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+
+function BackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      <span className="hidden sm:inline">{label}</span>
+    </Link>
+  );
+}
+
+function ReceiptBackLink() {
+  const from = useSearchParams().get("from");
+  const backTo = safeReturnPath(from, "/");
+  return <BackLink href={backTo} label={from ? returnLabel(backTo) : "Dashboard"} />;
+}
 
 export default function ReceiptViewPage() {
   const params = useParams();
@@ -208,13 +228,9 @@ export default function ReceiptViewPage() {
         <div className="print:hidden sticky top-4 z-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2.5 sm:px-4">
             <div className="flex min-w-0 items-center gap-2.5">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Link>
+              <Suspense fallback={<BackLink href="/" label="Dashboard" />}>
+                <ReceiptBackLink />
+              </Suspense>
               <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
               <span className={`truncate font-mono text-sm font-semibold ${receipt.isVoided ? "line-through text-rose-700" : "text-slate-800"}`}>
                 {receipt.receiptNumber}

@@ -10,6 +10,7 @@ import { AddStudentModal } from "@/components/students/AddStudentModal";
 import { DatabaseImportModal } from "@/components/students/DatabaseImportModal";
 import { PageHeader } from "@/components/ui/page-header";
 import { useDashboard } from "@/features/dashboard/useDashboard";
+import { ReceiptLink } from "@/features/shared/ReceiptLink";
 import { formatNaira } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -26,9 +27,9 @@ import {
   UserPlus
 } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
-
-export default function DashboardPage() {
+function DashboardScreen() {
   const form = useDashboard();
   const { error, isModalOpen, setIsModalOpen, isAddStudentOpen, setIsAddStudentOpen, isImportModalOpen, setIsImportModalOpen, selectedStudentForReceipt, stats, loading, receiptFilter, setReceiptFilter, hideSensitive, toggleSensitive, loadData, handleOpenIssueModal, filteredReceipts } = form;
   return (
@@ -240,12 +241,12 @@ export default function DashboardPage() {
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-3">
-                          <Link
-                            href={`/receipts/${receipt.id}`}
+                          <ReceiptLink
+                            id={receipt.id}
                             className="font-mono font-semibold text-[#075E54] hover:underline text-sm"
                           >
                             {receipt.receiptNumber}
-                          </Link>
+                          </ReceiptLink>
                           <div className="text-xs text-slate-400 font-sans">
                             {receipt.paymentMethod}
                           </div>
@@ -280,13 +281,13 @@ export default function DashboardPage() {
 
                         <td className="py-3.5 px-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Link
-                              href={`/receipts/${receipt.id}`}
+                            <ReceiptLink
+                              id={receipt.id}
                               className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
                               title="View / Print Receipt"
                             >
                               <ExternalLink className="h-4.5 w-4.5" />
-                            </Link>
+                            </ReceiptLink>
 
                             {/* 1-Click WhatsApp Share */}
                             <a
@@ -355,5 +356,13 @@ export default function DashboardPage() {
         />
       </SidebarLayout>
     </AuthGuard>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<AuthGuard><SidebarLayout><main className="app-page" /></SidebarLayout></AuthGuard>}>
+      <DashboardScreen />
+    </Suspense>
   );
 }

@@ -4,6 +4,7 @@ import { usePrivacy } from "@/features/shared/usePrivacy";
 import type { AccountReportApplied, AccountReportOptions, ReportStudentRow } from "@/lib/report-query";
 import type { ReportSummary, SchoolProfile } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { usePageQuery } from "@/features/shared/usePageQuery";
 import { exportReportCSV, exportReportPDF } from "./export-report";
 
 type ReportPayload = {
@@ -22,15 +23,37 @@ const EMPTY_OPTIONS: AccountReportOptions = {
   terms: ["ALL", "1st Term", "2nd Term", "3rd Term", "Whole Session"],
 };
 
+const TERMS = new Set(["", "ALL", "1st Term", "2nd Term", "3rd Term", "Whole Session"]);
+const REPORT_STATUSES = new Set(["ALL", "FULL", "PARTIAL", "UNPAID"]);
+const day = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+
 export function useReport() {
-  const [term, setTerm] = useState("");
-  const [classFilter, setClassFilter] = useState("ALL");
-  const [armFilter, setArmFilter] = useState("ALL");
-  const [bankFilter, setBankFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [feeFilter, setFeeFilter] = useState("ALL");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [filters, updateFilters] = usePageQuery({
+    term: "",
+    class: "ALL",
+    arm: "ALL",
+    bank: "ALL",
+    status: "ALL",
+    fee: "ALL",
+    from: "",
+    to: "",
+  });
+  const term = TERMS.has(filters.term) ? filters.term : "";
+  const classFilter = filters.class || "ALL";
+  const armFilter = filters.arm || "ALL";
+  const bankFilter = filters.bank || "ALL";
+  const statusFilter = REPORT_STATUSES.has(filters.status) ? filters.status : "ALL";
+  const feeFilter = filters.fee || "ALL";
+  const fromDate = day(filters.from);
+  const toDate = day(filters.to);
+  const setTerm = (value: string) => updateFilters({ term: value });
+  const setClassFilter = (value: string) => updateFilters({ class: value });
+  const setArmFilter = (value: string) => updateFilters({ arm: value });
+  const setBankFilter = (value: string) => updateFilters({ bank: value });
+  const setStatusFilter = (value: string) => updateFilters({ status: value });
+  const setFeeFilter = (value: string) => updateFilters({ fee: value });
+  const setFromDate = (value: string) => updateFilters({ from: value });
+  const setToDate = (value: string) => updateFilters({ to: value });
   const { hideSensitive, toggleSensitive } = usePrivacy();
 
   const params = new URLSearchParams({ view: "accounts" });
@@ -59,14 +82,16 @@ export function useReport() {
   }, [applied?.term, term]);
 
   const handleResetFilters = () => {
-    setClassFilter("ALL");
-    setArmFilter("ALL");
-    setBankFilter("ALL");
-    setStatusFilter("ALL");
-    setFeeFilter("ALL");
-    setFromDate("");
-    setToDate("");
-    setTerm(defaultTerm || "1st Term");
+    updateFilters({
+      class: "ALL",
+      arm: "ALL",
+      bank: "ALL",
+      status: "ALL",
+      fee: "ALL",
+      from: "",
+      to: "",
+      term: defaultTerm || "1st Term",
+    });
   };
 
   const hasActiveFilters = classFilter !== "ALL" || armFilter !== "ALL" || bankFilter !== "ALL" || statusFilter !== "ALL" || feeFilter !== "ALL" || fromDate !== "" || toDate !== "" || (Boolean(term) && Boolean(defaultTerm) && term !== defaultTerm);

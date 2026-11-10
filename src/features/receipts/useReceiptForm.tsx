@@ -6,7 +6,8 @@ import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod, type Term
 import { getStudentFeeObligations } from "@/lib/student-importer";
 import { ClassFeeConfig, ConcessionCategoryConfig, FeeCategory, Receipt, ReceiptItem, Student } from "@/lib/types";
 import confetti from "canvas-confetti";
-import { useRouter } from "next/navigation";
+import { currentPath, receiptHref } from "@/lib/return-path";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PRESET_FEE_OPTIONS } from "./fee-options";
 
@@ -24,6 +25,8 @@ export function useReceiptForm({
   onReceiptCreated,
 }: ReceiptModalProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Student selection state
   const [searchQuery, setSearchQuery] = useState("");
@@ -287,7 +290,7 @@ export function useReceiptForm({
       }
 
       onClose();
-      router.push(`/receipts/${data.receipt.id}`);
+      router.push(receiptHref(data.receipt.id, currentPath(pathname || "/", searchParams)));
     } catch (err: any) {
       setErrorMessage(err.message || "An error occurred while issuing receipt.");
     } finally {

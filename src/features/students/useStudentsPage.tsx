@@ -1,19 +1,26 @@
 "use client";
 import { useApiResource } from "@/features/shared/useApiResource";
+import { usePageQuery } from "@/features/shared/usePageQuery";
 
 import { detectStudentCategory } from "@/lib/student-importer";
 import { Student } from "@/lib/types";
 import { useState } from "react";
 
-
+const CATEGORIES = new Set(["ALL", "REGULAR", "SR", "YR", "DUAL", "BOT", "ADF"]);
+const STATUSES = new Set(["ALL", "FULL", "PARTIAL", "UNPAID"]);
 
 export function useStudentsPage() {
   const { data, loading, error, reload: fetchStudents } = useApiResource<{ students: Student[] }>("/api/students");
   const students = data?.students || [];
-  const [query, setQuery] = useState("");
-  const [classFilter, setClassFilter] = useState("ALL");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [filters, updateFilters] = usePageQuery({ q: "", category: "ALL", status: "ALL", class: "ALL" });
+  const query = filters.q;
+  const categoryFilter = CATEGORIES.has(filters.category) ? filters.category : "ALL";
+  const statusFilter = STATUSES.has(filters.status) ? filters.status : "ALL";
+  const classFilter = filters.class || "ALL";
+  const setQuery = (q: string) => updateFilters({ q });
+  const setCategoryFilter = (category: string) => updateFilters({ category });
+  const setStatusFilter = (status: string) => updateFilters({ status });
+  const setClassFilter = (value: string) => updateFilters({ class: value });
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

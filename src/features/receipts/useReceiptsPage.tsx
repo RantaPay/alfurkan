@@ -1,17 +1,22 @@
 "use client";
 import { useApiResource } from "@/features/shared/useApiResource";
+import { usePageQuery } from "@/features/shared/usePageQuery";
 
 import { Receipt } from "@/lib/types";
-import { useState } from "react";
 
-
+const STATUSES = ["ALL", "FULL", "PARTIAL", "VOIDED"] as const;
+type ReceiptListStatus = (typeof STATUSES)[number];
 
 export function useReceiptsPage() {
   const { data, loading, error, reload } = useApiResource<{ receipts: Receipt[] }>("/api/receipts");
   const receipts = data?.receipts || [];
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "FULL" | "PARTIAL" | "VOIDED">("ALL");
-  const [bankFilter, setBankFilter] = useState("ALL");
+  const [filters, updateFilters] = usePageQuery({ q: "", status: "ALL", bank: "ALL" });
+  const query = filters.q;
+  const statusFilter: ReceiptListStatus = STATUSES.includes(filters.status as ReceiptListStatus) ? filters.status as ReceiptListStatus : "ALL";
+  const bankFilter = filters.bank || "ALL";
+  const setQuery = (q: string) => updateFilters({ q });
+  const setStatusFilter = (status: ReceiptListStatus) => updateFilters({ status });
+  const setBankFilter = (bank: string) => updateFilters({ bank });
   const uniqueBanks = Array.from(
     new Set(receipts.map((r) => r.bankName?.trim()).filter(Boolean))
   ) as string[];

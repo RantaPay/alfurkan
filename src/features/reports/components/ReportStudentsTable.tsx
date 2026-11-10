@@ -5,7 +5,7 @@ import { BankBadge } from "@/features/reports/BankBadge";
 import { useReport } from "@/features/reports/useReport";
 import { formatNaira } from "@/lib/utils";
 import { Filter } from "lucide-react";
-import Link from "next/link";
+import { ReceiptLink } from "@/features/shared/ReceiptLink";
 
 type Props = { form: ReturnType<typeof useReport> };
 
@@ -60,18 +60,18 @@ export function ReportStudentsTable({ form }: Props) {
                     <td className="px-3 py-3 font-mono text-xs text-slate-400">{index + 1}</td>
                     <td className="px-3 py-3">
                       {latest ? (
-                        <Link href={`/receipts/${latest.id}`} className="text-sm font-bold text-slate-900 hover:text-[#075E54] hover:underline sm:text-base">
+                        <ReceiptLink id={latest.id} className="text-sm font-bold text-slate-900 hover:text-[#075E54] hover:underline sm:text-base">
                           {student.fullName}
-                        </Link>
+                        </ReceiptLink>
                       ) : (
                         <div className="text-sm font-bold text-slate-900 sm:text-base">{student.fullName}</div>
                       )}
                       <div className="font-mono text-xs text-slate-500">{student.regNumber}</div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                         {student.receipts.length ? student.receipts.map((receipt) => (
-                          <Link key={receipt.id} href={`/receipts/${receipt.id}`} className="font-mono text-xs font-semibold text-[#075E54] hover:underline" title={`${receipt.fees} • ${receipt.date}`}>
+                          <ReceiptLink key={receipt.id} id={receipt.id} className="font-mono text-xs font-semibold text-[#075E54] hover:underline" title={`${receipt.fees} • ${receipt.date}`}>
                             {receipt.receiptNumber}
-                          </Link>
+                          </ReceiptLink>
                         )) : <span className="text-xs text-slate-400">No receipt in this filter</span>}
                       </div>
                     </td>

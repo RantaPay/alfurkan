@@ -1,5 +1,6 @@
 "use client";
 import { useApiResource } from "@/features/shared/useApiResource";
+import { usePageQuery } from "@/features/shared/usePageQuery";
 import { usePrivacy } from "@/features/shared/usePrivacy";
 import type { ReportSummary } from "@/lib/types";
 
@@ -20,7 +21,9 @@ export function useDashboard() {
   const loading = receiptsResource.loading || reportResource.loading;
   const error = receiptsResource.error || reportResource.error;
   const loadData = () => { receiptsResource.reload(); reportResource.reload(); };
-  const [receiptFilter, setReceiptFilter] = useState<"ALL" | "FULL" | "PARTIAL">("ALL");
+  const [listFilters, updateListFilters] = usePageQuery({ show: "ALL" });
+  const receiptFilter = listFilters.show === "FULL" || listFilters.show === "PARTIAL" ? listFilters.show : "ALL";
+  const setReceiptFilter = (show: "ALL" | "FULL" | "PARTIAL") => updateListFilters({ show });
   const { hideSensitive, toggleSensitive } = usePrivacy();
 
   const handleOpenIssueModal = (student?: Student) => {

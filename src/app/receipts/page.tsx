@@ -5,6 +5,7 @@ import { PaymentStatus } from "@/components/ui/payment-status";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { useReceiptsPage } from "@/features/receipts/useReceiptsPage";
+import { ReceiptLink } from "@/features/shared/ReceiptLink";
 import { formatNaira } from "@/lib/utils";
 import {
   ExternalLink,
@@ -13,10 +14,9 @@ import {
   Receipt as ReceiptIcon,
   Search
 } from "lucide-react";
-import Link from "next/link";
+import { Suspense } from "react";
 
-
-export default function ReceiptsPage() {
+function ReceiptsScreen() {
   const form = useReceiptsPage();
   const { error, reload, query, setQuery, statusFilter, setStatusFilter, bankFilter, setBankFilter, loading, uniqueBanks, filtered } = form;
   return (
@@ -144,12 +144,12 @@ export default function ReceiptsPage() {
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-3">
-                          <Link
-                            href={`/receipts/${receipt.id}`}
+                          <ReceiptLink
+                            id={receipt.id}
                             className="font-mono font-semibold text-[#075E54] hover:underline text-sm"
                           >
                             {receipt.receiptNumber}
-                          </Link>
+                          </ReceiptLink>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                               {receipt.bankName || receipt.paymentMethod}
@@ -189,13 +189,13 @@ export default function ReceiptsPage() {
 
                         <td className="py-3.5 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`/receipts/${receipt.id}`}
+                            <ReceiptLink
+                              id={receipt.id}
                               className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
                               title="View / Print Receipt"
                             >
                               <ExternalLink className="h-4.5 w-4.5" />
-                            </Link>
+                            </ReceiptLink>
 
                             <a
                               href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
@@ -235,5 +235,13 @@ export default function ReceiptsPage() {
       </main>
       </SidebarLayout>
     </AuthGuard>
+  );
+}
+
+export default function ReceiptsPage() {
+  return (
+    <Suspense fallback={<AuthGuard><SidebarLayout><main className="app-page" /></SidebarLayout></AuthGuard>}>
+      <ReceiptsScreen />
+    </Suspense>
   );
 }

@@ -21,9 +21,9 @@ import {
   UserPlus,
   Users
 } from "lucide-react";
+import { Suspense } from "react";
 
-
-export default function StudentsPage() {
+function StudentsScreen() {
   const form = useStudentsPage();
   const { error, students, query, setQuery, classFilter, setClassFilter, categoryFilter, setCategoryFilter, statusFilter, setStatusFilter, loading, selectedStudent, setSelectedStudent, editingStudent, setEditingStudent, isModalOpen, setIsModalOpen, isAddModalOpen, setIsAddModalOpen, isEditModalOpen, setIsEditModalOpen, isPromotionModalOpen, setIsPromotionModalOpen, isImportModalOpen, setIsImportModalOpen, fetchStudents, handleIssueReceipt, filtered } = form;
   return (
@@ -285,5 +285,13 @@ export default function StudentsPage() {
       />
       </SidebarLayout>
     </AuthGuard>
+  );
+}
+
+export default function StudentsPage() {
+  return (
+    <Suspense fallback={<AuthGuard><SidebarLayout><main className="app-page" /></SidebarLayout></AuthGuard>}>
+      <StudentsScreen />
+    </Suspense>
   );
 }
