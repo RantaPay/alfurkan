@@ -19,8 +19,8 @@ export function canonicalExamName(name: string): string | null {
   return null;
 }
 
-export function paidTowardExam(receipts: { items?: { name?: string; amount?: number }[] }[], examName: string): number {
-  return receipts.reduce((sum, receipt) => sum + (receipt.items || []).reduce((line, item) => {
+export function paidTowardExam(receipts: { isVoided?: boolean; items?: { name?: string; amount?: number }[] }[], examName: string): number {
+  return receipts.filter((receipt) => !receipt.isVoided).reduce((sum, receipt) => sum + (receipt.items || []).reduce((line, item) => {
     return canonicalExamName(item.name || "") === examName ? line + (Number(item.amount) || 0) : line;
   }, 0), 0);
 }

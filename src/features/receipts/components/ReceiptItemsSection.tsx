@@ -1,14 +1,15 @@
 "use client";
 import { OTHER_FEE_OPTIONS, PRESET_FEE_OPTIONS, STANDARD_FEE_OPTIONS } from "@/features/receipts/fee-options";
+import { canonicalExamName, examCharge, paidTowardExam } from "@/lib/exam-fees";
 import { useReceiptForm } from "@/features/receipts/useReceiptForm";
 import { formatNaira } from "@/lib/utils";
 import {
   Plus,
   Trash2
 } from "lucide-react";
-type Props = { form: Pick<ReturnType<typeof useReceiptForm>, "searchQuery" | "setSearchQuery" | "selectedStudent" | "depositorName" | "setDepositorName" | "isExternalPayer" | "setIsExternalPayer" | "externalPayerName" | "setExternalPayerName" | "items" | "setItems" | "totalAmount" | "handleAddItem" | "handleRemoveItem" | "handleUpdateItemAmount"> };
+type Props = { form: Pick<ReturnType<typeof useReceiptForm>, "searchQuery" | "setSearchQuery" | "selectedStudent" | "depositorName" | "setDepositorName" | "isExternalPayer" | "setIsExternalPayer" | "externalPayerName" | "setExternalPayerName" | "items" | "setItems" | "examFees" | "priorReceipts" | "totalAmount" | "handleAddItem" | "handleRemoveItem" | "handleUpdateItemAmount"> };
 export function ReceiptItemsSection({ form }: Props) {
-  const { searchQuery, setSearchQuery, selectedStudent, depositorName, setDepositorName, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, items, setItems, totalAmount, handleAddItem, handleRemoveItem, handleUpdateItemAmount } = form;
+  const { searchQuery, setSearchQuery, selectedStudent, depositorName, setDepositorName, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, items, setItems, examFees, priorReceipts, totalAmount, handleAddItem, handleRemoveItem, handleUpdateItemAmount } = form;
   return (<>
     {/* STEP 2: Itemized Fee Categories */}
     <div>
@@ -71,6 +72,11 @@ export function ReceiptItemsSection({ form }: Props) {
           const isOtherPreset = OTHER_FEE_OPTIONS.some((p) => p.name === item.name && p.name !== "CUSTOM");
           const isCustom = !isStandard && !isOtherPreset;
           const isOther = isOtherPreset || isCustom;
+          const examName = canonicalExamName(item.name);
+          const alreadyPaid = examName
+            ? paidTowardExam(priorReceipts, examName) + items.slice(0, idx).reduce((sum, earlier) => canonicalExamName(earlier.name) === examName ? sum + (Number(earlier.amount) || 0) : sum, 0)
+            : 0;
+          const examLine = examName ? examCharge(item.name, Number(item.amount) || 0, alreadyPaid, examFees) : null;
 
           return (
             <div
@@ -210,6 +216,11 @@ export function ReceiptItemsSection({ form }: Props) {
                   </button>
                 </div>
               </div>
+              {examLine && (
+                <p className={`text-xs font-semibold ${examLine.chargeBalance > 0 ? "text-red-700" : "text-green-700"}`}>
+                  Remaining: {formatNaira(examLine.chargeBalance)}
+                </p>
+              )}
 
               {/* Custom description field if 'Custom / Other Fee' is selected or non-preset name */}
               {isCustom && (
