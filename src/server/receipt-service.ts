@@ -523,7 +523,7 @@ export async function updateReceipt(receiptId: string, input: {
         term: paymentTerm,
         parentName: input.depositorName?.trim() || existing.parentName,
         parentPhone: input.depositorPhone?.trim() ?? existing.parentPhone,
-        notes: input.notes?.trim() || existing.notes,
+        notes: input.notes === undefined ? existing.notes : input.notes.trim(),
         items: {
           create: allocatedItems.map((item) => {
             const category = item.category as keyof typeof obligations;
