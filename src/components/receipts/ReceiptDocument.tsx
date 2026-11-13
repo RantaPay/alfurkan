@@ -288,7 +288,7 @@ export function ReceiptDocument({
                       {it.description && <span className="block text-[9px]">{it.description}</span>}
                       {it.chargeAmount !== undefined && it.chargeBalance !== undefined && (
                         <span className="block text-[9px] text-slate-500">
-                          {canonicalExamName(it.name) ? it.name : it.category === "Tuition" ? "School fees" : it.category}: due {formatNaira(it.chargeAmount)}, balance {formatNaira(it.chargeBalance)}
+                          {canonicalExamName(it.name) ? `${canonicalExamName(it.name)} remaining balance: ${formatNaira(it.chargeBalance)}` : `${it.category === "Tuition" ? "School fees" : it.category}: due ${formatNaira(it.chargeAmount)}, balance ${formatNaira(it.chargeBalance)}`}
                         </span>
                       )}
                     </span>
@@ -526,7 +526,11 @@ export function ReceiptDocument({
                       </div>
                       {item.chargeAmount !== undefined && item.chargeBalance !== undefined && (
                         <div className="text-slate-600">
-                          {canonicalExamName(item.name) ? item.name : item.category === "Tuition" ? "School fees" : item.category} due: {formatNaira(item.chargeAmount)} • <span className={(item.chargeBalance ?? 0) <= 0 ? "receipt-cleared text-xs font-semibold text-green-700" : "receipt-alert text-xs font-bold text-red-700"}>Remaining: {formatNaira(item.chargeBalance)}</span>
+                          {canonicalExamName(item.name) ? (
+                            <span className={(item.chargeBalance ?? 0) <= 0 ? "receipt-cleared text-xs font-semibold text-green-700" : "receipt-alert text-xs font-bold text-red-700"}>{canonicalExamName(item.name)} remaining balance: {formatNaira(item.chargeBalance)}</span>
+                          ) : (
+                            <>{item.category === "Tuition" ? "School fees" : item.category} due: {formatNaira(item.chargeAmount)} • <span className={(item.chargeBalance ?? 0) <= 0 ? "receipt-cleared text-xs font-semibold text-green-700" : "receipt-alert text-xs font-bold text-red-700"}>Remaining: {formatNaira(item.chargeBalance)}</span></>
+                          )}
                         </div>
                       )}
                     </div>
@@ -690,7 +694,11 @@ export function ReceiptDocument({
                             {it.paymentTerm && it.paymentTerm !== receipt.term && <span className="block text-xs font-medium text-slate-600">{it.paymentTerm}</span>}
                             {it.chargeAmount !== undefined && it.chargeBalance !== undefined && (
                               <span className="block text-xs font-medium text-slate-500 mt-0.5">
-                                {canonicalExamName(it.name) ? it.name : it.category === "Tuition" ? "School fees" : it.category}: due {formatNaira(it.chargeAmount)}, <span className={(it.chargeBalance ?? 0) <= 0 ? "receipt-cleared font-semibold text-green-700" : "receipt-alert font-bold text-red-700"}>balance after this payment {formatNaira(it.chargeBalance)}</span>
+                                {canonicalExamName(it.name) ? (
+                                  <span className={(it.chargeBalance ?? 0) <= 0 ? "receipt-cleared font-semibold text-green-700" : "receipt-alert font-bold text-red-700"}>{canonicalExamName(it.name)} remaining balance: {formatNaira(it.chargeBalance)}</span>
+                                ) : (
+                                  <>{it.category === "Tuition" ? "School fees" : it.category}: due {formatNaira(it.chargeAmount)}, <span className={(it.chargeBalance ?? 0) <= 0 ? "receipt-cleared font-semibold text-green-700" : "receipt-alert font-bold text-red-700"}>balance after this payment {formatNaira(it.chargeBalance)}</span></>
+                                )}
                               </span>
                             )}
                             {it.description && <span className="block text-xs font-normal text-slate-500 mt-0.5">{it.description}</span>}

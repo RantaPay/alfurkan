@@ -218,7 +218,7 @@ export function ReceiptItemsSection({ form }: Props) {
               </div>
               {examLine && (
                 <p className={`text-xs font-semibold ${examLine.chargeBalance > 0 ? "text-red-700" : "text-green-700"}`}>
-                  Remaining: {formatNaira(examLine.chargeBalance)}
+                  {examName} remaining balance: {formatNaira(examLine.chargeBalance)}
                 </p>
               )}
 
