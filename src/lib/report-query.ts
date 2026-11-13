@@ -97,6 +97,10 @@ export function canonicalFeeName(item: { name?: string; category?: string }): st
   if (item.category === "Tuition" || /tuition|school fees/i.test(name)) return "School Fees";
   if (/sport/i.test(name)) return "Sport Wears";
   if (/\bahis\b/i.test(name)) return "AHIS";
+  if (/\bwaec\s*ssce\b/i.test(name)) return "WAEC SSCE";
+  if (/\bneco\s*ssce\b/i.test(name)) return "NECO SSCE";
+  if (/\bbabece\b/i.test(name)) return "BABECE";
+  if (/\bbece\b/i.test(name)) return "BECE";
   if (!name && item.category === "Uniform") return "School Uniform";
   if (!name && item.category === "Books") return "Books";
   if (name.toUpperCase() === "CUSTOM") return "Other";
@@ -109,6 +113,10 @@ export const STANDARD_FEE_FILTERS = [
   "Textbooks",
   "School Uniform",
   "Sport Wears",
+  "WAEC SSCE",
+  "NECO SSCE",
+  "BABECE",
+  "BECE",
   "Transport / Bus Service",
   "Laboratory & Practical Fees",
   "Excursion & Field Trip",

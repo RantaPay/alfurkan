@@ -31,6 +31,10 @@ test("class levels and arms do not swallow a neighbouring class", () => {
   assert.equal(canonicalFeeName({ name: "AHIS fees", category: "Other" }), "AHIS");
   assert.equal(canonicalFeeName({ name: "ahis", category: "Other" }), "AHIS");
   assert.equal(canonicalFeeName({ name: "Badge fee", category: "Other" }), "Badge fee");
+  assert.equal(canonicalFeeName({ name: "WAEC SSCE", category: "Other" }), "WAEC SSCE");
+  assert.equal(canonicalFeeName({ name: "neco ssce", category: "Other" }), "NECO SSCE");
+  assert.equal(canonicalFeeName({ name: "BABECE", category: "Other" }), "BABECE");
+  assert.equal(canonicalFeeName({ name: "BECE exam", category: "Other" }), "BECE");
 });
 
 test("report filters class, arm, fee, bank, and dates, and keeps the receipt link", () => {
