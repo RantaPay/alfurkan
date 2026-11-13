@@ -1,3 +1,5 @@
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AuthProvider } from "@/lib/auth-context";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
@@ -27,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#F8FAFC] text-slate-900 font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>{children}<RegisterServiceWorker /><InstallPrompt /></AuthProvider>
       </body>
     </html>
   );

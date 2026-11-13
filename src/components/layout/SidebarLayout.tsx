@@ -1,5 +1,6 @@
 "use client";
 
+import { OfflineControls } from "@/components/offline/OfflineControls";
 import { Dialog } from "@/components/ui/dialog";
 import { useApiResource } from "@/features/shared/useApiResource";
 import { useAuth } from "@/lib/auth-context";
@@ -73,6 +74,7 @@ export function SidebarLayout({ children, onOpenIssueModal, schoolName: provided
           <Link href="/" className="flex min-w-0 items-center gap-3"><img src={logoUrl || "/logo.png"} alt={schoolName} className="h-9 w-9 shrink-0 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900"><span className="hidden sm:inline">{schoolName}</span><span className="sm:hidden">Alfurqan Pay</span></p><p className="mt-0.5 text-[11px] text-slate-500">School accounts</p></div></Link>
         </div>
         <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+          <OfflineControls />
           <button type="button" onClick={handleIssueClick} className="button-accent"><Plus className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Issue receipt</span><span className="sm:hidden">Receipt</span></button>
           {user ? <div className="flex items-center gap-2.5 sm:border-l sm:border-slate-200 sm:pl-5">
             <span className="hidden h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-xs font-semibold text-[#075E54] sm:flex">{initials}</span>

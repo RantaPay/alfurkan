@@ -6,6 +6,10 @@ import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod, type Term
 import { getStudentFeeObligations } from "@/lib/student-importer";
 import { ClassFeeConfig, ConcessionCategoryConfig, FeeCategory, Receipt, ReceiptItem, Student } from "@/lib/types";
 import confetti from "canvas-confetti";
+import { findMatchingReceipt } from "@/lib/receipt-duplicate";
+import { loadJson, outboxAsReceipt, readOutbox, readSnapshot, saveOutbox } from "@/lib/offline/store";
+import { shouldUseSnapshot } from "@/lib/offline/sync-result";
+import { syncOutbox } from "@/lib/offline/sync";
 import { currentPath, receiptHref } from "@/lib/return-path";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -90,8 +94,7 @@ export function useReceiptForm({
   useEffect(() => {
     let cancelled = false;
     if (isOpen) {
-      fetch("/api/settings")
-        .then((r) => r.json())
+      loadJson("/api/settings")
         .then((d) => {
           if (cancelled) return;
           if (d.success) {
@@ -123,11 +126,13 @@ export function useReceiptForm({
     const studentId = selectedStudent?.id;
     if (!isOpen || !studentId) return;
 
-    fetch(`/api/receipts?studentId=${encodeURIComponent(studentId)}`)
-      .then((response) => response.json())
-      .then((data) => {
+    loadJson(`/api/receipts?studentId=${encodeURIComponent(studentId)}`)
+      .then(async (data) => {
         if (cancelled || !data.success) return;
-        const receipts = (data.receipts || []).filter((receipt: Receipt) => receipt.session === activeSession);
+        const queued = (await readOutbox())
+          .filter((entry) => entry.status !== "synced" && entry.status !== "reprint" && entry.payload.studentId === studentId)
+          .map(outboxAsReceipt);
+        const receipts = [...queued, ...(data.receipts || [])].filter((receipt: Receipt) => !activeSession || receipt.session === activeSession);
         setPaidLedger({ studentId, session: activeSession, receipts });
       })
       .catch(() => { });
@@ -213,22 +218,39 @@ export function useReceiptForm({
       return;
     }
 
+    const duplicateQuery = {
+      studentName: payerName,
+      regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
+      amountPaid: totalAmount,
+      date: receivingDate,
+      term: selectedStudent ? paymentPeriod : activeTerm,
+      session: activeSession,
+      items,
+    };
     // Duplicate detection check
     if (!allowDuplicateOverride) {
       setIsCheckingDuplicate(true);
       try {
+        const snapshot = await readSnapshot();
+        const queued = (await readOutbox()).filter((entry) => entry.status !== "synced" && entry.status !== "reprint").map(outboxAsReceipt);
+        const snapshotMatch = findMatchingReceipt([...(snapshot?.receipts || []), ...queued], duplicateQuery);
+        if (snapshotMatch) {
+          setDetectedDuplicate({
+            id: snapshotMatch.id || snapshotMatch.receiptNumber || "pending",
+            receiptNumber: snapshotMatch.receiptNumber || "Pending",
+            studentName: snapshotMatch.studentName,
+            regNumber: snapshotMatch.regNumber,
+            amountPaid: snapshotMatch.amountPaid,
+            date: snapshotMatch.date,
+            feePurpose: (snapshotMatch.items || []).map((item) => item.name).join(", "),
+          });
+          setIsCheckingDuplicate(false);
+          return;
+        }
         const checkRes = await fetch("/api/receipts/check-duplicate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            studentName: payerName,
-            regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
-            amountPaid: totalAmount,
-            date: receivingDate,
-            term: selectedStudent ? paymentPeriod : activeTerm,
-            session: activeSession,
-            items,
-          }),
+          body: JSON.stringify(duplicateQuery),
         });
         const checkData = await checkRes.json();
         if (checkData.success && checkData.isDuplicate && checkData.duplicate) {
@@ -237,10 +259,53 @@ export function useReceiptForm({
           return;
         }
       } catch (err) {
-        console.warn("Duplicate check error:", err);
+        if (!shouldUseSnapshot(err, navigator.onLine)) console.warn("Duplicate check error:", err);
       } finally {
         setIsCheckingDuplicate(false);
       }
+    }
+
+    const payload = {
+      studentId: selectedStudent?.id || null,
+      studentName: payerName,
+      studentClass: selectedStudent ? selectedStudent.class : (externalCategory.trim() || "General"),
+      regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
+      amountPaid: totalAmount,
+      term: selectedStudent ? paymentPeriod : activeTerm,
+      session: activeSession,
+      paymentMethod,
+      bankName: receivingBank,
+      date: receivingDate,
+      bankReference,
+      depositorName: depositorName.trim() || payerName,
+      depositorPhone: depositorPhone.trim() || (selectedStudent ? selectedStudent.parentPhone : ""),
+      items,
+      notes,
+      provisionalBill: studentTotalBill,
+      provisionalBalance: projectedBalance,
+    };
+
+    const queueOffline = async () => {
+      const clientReceiptId = crypto.randomUUID();
+      const provisionalRef = `PENDING-${clientReceiptId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+      await saveOutbox({
+        clientReceiptId,
+        provisionalRef,
+        createdAt: new Date().toISOString(),
+        status: "waiting",
+        payload: { ...payload, clientReceiptId },
+        provisionalBill: studentTotalBill,
+        provisionalBalance: projectedBalance,
+      });
+      window.dispatchEvent(new Event("alfurqan-offline"));
+      void syncOutbox();
+      onClose();
+      router.push(receiptHref(clientReceiptId, currentPath(pathname || "/", searchParams)));
+    };
+
+    if (!navigator.onLine) {
+      await queueOffline();
+      return;
     }
 
     setIsSubmitting(true);
@@ -250,22 +315,7 @@ export function useReceiptForm({
       const res = await fetch("/api/receipts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: selectedStudent?.id || null,
-          studentName: payerName,
-          studentClass: selectedStudent ? selectedStudent.class : (externalCategory.trim() || "General"),
-          regNumber: selectedStudent ? selectedStudent.regNumber : "N/A",
-          amountPaid: totalAmount,
-          term: selectedStudent ? paymentPeriod : activeTerm,
-          paymentMethod,
-          bankName: receivingBank,
-          date: receivingDate,
-          bankReference,
-          depositorName: depositorName.trim() || payerName,
-          depositorPhone: depositorPhone.trim() || (selectedStudent ? selectedStudent.parentPhone : ""),
-          items,
-          notes,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -292,6 +342,10 @@ export function useReceiptForm({
       onClose();
       router.push(receiptHref(data.receipt.id, currentPath(pathname || "/", searchParams)));
     } catch (err: any) {
+      if (shouldUseSnapshot(err, navigator.onLine)) {
+        await queueOffline();
+        return;
+      }
       setErrorMessage(err.message || "An error occurred while issuing receipt.");
     } finally {
       setIsSubmitting(false);

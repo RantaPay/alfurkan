@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   X
 } from "lucide-react";
+import { loadJson, outboxAsReceipt, readOutbox, readSnapshot } from "@/lib/offline/store";
 import { returnLabel, safeReturnPath } from "@/lib/return-path";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
@@ -67,24 +68,27 @@ export default function ReceiptViewPage() {
     const fetchReceipt = async () => {
       try {
         setLoading(true);
-        const [recRes, schoolRes] = await Promise.all([
-          fetch(`/api/receipts`),
-          fetch(`/api/settings`),
+        const [recData, schoolData] = await Promise.all([
+          loadJson("/api/receipts").catch(() => ({ success: false, receipts: [] as Receipt[] })),
+          loadJson("/api/settings").catch(() => ({ success: false, school: null })),
         ]);
 
-        const recData = await recRes.json();
-        const schoolData = await schoolRes.json();
-
-        if (recData.success) {
-          const found = recData.receipts.find((r: Receipt) => r.id === id);
-          if (found) {
-            setReceipt(found);
-          } else {
-            setError("Receipt not found.");
-          }
+        const queued = (await readOutbox()).find((entry) => entry.clientReceiptId === id);
+        const listed = recData.success ? recData.receipts : [];
+        const found = listed.find((receipt: Receipt) => receipt.id === id || receipt.id === queued?.officialId);
+        if (found) setReceipt(found);
+        else if (queued && !queued.officialId) setReceipt(outboxAsReceipt(queued));
+        else {
+          const snapshot = await readSnapshot();
+          const saved = snapshot?.receipts.find((receipt) => receipt.id === id || receipt.id === queued?.officialId);
+          if (saved) setReceipt(saved);
+          else if (queued) setReceipt(outboxAsReceipt(queued));
+          else setError("Receipt not found.");
         }
-        if (schoolData.success) {
-          setSchool(schoolData.school);
+        if (schoolData.success) setSchool(schoolData.school);
+        else {
+          const snapshot = await readSnapshot();
+          if (snapshot) setSchool(snapshot.school);
         }
       } catch (err: any) {
         setError(err.message || "Failed to load receipt");
@@ -160,6 +164,14 @@ export default function ReceiptViewPage() {
 
     try {
       setIsVoiding(true);
+      if (receipt.receiptNumber.startsWith("PENDING-")) {
+        const { removeOutbox } = await import("@/lib/offline/store");
+        await removeOutbox(receipt.id);
+        setReceipt({ ...receipt, isVoided: true, voidReason: finalReason });
+        setIsVoidModalOpen(false);
+        window.dispatchEvent(new Event("alfurqan-offline"));
+        return;
+      }
       const res = await fetch("/api/receipts/void", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

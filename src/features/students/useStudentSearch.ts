@@ -1,4 +1,6 @@
 "use client";
+import { readOfflineApi } from "@/lib/offline/store";
+import { shouldUseSnapshot } from "@/lib/offline/sync-result";
 import type { Student } from "@/lib/types";
 import { useEffect, useState } from "react";
 
@@ -14,6 +16,14 @@ export function useStudentSearch(query: string, enabled = true) {
         if (!response.ok || !data.success) throw new Error(data.error || "Unable to search students. Please try again.");
         if (!controller.signal.aborted) setState({ query, students: data.students, error: "" });
       } catch (error) {
+        if (controller.signal.aborted) return;
+        if (shouldUseSnapshot(error, navigator.onLine)) {
+          const offline = await readOfflineApi(`/api/students?query=${encodeURIComponent(query)}`);
+          if (!controller.signal.aborted && offline) {
+            setState({ query, students: offline.students as Student[], error: "" });
+            return;
+          }
+        }
         if (!controller.signal.aborted) setState({ query, students: [], error: error instanceof Error ? error.message : "Unable to search students." });
       }
     }, 200);

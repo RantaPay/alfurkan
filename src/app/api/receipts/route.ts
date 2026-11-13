@@ -72,11 +72,22 @@ export async function POST(request: Request) {
       depositorPhone: depositorPhone || payerPhone || undefined,
       items: items || [],
       term: body.term,
+      session: body.session,
       notes,
+      clientReceiptId: body.clientReceiptId,
+      confirmDuplicate: body.confirmDuplicate === true,
     });
 
-    return NextResponse.json({ success: true, receipt }, { status: 201 });
+    const provisionalBalance = Number(body.provisionalBalance);
+    const provisionalBill = Number(body.provisionalBill);
+    const reprint = !!body.clientReceiptId && (
+      (Number.isFinite(provisionalBalance) && Math.abs(provisionalBalance - receipt.balanceRemaining) > 0.01) ||
+      (Number.isFinite(provisionalBill) && Math.abs(provisionalBill - receipt.totalTermBill) > 0.01)
+    );
+    return NextResponse.json({ success: true, receipt, reprint }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const code = error?.code as string | undefined;
+    const status = code === "DUPLICATE" || code === "SESSION_CHANGED" ? 409 : code === "SYNC_UNAVAILABLE" ? 503 : code === "STUDENT_MISSING" ? 409 : 500;
+    return NextResponse.json({ success: false, error: error.message, code, duplicate: error.duplicate }, { status });
   }
 }

@@ -11,6 +11,7 @@ import {
 import QRCode from "qrcode";
 import { parseBillingConfiguration } from "./billing-config";
 
+import { sameReceiptPayment, type DuplicateQuery } from "@/lib/receipt-duplicate";
 import { formatSessionCode } from "./config";
 import { formatReceipt } from "./formatters";
 
@@ -68,35 +69,6 @@ export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<
   const amount = Number(input.amountPaid) || 0;
   if (amount <= 0) return null;
 
-  // Format date for comparison
-  let receiptDateObj = new Date();
-  if (input.date) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
-      const [y, m, d] = input.date.split("-").map(Number);
-      receiptDateObj = new Date(y, m - 1, d, 12, 0, 0);
-    } else {
-      const parsed = new Date(input.date);
-      if (!isNaN(parsed.getTime())) receiptDateObj = parsed;
-    }
-  }
-
-  const formattedDate = receiptDateObj.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  const isoDate = input.date ? input.date.split("T")[0] : receiptDateObj.toISOString().split("T")[0];
-
-  const defaultFeeName = "tuition / school fees";
-  const inputItemNames = (
-    input.items && input.items.length > 0
-      ? Array.from(new Set(input.items.map((it) => it.name.trim().toLowerCase())))
-      : [defaultFeeName]
-  )
-    .filter(Boolean)
-    .sort()
-    .join(", ");
-
   const studentConditions: any[] = [];
   if (reg && reg !== "N/A") {
     studentConditions.push({ regNumber: { equals: reg, mode: "insensitive" } });
@@ -118,32 +90,22 @@ export async function findDuplicateReceipt(input: CheckDuplicateInput): Promise<
     orderBy: { timestamp: "desc" },
   });
 
-  for (const r of candidateReceipts) {
-    const rIsoDate = r.timestamp instanceof Date ? r.timestamp.toISOString().split("T")[0] : "";
-    const rDateObj = r.timestamp instanceof Date ? r.timestamp : new Date(r.timestamp);
-    const rFormattedDate = !isNaN(rDateObj.getTime())
-      ? rDateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-      : "";
-
-    const isSameDate =
-      r.date.trim().toLowerCase() === formattedDate.trim().toLowerCase() ||
-      r.date.trim().toLowerCase() === (input.date || "").trim().toLowerCase() ||
-      (isoDate && rIsoDate === isoDate) ||
-      (rFormattedDate && rFormattedDate.toLowerCase() === formattedDate.toLowerCase());
-
-    if (!isSameDate) continue;
-
-    const rItemNames = (
-      r.items && r.items.length > 0
-        ? Array.from(new Set(r.items.map((it) => it.name.trim().toLowerCase())))
-        : [defaultFeeName]
-    )
-      .filter(Boolean)
-      .sort()
-      .join(", ");
-
-    if (inputItemNames === rItemNames) {
-      return formatReceipt(r);
+  const query: DuplicateQuery = input;
+  for (const receipt of candidateReceipts) {
+    if (sameReceiptPayment({
+      id: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      studentName: receipt.studentName,
+      regNumber: receipt.regNumber,
+      amountPaid: Number(receipt.amountPaid),
+      date: receipt.date,
+      timestamp: receipt.timestamp instanceof Date ? receipt.timestamp.toISOString() : String(receipt.timestamp),
+      term: receipt.term,
+      session: receipt.session,
+      isVoided: receipt.isVoided,
+      items: receipt.items,
+    }, query)) {
+      return formatReceipt(receipt);
     }
   }
 
@@ -167,6 +129,20 @@ export interface CreateReceiptInput {
   items: ReceiptItem[];
   notes?: string;
   term?: PaymentPeriod;
+  session?: string;
+  clientReceiptId?: string;
+  confirmDuplicate?: boolean;
+}
+
+function missingClientColumn(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("42703") || (message.includes("clientReceiptId") && message.toLowerCase().includes("does not exist"));
+}
+
+function codedError(message: string, code: string): Error {
+  const error = new Error(message);
+  (error as Error & { code: string }).code = code;
+  return error;
 }
 
 export async function createReceipt(input: CreateReceiptInput): Promise<Receipt> {
@@ -194,6 +170,64 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
   return await prisma.$transaction(async (tx) => {
     // Serialize receipt numbering and balance changes across application instances.
     await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(hashtext('alfurqan-receipt-ledger'))`;
+    if (input.clientReceiptId) {
+      let existingId = "";
+      try {
+        const rows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Receipt" WHERE "clientReceiptId" = ${input.clientReceiptId} LIMIT 1`;
+        existingId = rows[0]?.id || "";
+      } catch (error) {
+        if (missingClientColumn(error)) throw codedError("Offline sync is not ready on this server.", "SYNC_UNAVAILABLE");
+        throw error;
+      }
+      if (existingId) {
+        const existing = await tx.receipt.findUnique({ where: { id: existingId }, include: { items: true } });
+        if (existing) return formatReceipt(existing);
+      }
+      if (!input.confirmDuplicate) {
+        const reg = (input.regNumber || "").trim();
+        const name = (input.studentName || input.depositorName || input.payerName || "").trim();
+        const duplicateQuery = {
+          studentName: name,
+          regNumber: reg,
+          amountPaid: input.amountPaid,
+          date: input.date,
+          term: input.term,
+          session: input.session,
+          items: input.items,
+        };
+        if (Number(input.amountPaid) > 0 && ((reg && reg !== "N/A") || name)) {
+          const candidates = await tx.receipt.findMany({
+            where: {
+              isVoided: false,
+              amountPaid: Number(input.amountPaid),
+              ...(input.term ? { term: input.term } : {}),
+              ...(input.session ? { session: input.session } : {}),
+              OR: reg && reg !== "N/A"
+                ? [{ regNumber: { equals: reg, mode: "insensitive" as const } }]
+                : [{ studentName: { equals: name, mode: "insensitive" as const } }],
+            },
+            include: { items: true },
+            orderBy: { timestamp: "desc" },
+          });
+          const match = candidates.find((candidate) => sameReceiptPayment({
+            studentName: candidate.studentName,
+            regNumber: candidate.regNumber,
+            amountPaid: Number(candidate.amountPaid),
+            date: candidate.date,
+            timestamp: candidate.timestamp.toISOString(),
+            term: candidate.term,
+            session: candidate.session,
+            isVoided: candidate.isVoided,
+            items: candidate.items,
+          }, duplicateQuery));
+          if (match) {
+            const error = codedError("This payment is already recorded.", "DUPLICATE");
+            (error as Error & { duplicate: Receipt }).duplicate = formatReceipt(match);
+            throw error;
+          }
+        }
+      }
+    }
     // 1. Fetch student if studentId is provided, or prepare external payer
     const student = input.studentId
       ? await tx.student.findUnique({
@@ -202,7 +236,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       : null;
 
     if (input.studentId && !student) {
-      throw new Error("Student not found");
+      throw input.clientReceiptId ? codedError("Student not found", "STUDENT_MISSING") : new Error("Student not found");
     }
 
     const school = await tx.schoolProfile.findUnique({
@@ -236,6 +270,10 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     const paymentTerm = input.term ?? currentTerm;
     if (!isPaymentPeriod(paymentTerm)) throw new Error("Select a valid payment period");
     const currentSession = (school?.currentSession || "2026/2027 Session").replace(/\bAcademic\s*/gi, "").trim();
+    const requestedSession = (input.session || "").replace(/\bAcademic\s*/gi, "").trim();
+    if (input.clientReceiptId && requestedSession && requestedSession !== currentSession) {
+      throw codedError("The school session changed while this receipt was offline.", "SESSION_CHANGED");
+    }
     const accountantName = school?.accountantName || "Aminu S. Boro";
 
     const { feeStructure, concessions } = parseBillingConfiguration(school);
@@ -368,6 +406,10 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         items: true,
       },
     });
+
+    if (input.clientReceiptId) {
+      await tx.$executeRaw`UPDATE "Receipt" SET "clientReceiptId" = ${input.clientReceiptId} WHERE id = ${createdReceipt.id}`;
+    }
 
     // 6. Update student balance in PostgreSQL (if registered student)
     if (student && allocatedItems.some((item) => item.paymentTerm === currentTerm)) {

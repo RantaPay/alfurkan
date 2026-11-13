@@ -43,6 +43,7 @@ export function ReceiptDocument({
     : receipt.receiptNumber.startsWith("AFIC-RCP-")
     ? receipt.receiptNumber.replace(/^AFIC-RCP-(\d{4})-/, "$1-27/")
     : receipt.receiptNumber;
+  const pendingSync = receipt.receiptNumber.startsWith("PENDING-");
 
   const primaryPhone = (school?.phone || "+234 806 977 0538").split("/")[0].trim();
   const displaySession = (receipt.session || "2026/2027")
@@ -193,7 +194,7 @@ export function ReceiptDocument({
                 ================================
               </div>
               <div className="text-xs font-black tracking-widest uppercase">
-                RECEIPT
+                {pendingSync ? "PENDING SYNC" : "RECEIPT"}
               </div>
               <div className="font-mono text-slate-400 select-none text-[11px]">
                 ================================
@@ -435,7 +436,7 @@ export function ReceiptDocument({
               {/* Right: Receipt Serial Number & Date */}
               <div className="shrink-0 text-right space-y-0.5">
                 <div className="receipt-serial inline-block border border-rose-700 bg-transparent text-rose-700 px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase">
-                  ORIGINAL
+                  {pendingSync ? "Pending sync" : "ORIGINAL"}
                 </div>
                 <div className="text-xs text-slate-700 font-bold">
                   No:{" "}
@@ -446,6 +447,7 @@ export function ReceiptDocument({
                 <div className="text-xs text-slate-600">
                   Date: <strong className="text-slate-900 underline font-mono text-xs sm:text-sm">{issueDate}</strong>
                 </div>
+                {pendingSync && <p className="text-[10px] font-semibold text-rose-700">Official number after sync</p>}
                 <div className="text-[10px] text-slate-500 font-medium">
                   Term: <strong className="text-slate-800">{receipt.term}</strong> • Session: <strong className="text-slate-800">{displaySession}</strong>
                 </div>
