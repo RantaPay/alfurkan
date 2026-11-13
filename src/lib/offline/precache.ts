@@ -12,7 +12,7 @@ async function save(cache: Cache, url: string, response: Response) {
 }
 
 /** Saves every staff screen, its code, and one receipt screen that can open any saved receipt. */
-export async function precacheApplication(receiptIds: string[]): Promise<void> {
+export async function precacheApplication(receiptIds: string[], studentIds: string[] = []): Promise<void> {
   const cache = await caches.open(APP_CACHE);
   const assets = new Set<string>(["/logo.png", "/favicon.ico"]);
   for (const page of PAGES) {
@@ -24,6 +24,23 @@ export async function precacheApplication(receiptIds: string[]): Promise<void> {
       assetsIn(html).forEach((asset) => assets.add(asset));
     } catch {
       // Keep the copy that is already saved.
+    }
+  }
+
+  const sampleStudentId = studentIds.find(Boolean);
+  if (sampleStudentId) {
+    try {
+      const response = await fetch(`/students/${encodeURIComponent(sampleStudentId)}`, { credentials: "same-origin", cache: "no-store" });
+      if (response.ok) {
+        const html = await response.clone().text();
+        await save(cache, `/students/${encodeURIComponent(sampleStudentId)}`, response.clone());
+        await cache.put("/__alfurqan_student_shell__", new Response(html, {
+          headers: { "Content-Type": "text/html; charset=utf-8", "X-Student-Id": sampleStudentId },
+        }));
+        assetsIn(html).forEach((asset) => assets.add(asset));
+      }
+    } catch {
+      // The student receipt list can be saved on the next download.
     }
   }
 

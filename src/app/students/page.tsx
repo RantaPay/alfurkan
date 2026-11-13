@@ -10,7 +10,9 @@ import { DatabaseImportModal } from "@/components/students/DatabaseImportModal";
 import { EditStudentModal } from "@/components/students/EditStudentModal";
 import { SessionPromotionModal } from "@/components/students/SessionPromotionModal";
 import { useStudentsPage } from "@/features/students/useStudentsPage";
+import { useCurrentPath } from "@/features/shared/usePageQuery";
 import { detectStudentCategory } from "@/lib/student-importer";
+import { studentHref } from "@/lib/return-path";
 import { formatNaira } from "@/lib/utils";
 import {
   Edit2,
@@ -21,9 +23,11 @@ import {
   UserPlus,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 function StudentsScreen() {
+  const here = useCurrentPath();
   const form = useStudentsPage();
   const { error, students, query, setQuery, classFilter, setClassFilter, categoryFilter, setCategoryFilter, statusFilter, setStatusFilter, loading, selectedStudent, setSelectedStudent, editingStudent, setEditingStudent, isModalOpen, setIsModalOpen, isAddModalOpen, setIsAddModalOpen, isEditModalOpen, setIsEditModalOpen, isPromotionModalOpen, setIsPromotionModalOpen, isImportModalOpen, setIsImportModalOpen, fetchStudents, handleIssueReceipt, filtered } = form;
   return (
@@ -145,22 +149,22 @@ function StudentsScreen() {
                   <th className="py-3 px-3">Student Name</th>
                   <th className="py-3 px-3">Admission No</th>
                   <th className="py-3 px-3">Class</th>
+                  <th className="py-3 px-3 text-right">Action</th>
                   <th className="py-3 px-3">Parent / Phone</th>
                   <th className="py-3 px-3 text-right">Term Bill</th>
                   <th className="py-3 px-3 text-right">Paid to Date</th>
                   <th className="py-3 px-3 text-right">Balance Due</th>
                   <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={8} className="px-5 py-3"><LoadingRows label="Loading students" /></td></tr>
+                  <tr><td colSpan={9} className="px-5 py-3"><LoadingRows label="Loading students" /></td></tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((student) => (
                     <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-3">
-                        <div className="font-bold text-slate-900 text-sm sm:text-base">{student.fullName}</div>
+                        <Link href={studentHref(student.id, here)} className="font-bold text-slate-900 text-sm hover:text-[#075E54] hover:underline sm:text-base">{student.fullName}</Link>
                       </td>
 
                       <td className="py-3.5 px-3 font-mono font-bold text-slate-700 text-sm">
@@ -175,6 +179,30 @@ function StudentsScreen() {
                               Repeating
                             </span>
                           )}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingStudent(student);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border border-transparent hover:border-slate-200"
+                            title="Edit Student & Class Placement (Repeating Status)"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleIssueReceipt(student)}
+                            className="bg-[#075E54] hover:bg-[#128C7E] active:translate-y-px text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs transition-all inline-flex items-center gap-1.5 cursor-pointer shrink-0"
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                            <span>Issue Receipt</span>
+                          </button>
                         </div>
                       </td>
 
@@ -199,31 +227,6 @@ function StudentsScreen() {
 
                       <td className="py-3.5 px-3 text-center">
                         <PaymentStatus status={student.totalTermBill === 0 || detectStudentCategory(student.fullName) === "ADF" ? "FULL" : student.status} />
-                      </td>
-
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingStudent(student);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border border-transparent hover:border-slate-200"
-                            title="Edit Student & Class Placement (Repeating Status)"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleIssueReceipt(student)}
-                            className="bg-[#075E54] hover:bg-[#128C7E] active:translate-y-px text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs transition-all inline-flex items-center gap-1.5 cursor-pointer shrink-0"
-                          >
-                            <PlusCircle className="h-4 w-4" />
-                            <span>Issue Receipt</span>
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))

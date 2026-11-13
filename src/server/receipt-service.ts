@@ -447,6 +447,131 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
   });
 }
 
+const FEE_CATEGORIES = ["Tuition", "Books", "Uniform", "PTA", "Transport", "Excursion", "Development", "Other"] as const;
+
+export async function updateReceipt(receiptId: string, input: {
+  items: { name: string; category: string; amount: number; description?: string }[];
+  paymentMethod: Receipt["paymentMethod"];
+  bankName?: string;
+  bankReference?: string;
+  date?: string;
+  depositorName?: string;
+  depositorPhone?: string;
+  notes?: string;
+  term?: PaymentPeriod;
+}): Promise<Receipt> {
+  const receiptItems = input.items || [];
+  if (!receiptItems.length || receiptItems.some((item) => !item?.name?.trim() || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0 || !FEE_CATEGORIES.includes(item.category as typeof FEE_CATEGORIES[number]))) {
+    throw new Error("Each fee needs a name, a category, and an amount.");
+  }
+  const amountPaid = receiptItems.reduce((sum, item) => sum + Number(item.amount), 0);
+  if (amountPaid <= 0) throw new Error("Payment amount must be a positive number");
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(hashtext('alfurqan-receipt-ledger'))`;
+    const existing = await tx.receipt.findUnique({ where: { id: receiptId }, include: { items: true } });
+    if (!existing) throw new Error("Receipt not found");
+    if (existing.isVoided) throw new Error("A cancelled receipt cannot be edited.");
+
+    const school = await tx.schoolProfile.findUnique({ where: { id: "default" } });
+    const currentTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
+    const paymentTerm = input.term ?? (isPaymentPeriod(existing.term) ? existing.term : currentTerm);
+    if (!isPaymentPeriod(paymentTerm)) throw new Error("Select a valid payment period");
+    const currentSession = (school?.currentSession || "").replace(/\bAcademic\s*/gi, "").trim();
+    const student = existing.studentId ? await tx.student.findUnique({ where: { id: existing.studentId } }) : null;
+    const { feeStructure, concessions } = parseBillingConfiguration(school);
+    const obligations = student
+      ? getStudentFeeObligations(student.fullName, student.class, feeStructure, concessions, student.totalTermBill || 0)
+      : { Tuition: 0, Books: 0, Uniform: 0, PTA: 0 };
+    const others = student
+      ? await tx.receipt.findMany({
+        where: { studentId: student.id, session: existing.session, isVoided: false, id: { not: receiptId } },
+        include: { items: true },
+      })
+      : [];
+    const earlier = others.filter((receipt) => receipt.timestamp <= existing.timestamp);
+    const allocatedItems = allocatePeriodItems(receiptItems as ReceiptItem[], paymentTerm, currentTerm, obligations, earlier);
+    const projected = [...earlier, { term: paymentTerm, amountPaid, items: allocatedItems }];
+    const previousLedger = calculatePeriodFeeBalance(obligations, earlier, paymentTerm, currentTerm);
+    const nextBalance = calculatePeriodFeeBalance(obligations, projected, paymentTerm, currentTerm);
+    const paymentStatus: "FULL" | "PARTIAL" = student ? (nextBalance.status === "FULL" ? "FULL" : "PARTIAL") : "FULL";
+
+    let receiptDate = existing.date;
+    if (input.date) {
+      const parsed = /^\d{4}-\d{2}-\d{2}$/.test(input.date)
+        ? new Date(Number(input.date.slice(0, 4)), Number(input.date.slice(5, 7)) - 1, Number(input.date.slice(8, 10)), 12, 0, 0)
+        : new Date(input.date);
+      if (!isNaN(parsed.getTime())) {
+        receiptDate = parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      }
+    }
+
+    await tx.receiptItem.deleteMany({ where: { receiptId } });
+    const updated = await tx.receipt.update({
+      where: { id: receiptId },
+      data: {
+        amountPaid,
+        totalTermBill: student ? nextBalance.totalBill : amountPaid,
+        previousTotalPaid: previousLedger.totalPaid,
+        newTotalPaid: student ? nextBalance.totalPaid : amountPaid,
+        balanceRemaining: student ? nextBalance.balanceRemaining : 0,
+        paymentStatus,
+        paymentMethod: input.paymentMethod,
+        bankName: input.bankName?.trim() || existing.bankName,
+        bankReference: input.bankReference?.trim() || existing.bankReference,
+        date: receiptDate,
+        term: paymentTerm,
+        parentName: input.depositorName?.trim() || existing.parentName,
+        parentPhone: input.depositorPhone?.trim() ?? existing.parentPhone,
+        notes: input.notes?.trim() || existing.notes,
+        items: {
+          create: allocatedItems.map((item) => {
+            const category = item.category as keyof typeof obligations;
+            const due = obligations[category];
+            const itemTerm = isTermPeriod(item.paymentTerm) ? item.paymentTerm : currentTerm;
+            const lineBalance = calculatePeriodFeeBalance(obligations, projected, itemTerm, currentTerm);
+            return {
+              name: item.name.trim(),
+              category: item.category,
+              amount: Number(item.amount),
+              description: item.description || null,
+              paymentTerm: itemTerm,
+              ...(student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
+            };
+          }),
+        },
+      },
+      include: { items: true },
+    });
+
+    if (student && existing.session === currentSession) {
+      const active = [...others, updated];
+      const activeTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
+      const ledger = calculatePeriodFeeBalance(obligations, active, activeTerm, activeTerm);
+      await tx.student.update({
+        where: { id: student.id },
+        data: {
+          totalTermBill: ledger.totalBill,
+          totalPaid: ledger.totalPaid,
+          balanceRemaining: ledger.balanceRemaining,
+          status: ledger.status,
+          lastPaymentDate: receiptDate,
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        action: "RECEIPT_EDITED",
+        performedBy: school?.accountantName || "Aminu S. Boro",
+        details: JSON.stringify({ receiptNumber: existing.receiptNumber, amountPaid }),
+      },
+    });
+
+    return formatReceipt(updated);
+  });
+}
+
 // Receipt Void / Cancellation - ACID Transactional
 export async function voidReceipt(
   receiptId: string,

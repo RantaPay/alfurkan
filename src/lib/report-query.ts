@@ -96,6 +96,7 @@ export function canonicalFeeName(item: { name?: string; category?: string }): st
   if (/previous\s*term\s*debt|\b3t\s*debt\b/i.test(name)) return "Previous Term Debt";
   if (item.category === "Tuition" || /tuition|school fees/i.test(name)) return "School Fees";
   if (/sport/i.test(name)) return "Sport Wears";
+  if (/\bahis\b/i.test(name)) return "AHIS";
   if (!name && item.category === "Uniform") return "School Uniform";
   if (!name && item.category === "Books") return "Books";
   if (name.toUpperCase() === "CUSTOM") return "Other";

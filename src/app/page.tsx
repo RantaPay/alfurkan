@@ -9,8 +9,11 @@ import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { AddStudentModal } from "@/components/students/AddStudentModal";
 import { DatabaseImportModal } from "@/components/students/DatabaseImportModal";
 import { PageHeader } from "@/components/ui/page-header";
+import { ShareReceiptButton } from "@/components/receipts/ShareReceiptButton";
 import { useDashboard } from "@/features/dashboard/useDashboard";
 import { ReceiptLink } from "@/features/shared/ReceiptLink";
+import { useCurrentPath } from "@/features/shared/usePageQuery";
+import { studentHref } from "@/lib/return-path";
 import { formatNaira } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -20,7 +23,6 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  MessageSquare,
   Receipt as ReceiptIcon,
   TrendingUp,
   Upload,
@@ -30,6 +32,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 function DashboardScreen() {
+  const here = useCurrentPath();
   const form = useDashboard();
   const { error, isModalOpen, setIsModalOpen, isAddStudentOpen, setIsAddStudentOpen, isImportModalOpen, setIsImportModalOpen, selectedStudentForReceipt, stats, loading, receiptFilter, setReceiptFilter, hideSensitive, toggleSensitive, loadData, handleOpenIssueModal, filteredReceipts } = form;
   return (
@@ -236,8 +239,6 @@ function DashboardScreen() {
                   <tr><td colSpan={7} className="px-5 py-3"><LoadingRows label="Loading receipts" /></td></tr>
                 ) : filteredReceipts.length > 0 ? (
                   filteredReceipts.map((receipt) => {
-                    const isFull = receipt.paymentStatus === "FULL";
-
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-3">
@@ -253,9 +254,11 @@ function DashboardScreen() {
                         </td>
 
                         <td className="py-3.5 px-3">
-                          <div className="font-bold text-slate-900 text-sm sm:text-base">
-                            {receipt.studentName}
-                          </div>
+                          {receipt.studentId ? (
+                            <Link href={studentHref(receipt.studentId, here)} className="font-bold text-slate-900 text-sm hover:text-[#075E54] hover:underline sm:text-base">{receipt.studentName}</Link>
+                          ) : (
+                            <div className="font-bold text-slate-900 text-sm sm:text-base">{receipt.studentName}</div>
+                          )}
                           <div className="text-xs text-slate-500 font-mono">
                             {receipt.regNumber} • <span className="font-sans font-semibold text-slate-700">{receipt.studentClass}</span>
                           </div>
@@ -289,18 +292,10 @@ function DashboardScreen() {
                               <ExternalLink className="h-4.5 w-4.5" />
                             </ReceiptLink>
 
-                            {/* 1-Click WhatsApp Share */}
-                            <a
-                              href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} (${receipt.regNumber}) at Alfurqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "VOIDED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance: ${formatNaira(receipt.balanceRemaining)})`}\n\nView or download digital receipt:\nhttps://alfurqan.edu.ng/receipts/${receipt.id}\n\nThank you.\nAccounts Department, Alfurqan International Academy`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="Share to Parent WhatsApp"
-                            >
-                              <MessageSquare className="h-4.5 w-4.5" />
-                            </a>
+                            <ShareReceiptButton
+                              receipt={receipt}
+                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+                            />
                           </div>
                         </td>
                       </tr>

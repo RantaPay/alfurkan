@@ -82,12 +82,25 @@ async function pageFirst(request) {
       const shell = await receiptShell(cache, decodeURIComponent(url.pathname.slice("/receipts/".length)));
       if (shell) return shell;
     }
+    if (!rsc && url.pathname.startsWith("/students/") && url.pathname !== "/students") {
+      const shell = await studentShell(cache, decodeURIComponent(url.pathname.slice("/students/".length)));
+      if (shell) return shell;
+    }
     if (rsc) return new Response("", { status: 503 });
     return new Response(missingPage(url.pathname), {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
+}
+
+async function studentShell(cache, studentId) {
+  const shell = await cache.match("/__alfurqan_student_shell__");
+  if (!shell) return null;
+  const shellId = shell.headers.get("X-Student-Id") || "";
+  let html = await shell.text();
+  if (shellId && studentId) html = html.split(shellId).join(studentId);
+  return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
 async function receiptShell(cache, receiptId) {

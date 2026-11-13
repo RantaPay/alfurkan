@@ -4,19 +4,23 @@ import { PaymentStatus } from "@/components/ui/payment-status";
 
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
+import { ShareReceiptButton } from "@/components/receipts/ShareReceiptButton";
 import { useReceiptsPage } from "@/features/receipts/useReceiptsPage";
 import { ReceiptLink } from "@/features/shared/ReceiptLink";
+import { useCurrentPath } from "@/features/shared/usePageQuery";
+import { studentHref } from "@/lib/return-path";
 import { formatNaira } from "@/lib/utils";
 import {
   ExternalLink,
   Landmark,
-  MessageSquare,
   Receipt as ReceiptIcon,
   Search
 } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 function ReceiptsScreen() {
+  const here = useCurrentPath();
   const form = useReceiptsPage();
   const { error, reload, query, setQuery, statusFilter, setStatusFilter, bankFilter, setBankFilter, loading, uniqueBanks, filtered } = form;
   return (
@@ -139,8 +143,6 @@ function ReceiptsScreen() {
                   <tr><td colSpan={7} className="px-5 py-3"><LoadingRows label="Loading receipts" /></td></tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((receipt) => {
-                    const isFull = receipt.paymentStatus === "FULL";
-
                     return (
                       <tr key={receipt.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-3">
@@ -161,7 +163,11 @@ function ReceiptsScreen() {
                         </td>
 
                         <td className="py-3.5 px-3">
-                          <div className="font-bold text-slate-900 text-sm sm:text-base">{receipt.studentName}</div>
+                          {receipt.studentId ? (
+                            <Link href={studentHref(receipt.studentId, here)} className="font-bold text-slate-900 text-sm hover:text-[#075E54] hover:underline sm:text-base">{receipt.studentName}</Link>
+                          ) : (
+                            <div className="font-bold text-slate-900 text-sm sm:text-base">{receipt.studentName}</div>
+                          )}
                           <div className="font-mono text-xs text-slate-500">{receipt.regNumber}</div>
                         </td>
 
@@ -197,17 +203,10 @@ function ReceiptsScreen() {
                               <ExternalLink className="h-4.5 w-4.5" />
                             </ReceiptLink>
 
-                            <a
-                              href={`https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-                                `Assalamu Alaikum ${receipt.parentName},\n\nPayment confirmation for ${receipt.studentName} at Alfurqan International Academy.\nReceipt: ${receipt.receiptNumber}\nAmount Paid: ${formatNaira(receipt.amountPaid)}\nStatus: ${isFull ? "PAID IN FULL" : `PARTIAL PAYMENT (Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n\nView digital receipt: https://alfurqan.edu.ng/receipts/${receipt.id}`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="Send WhatsApp to Parent"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </a>
+                            <ShareReceiptButton
+                              receipt={receipt}
+                              className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+                            />
                           </div>
                         </td>
                       </tr>

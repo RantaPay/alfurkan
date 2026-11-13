@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getReceipts, createReceipt, getReceiptByNumber, getStudentReceipts } from "@/lib/data-store";
+import { getReceipts, createReceipt, getReceiptByNumber, getStudentReceipts, updateReceipt } from "@/lib/data-store";
 import { isPaymentPeriod } from "@/lib/fee-ledger";
 
 export async function GET(request: Request) {
@@ -26,6 +26,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, count: receipts.length, receipts });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    if (!body.id) return NextResponse.json({ success: false, error: "Receipt not found" }, { status: 400 });
+    if (body.term !== undefined && !isPaymentPeriod(body.term)) {
+      return NextResponse.json({ success: false, error: "Select a valid payment period." }, { status: 400 });
+    }
+    const receipt = await updateReceipt(body.id, {
+      items: body.items || [],
+      paymentMethod: body.paymentMethod || "Cash",
+      bankName: body.bankName,
+      bankReference: body.bankReference,
+      date: body.date,
+      depositorName: body.depositorName,
+      depositorPhone: body.depositorPhone,
+      notes: body.notes,
+      term: body.term,
+    });
+    return NextResponse.json({ success: true, receipt });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to save this receipt.";
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
 

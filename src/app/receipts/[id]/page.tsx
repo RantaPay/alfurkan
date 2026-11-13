@@ -1,6 +1,7 @@
 "use client";
 import { Dialog } from "@/components/ui/dialog";
 
+import { EditReceiptDialog } from "@/components/receipts/EditReceiptDialog";
 import { ReceiptDocument } from "@/components/receipts/ReceiptDocument";
 import { Receipt, SchoolProfile } from "@/lib/types";
 import { formatNaira } from "@/lib/utils";
@@ -13,11 +14,13 @@ import {
   Download,
   Loader2,
   MessageSquare,
+  Pencil,
   Printer,
   Share2,
   ShieldAlert,
   X
 } from "lucide-react";
+import { elementToPdfFile, shareReceiptFile, whatsappPhone } from "@/lib/share-receipt";
 import { loadJson, outboxAsReceipt, readOutbox, readSnapshot } from "@/lib/offline/store";
 import { returnLabel, safeReturnPath } from "@/lib/return-path";
 import Link from "next/link";
@@ -62,6 +65,7 @@ export default function ReceiptViewPage() {
   const [voidError, setVoidError] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [voidSuccess, setVoidSuccess] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -227,12 +231,25 @@ export default function ReceiptViewPage() {
     );
   }
 
-  const isFull = receipt.paymentStatus === "FULL";
-
-  // WhatsApp Pre-composed Message for parent
-  const parentWaUrl = `https://wa.me/234${receipt.parentPhone.replace(/^0/, "")}?text=${encodeURIComponent(
-    `Assalamu Alaikum ${receipt.parentName},\n\nFee Receipt Confirmation for ${receipt.studentName} (${receipt.regNumber}) at Alfurqan International Academy.\n\n• Receipt No: ${receipt.receiptNumber}\n• Amount Paid: ${formatNaira(receipt.amountPaid)}\n• Status: ${receipt.isVoided ? "CANCELLED / REVOKED" : isFull ? "PAID IN FULL (CLEARED)" : `PARTIAL PAYMENT (Balance Remaining: ${formatNaira(receipt.balanceRemaining)})`}\n• Date: ${receipt.date}\n\nView and download your clearance receipt:\n${typeof window !== "undefined" ? window.location.href : `https://alfurqan.edu.ng/receipts/${receipt.id}`}\n\nWarm regards,\nCashier & Accounts Department\nAlfurqan International Academy`
-  )}`;
+  const handleWhatsApp = async () => {
+    if (!receipt || isDownloadingPdf) return;
+    if (activeFormat !== "traditional") {
+      setActiveFormat("traditional");
+      await new Promise((resolve) => window.setTimeout(resolve, 150));
+    }
+    const element = document.getElementById("printable-receipt");
+    if (!(element instanceof HTMLElement)) return;
+    setIsDownloadingPdf(true);
+    try {
+      const file = await elementToPdfFile(element, `AlFurqan_Receipt_${receipt.receiptNumber}.pdf`);
+      await shareReceiptFile(file, whatsappPhone(receipt.parentPhone));
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("WhatsApp share failed", err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900 py-8 px-4 sm:px-6">
@@ -264,6 +281,16 @@ export default function ReceiptViewPage() {
                 <Share2 className="h-4 w-4" />
                 <span className="hidden sm:inline">{copied ? "Copied" : "Copy link"}</span>
               </button>
+              {!receipt.isVoided && !receipt.receiptNumber.startsWith("PENDING-") && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(true)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span>Edit</span>
+                </button>
+              )}
               {!receipt.isVoided ? (
                 <button
                   type="button"
@@ -329,20 +356,31 @@ export default function ReceiptViewPage() {
                 <span className="sm:hidden">{isDownloadingPdf ? "Saving" : "PDF"}</span>
                 <span className="hidden sm:inline">{isDownloadingPdf ? "Saving PDF" : "Download PDF"}</span>
               </button>
-              <a
-                href={parentWaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white min-[840px]:px-4 ${
+              <button
+                type="button"
+                onClick={handleWhatsApp}
+                disabled={isDownloadingPdf}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-50 min-[840px]:px-4 ${
                   receipt.isVoided ? "bg-slate-500 hover:bg-slate-600" : "bg-[#25D366] hover:bg-[#1EBE5D]"
                 }`}
               >
                 <MessageSquare className="h-4 w-4" />
                 <span className="truncate">{receipt.isVoided ? "Notice" : "WhatsApp"}</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>
+
+        {isEditOpen && (
+          <EditReceiptDialog
+            receipt={receipt}
+            onClose={() => setIsEditOpen(false)}
+            onSaved={(updated) => {
+              setReceipt(updated);
+              setIsEditOpen(false);
+            }}
+          />
+        )}
 
         {/* Void Success Notification Toast */}
         {voidSuccess && (

@@ -98,7 +98,8 @@ export async function downloadForOffline(): Promise<string> {
   if (!response.ok || !data.success) throw new Error(data.error || "Unable to download the accounts copy.");
   await writeSnapshot(data.snapshot);
   const receiptIds = Array.isArray(data.snapshot.receipts) ? data.snapshot.receipts.map((receipt: { id?: string }) => receipt.id || "").filter(Boolean) : [];
-  await precacheApplication(receiptIds);
+  const studentIds = Array.isArray(data.snapshot.students) ? data.snapshot.students.map((student: { id?: string }) => student.id || "").filter(Boolean) : [];
+  await precacheApplication(receiptIds, studentIds);
   publish();
   await syncOutbox();
   return data.snapshot.savedAt as string;

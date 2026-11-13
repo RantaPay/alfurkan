@@ -6,8 +6,20 @@ import { useReport } from "@/features/reports/useReport";
 import { formatNaira } from "@/lib/utils";
 import { Filter } from "lucide-react";
 import { ReceiptLink } from "@/features/shared/ReceiptLink";
+import { useCurrentPath } from "@/features/shared/usePageQuery";
+import { studentHref } from "@/lib/return-path";
+import Link from "next/link";
 
 type Props = { form: ReturnType<typeof useReport> };
+
+function StudentReceiptName({ id, name }: { id: string; name: string }) {
+  const here = useCurrentPath();
+  return (
+    <Link href={studentHref(id, here)} className="text-sm font-bold text-slate-900 hover:text-[#075E54] hover:underline sm:text-base">
+      {name}
+    </Link>
+  );
+}
 
 export function ReportStudentsTable({ form }: Props) {
   const { students, loading, hideSensitive, handleResetFilters, paymentSlice } = form;
@@ -59,13 +71,7 @@ export function ReportStudentsTable({ form }: Props) {
                   <tr key={student.id} className="hover:bg-slate-50/70">
                     <td className="px-3 py-3 font-mono text-xs text-slate-400">{index + 1}</td>
                     <td className="px-3 py-3">
-                      {latest ? (
-                        <ReceiptLink id={latest.id} className="text-sm font-bold text-slate-900 hover:text-[#075E54] hover:underline sm:text-base">
-                          {student.fullName}
-                        </ReceiptLink>
-                      ) : (
-                        <div className="text-sm font-bold text-slate-900 sm:text-base">{student.fullName}</div>
-                      )}
+                      <StudentReceiptName id={student.id} name={student.fullName} />
                       <div className="font-mono text-xs text-slate-500">{student.regNumber}</div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                         {student.receipts.length ? student.receipts.map((receipt) => (

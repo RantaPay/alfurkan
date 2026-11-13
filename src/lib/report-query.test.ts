@@ -28,6 +28,9 @@ test("class levels and arms do not swallow a neighbouring class", () => {
   assert.deepEqual(splitClassName("SS 1 Science"), { level: "SS 1", arm: "Science" });
   assert.notEqual(splitClassName("SS 10 A").level, "SS 1");
   assert.equal(canonicalFeeName({ name: "Sport Wears", category: "PTA" }), "Sport Wears");
+  assert.equal(canonicalFeeName({ name: "AHIS fees", category: "Other" }), "AHIS");
+  assert.equal(canonicalFeeName({ name: "ahis", category: "Other" }), "AHIS");
+  assert.equal(canonicalFeeName({ name: "Badge fee", category: "Other" }), "Badge fee");
 });
 
 test("report filters class, arm, fee, bank, and dates, and keeps the receipt link", () => {

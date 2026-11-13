@@ -12,6 +12,10 @@ export function receiptHref(id: string, from: string): string {
   return `/receipts/${encodeURIComponent(id)}?from=${encodeURIComponent(from || "/")}`;
 }
 
+export function studentHref(id: string, from: string): string {
+  return `/students/${encodeURIComponent(id)}?from=${encodeURIComponent(from || "/students")}`;
+}
+
 export function safeReturnPath(value: string | null | undefined, fallback = "/"): string {
   if (!value) return fallback;
   const path = value.trim();
