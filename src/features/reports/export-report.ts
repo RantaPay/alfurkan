@@ -1,5 +1,6 @@
 import type { ReportStudentRow } from "@/lib/report-query";
 import type { ReportSummary, SchoolProfile } from "@/lib/types";
+import * as XLSX from "xlsx";
 export type ReportExport = {
   students: ReportStudentRow[];
   summary: ReportSummary | null;
@@ -14,57 +15,43 @@ export type ReportExport = {
   toDate: string;
   session: string;
 };
-// Export to CSV Function
-export function exportReportCSV({ students, classFilter, armFilter, bankFilter, statusFilter, feeFilter, term, fromDate, toDate }: ReportExport) {
+export function exportReportExcel({ students, classFilter, armFilter, bankFilter, statusFilter, feeFilter, term, fromDate, toDate }: ReportExport) {
   if (!students.length) return;
 
-  const headers = [
-    "Student Name",
-    "Registration Number",
-    "Class",
-    "Parent Name",
-    "Parent Phone",
-    "Receipt Numbers",
-    "Receiving Bank",
-    "Received In Filter (NGN)",
-    "Term Bill (NGN)",
-    "Outstanding Debt (NGN)",
-    "Payment Status",
-    "Last Payment Date",
+  const rows = students.map((student) => ({
+    "Student Name": student.fullName,
+    "Registration Number": student.regNumber,
+    Class: student.class,
+    "Parent Name": student.parentName || "",
+    "Parent Phone": student.parentPhone || "",
+    "Receipt Numbers": student.receipts.map((receipt) => receipt.receiptNumber).join("; "),
+    "Receiving Bank": student.paymentBank || "N/A",
+    "Received In Filter (NGN)": student.receivedAmount,
+    "Outstanding Debt (NGN)": student.balanceRemaining,
+    "Payment Status": student.status,
+    "Last Payment Date": student.lastPaymentDate || "N/A",
+  }));
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  sheet["!cols"] = [
+    { wch: 28 },
+    { wch: 20 },
+    { wch: 16 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 28 },
+    { wch: 20 },
+    { wch: 24 },
+    { wch: 22 },
+    { wch: 16 },
+    { wch: 18 },
   ];
-
-  const rows = students.map((s) => [
-    `"${s.fullName.replace(/"/g, "\"\"")}"`,
-    `"${s.regNumber}"`,
-    `"${s.class}"`,
-    `"${(s.parentName || "").replace(/"/g, "\"\"")}"`,
-    `"${s.parentPhone}"`,
-    `"${s.receipts.map((receipt) => receipt.receiptNumber).join("; ")}"`,
-    `"${s.paymentBank || "N/A"}"`,
-    s.receivedAmount,
-    s.totalTermBill,
-    s.balanceRemaining,
-    s.status,
-    s.lastPaymentDate || "N/A",
-  ]);
-
-  const csvContent =
-    "data:text/csv;charset=utf-8," +
-    [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-
-  const safeClass = classFilter.replace(/\s+/g, "_");
-  const safeBank = bankFilter.replace(/\s+/g, "_");
-  link.setAttribute(
-    "download",
-    `AlFurqan_${safeClass}_${armFilter}_${safeBank}_${feeFilter.replace(/\s+/g, "_")}_${statusFilter}_${term.replace(/\s+/g, "_")}_${fromDate || "start"}_${toDate || "end"}_${new Date().toISOString().split("T")[0]}.csv`
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Payments");
+  const safe = (value: string) => value.replace(/[^\w.-]+/g, "_");
+  XLSX.writeFile(
+    book,
+    `AlFurqan_${safe(classFilter)}_${safe(armFilter)}_${safe(bankFilter)}_${safe(feeFilter)}_${safe(statusFilter)}_${safe(term)}_${fromDate || "start"}_${toDate || "end"}_${new Date().toISOString().split("T")[0]}.xlsx`,
   );
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }
 
 

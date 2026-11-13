@@ -18,7 +18,7 @@ import { Suspense } from "react";
 
 function ReportsScreen() {
   const form = useReport();
-  const { error, reload, students, hideSensitive, toggleSensitive, handleExportCSV, isDownloadingPdf, handleDownloadPDF } = form;
+  const { error, reload, students, hideSensitive, toggleSensitive, handleExportExcel, isDownloadingPdf, handleDownloadPDF } = form;
   return (
     <AuthGuard>
       <SidebarLayout>
@@ -63,12 +63,12 @@ function ReportsScreen() {
 
             <button
               type="button"
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               disabled={students.length === 0}
               className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileSpreadsheet className="h-4.5 w-4.5 text-emerald-600" />
-              <span>Download Excel/CSV</span>
+              <span>Download Excel</span>
             </button>
 
             <button

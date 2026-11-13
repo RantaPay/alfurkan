@@ -5,7 +5,7 @@ import type { AccountReportApplied, AccountReportOptions, ReportStudentRow } fro
 import type { ReportSummary, SchoolProfile } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { usePageQuery } from "@/features/shared/usePageQuery";
-import { exportReportCSV, exportReportPDF } from "./export-report";
+import { exportReportExcel, exportReportPDF } from "./export-report";
 
 type ReportPayload = {
   students: ReportStudentRow[];
@@ -111,7 +111,7 @@ export function useReport() {
     session: applied?.session || school?.currentSession || "",
   };
 
-  const handleExportCSV = () => exportReportCSV(exportInput);
+  const handleExportExcel = () => exportReportExcel(exportInput);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const handleDownloadPDF = async () => {
     if (!students.length) return;
@@ -130,6 +130,6 @@ export function useReport() {
     bankFilter, setBankFilter, statusFilter, setStatusFilter, feeFilter, setFeeFilter,
     fromDate, setFromDate, toDate, setToDate, students, summary, school, options, applied,
     loading, hideSensitive, toggleSensitive, handleResetFilters, hasActiveFilters, paymentSlice,
-    handleExportCSV, isDownloadingPdf, handleDownloadPDF,
+    handleExportExcel, isDownloadingPdf, handleDownloadPDF,
   };
 }
