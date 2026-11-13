@@ -1,4 +1,5 @@
 import { isPaymentPeriod, type PaymentPeriod } from "@/lib/fee-ledger";
+import { canonicalExamName, examCharge, paidTowardExam, readStoredExamFees } from "@/lib/exam-fees";
 import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod } from "@/lib/payment-period";
 import { prisma } from "@/lib/prisma";
 import {
@@ -132,6 +133,14 @@ export interface CreateReceiptInput {
   session?: string;
   clientReceiptId?: string;
   confirmDuplicate?: boolean;
+}
+
+function examFeesOn(school: { concessionsJson?: string | null } | null) {
+  try {
+    return JSON.parse(school?.concessionsJson || "{}")._examFees;
+  } catch {
+    return null;
+  }
 }
 
 function missingClientColumn(error: unknown): boolean {
@@ -355,18 +364,24 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
     const securityHash = `AIA-HASH-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const defaultNotes = `${paymentStatus === "FULL" ? "Full payment cleared" : "Partial payment recorded"}. Verified by Accounts.`;
 
+    const examFees = readStoredExamFees(examFeesOn(school));
+    const examPaidOnReceipt = new Map<string, number>();
     const receiptItemsData = allocatedItems.map((it) => {
       const category = it.category as keyof typeof obligations;
       const due = obligations[category];
       const itemTerm = isTermPeriod(it.paymentTerm) ? it.paymentTerm : currentTerm;
       const lineBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, itemTerm, currentTerm);
+      const examName = canonicalExamName(it.name);
+      const alreadyPaid = examName ? paidTowardExam(priorReceipts, examName) + (examPaidOnReceipt.get(examName) || 0) : 0;
+      const examLine = examName ? examCharge(it.name, Number(it.amount), alreadyPaid, examFees) : null;
+      if (examName) examPaidOnReceipt.set(examName, (examPaidOnReceipt.get(examName) || 0) + Number(it.amount));
       return {
         name: it.name.trim(),
         category: it.category,
         amount: Number(it.amount),
         description: it.description || null,
         paymentTerm: itemTerm,
-        ...(student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
+        ...(examLine ? examLine : student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
       };
     });
 
@@ -530,13 +545,16 @@ export async function updateReceipt(receiptId: string, input: {
             const due = obligations[category];
             const itemTerm = isTermPeriod(item.paymentTerm) ? item.paymentTerm : currentTerm;
             const lineBalance = calculatePeriodFeeBalance(obligations, projected, itemTerm, currentTerm);
+            const examName = canonicalExamName(item.name);
+            const alreadyPaid = examName ? paidTowardExam(earlier, examName) : 0;
+            const examLine = examName ? examCharge(item.name, Number(item.amount), alreadyPaid, readStoredExamFees(examFeesOn(school))) : null;
             return {
               name: item.name.trim(),
               category: item.category,
               amount: Number(item.amount),
               description: item.description || null,
               paymentTerm: itemTerm,
-              ...(student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
+              ...(examLine ? examLine : student && due !== undefined ? { chargeAmount: due, chargeBalance: lineBalance.balances[category] } : {}),
             };
           }),
         },

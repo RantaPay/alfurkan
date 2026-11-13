@@ -2,7 +2,7 @@
 
 import { Dialog } from "@/components/ui/dialog";
 import { OTHER_FEE_OPTIONS, PRESET_FEE_OPTIONS, STANDARD_FEE_OPTIONS } from "@/features/receipts/fee-options";
-import { DEFAULT_EXAM_FEES, examFeeAmount } from "@/lib/exam-fees";
+
 import { loadJson } from "@/lib/offline/store";
 import type { BankAccountConfig, Receipt, ReceiptItem } from "@/lib/types";
 import { useEffect, useState } from "react";
@@ -27,16 +27,12 @@ export function EditReceiptDialog({ receipt, onClose, onSaved }: { receipt: Rece
   const [depositorPhone, setDepositorPhone] = useState(receipt.parentPhone || "");
   const [term, setTerm] = useState(receipt.term);
   const [banks, setBanks] = useState<BankAccountConfig[]>([]);
-  const [examFees, setExamFees] = useState<Record<string, number>>({ ...DEFAULT_EXAM_FEES });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadJson("/api/settings")
-      .then((data) => {
-        setBanks(data.school?.bankAccounts || []);
-        setExamFees({ ...DEFAULT_EXAM_FEES, ...(data.school?.examFees || {}) });
-      })
+      .then((data) => setBanks(data.school?.bankAccounts || []))
       .catch(() => setBanks([]));
   }, []);
 
@@ -94,8 +90,7 @@ export function EditReceiptDialog({ receipt, onClose, onSaved }: { receipt: Rece
                     onChange={(event) => {
                       const found = STANDARD_FEE_OPTIONS.find((option) => option.name === event.target.value);
                       if (!found) return;
-                      const price = examFeeAmount(found.name, examFees);
-                      setItems(items.map((row, rowIndex) => rowIndex === index ? { ...row, name: found.name, category: found.category, ...(price > 0 ? { amount: price } : {}) } : row));
+                      setItems(items.map((row, rowIndex) => rowIndex === index ? { ...row, name: found.name, category: found.category, amount: 0 } : row));
                     }}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
                   >

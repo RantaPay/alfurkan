@@ -1,3 +1,4 @@
+import { canonicalExamName } from "./exam-fees";
 import type { ReceiptItem } from "./types";
 
 const PREVIOUS_DEBT = /previous\s*term\s*debt|\b3t\s*debt\b/i;
@@ -65,6 +66,11 @@ export function buildReceiptNarration(input: {
     if (PREVIOUS_DEBT.test(item.name || "")) {
       const previous = previousTermContext(input.currentTerm, input.session);
       phrases.push(`payment of ${previous.term} ${previous.session}`.trim());
+      continue;
+    }
+    const examName = canonicalExamName(item.name || "");
+    if (examName && item.chargeBalance !== undefined) {
+      phrases.push(Number(item.chargeBalance) > 0 ? `part payment of ${item.name}` : `full payment of ${item.name}`);
       continue;
     }
     if (item.name) phrases.push(`payment of ${item.name}`);

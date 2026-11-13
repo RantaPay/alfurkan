@@ -30,6 +30,16 @@ test("narration separates school fees, other items, and previous-term debt", () 
   assert.equal(narration, "part payment of school fees, payment of Textbooks, payment of School Uniform, payment of 3rd Term 2025/2026");
 });
 
+test("a smaller exam payment names the part payment and keeps the rest", () => {
+  const narration = buildReceiptNarration({
+    currentTerm: "1st Term",
+    session: "2026/2027",
+    hasStudent: true,
+    items: [{ name: "WAEC SSCE", category: "Other", amount: 30000, chargeBalance: 17000 }],
+  });
+  assert.equal(narration, "part payment of WAEC SSCE");
+});
+
 test("cleared school fees and a single other item stay specific", () => {
   const narration = buildReceiptNarration({
     currentTerm: "2nd Term",
