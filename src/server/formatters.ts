@@ -1,3 +1,4 @@
+import { readStoredExamFees } from "@/lib/exam-fees";
 import {
   DEFAULT_CONCESSIONS
 } from "@/lib/student-importer";
@@ -139,14 +140,17 @@ export function formatSchool(s: any): SchoolProfile {
   }
 
   let concessions: ConcessionCategoryConfig = DEFAULT_CONCESSIONS;
+  let examFees = readStoredExamFees(null);
   if (s.concessionsJson) {
     try {
       const parsed = JSON.parse(s.concessionsJson);
       if (parsed && typeof parsed === "object") {
+        const { _examFees, ...rest } = parsed;
         concessions = {
           ...DEFAULT_CONCESSIONS,
-          ...parsed,
+          ...rest,
         };
+        examFees = readStoredExamFees(_examFees);
       }
     } catch {
       // fallback
@@ -184,6 +188,7 @@ export function formatSchool(s: any): SchoolProfile {
     feeStructure,
     feeScheduleHistory,
     concessions,
+    examFees,
   };
 }
 

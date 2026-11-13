@@ -1,14 +1,15 @@
 "use client";
 import { OTHER_FEE_OPTIONS, PRESET_FEE_OPTIONS, STANDARD_FEE_OPTIONS } from "@/features/receipts/fee-options";
+import { examFeeAmount } from "@/lib/exam-fees";
 import { useReceiptForm } from "@/features/receipts/useReceiptForm";
 import { formatNaira } from "@/lib/utils";
 import {
   Plus,
   Trash2
 } from "lucide-react";
-type Props = { form: Pick<ReturnType<typeof useReceiptForm>, "searchQuery" | "setSearchQuery" | "selectedStudent" | "depositorName" | "setDepositorName" | "isExternalPayer" | "setIsExternalPayer" | "externalPayerName" | "setExternalPayerName" | "items" | "setItems" | "totalAmount" | "handleAddItem" | "handleRemoveItem" | "handleUpdateItemAmount"> };
+type Props = { form: Pick<ReturnType<typeof useReceiptForm>, "searchQuery" | "setSearchQuery" | "selectedStudent" | "depositorName" | "setDepositorName" | "isExternalPayer" | "setIsExternalPayer" | "externalPayerName" | "setExternalPayerName" | "items" | "setItems" | "examFees" | "totalAmount" | "handleAddItem" | "handleRemoveItem" | "handleUpdateItemAmount"> };
 export function ReceiptItemsSection({ form }: Props) {
-  const { searchQuery, setSearchQuery, selectedStudent, depositorName, setDepositorName, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, items, setItems, totalAmount, handleAddItem, handleRemoveItem, handleUpdateItemAmount } = form;
+  const { searchQuery, setSearchQuery, selectedStudent, depositorName, setDepositorName, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, items, setItems, examFees, totalAmount, handleAddItem, handleRemoveItem, handleUpdateItemAmount } = form;
   return (<>
     {/* STEP 2: Itemized Fee Categories */}
     <div>
@@ -90,10 +91,11 @@ export function ReceiptItemsSection({ form }: Props) {
                       if (!val) return;
                       const found = STANDARD_FEE_OPTIONS.find((p) => p.name === val);
                       if (found) {
+                        const price = examFeeAmount(found.name, examFees);
                         setItems((prev) =>
                           prev.map((it, i) =>
                             i === idx
-                              ? { ...it, name: found.name, category: found.category }
+                              ? { ...it, name: found.name, category: found.category, ...(price > 0 ? { amount: price } : {}) }
                               : it
                           )
                         );

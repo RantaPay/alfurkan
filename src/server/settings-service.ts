@@ -1,3 +1,4 @@
+import { readStoredExamFees } from "@/lib/exam-fees";
 import { calculatePeriodFeeBalance, isTermPeriod } from "@/lib/payment-period";
 import { prisma } from "@/lib/prisma";
 import {
@@ -37,7 +38,7 @@ export async function getSchoolProfile(): Promise<SchoolProfile> {
 
 export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { feeRevisionNote?: string }): Promise<SchoolProfile> {
   const previousSchool = await prisma.schoolProfile.findUnique({ where: { id: "default" } });
-  const { bankAccounts, feeStructure, feeScheduleHistory, feeRevisionNote, concessions, ...rest } = updates;
+  const { bankAccounts, feeStructure, feeScheduleHistory, feeRevisionNote, concessions, examFees, ...rest } = updates;
   const prismaData: any = { ...rest };
 
   if (bankAccounts !== undefined) {
@@ -50,8 +51,18 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
     }
   }
 
-  if (concessions !== undefined) {
-    prismaData.concessionsJson = JSON.stringify(concessions);
+  if (concessions !== undefined || examFees !== undefined) {
+    let stored: Record<string, unknown> = {};
+    try {
+      stored = JSON.parse(previousSchool?.concessionsJson || "{}");
+    } catch {
+      stored = {};
+    }
+    const { _examFees, ...storedConcessions } = stored;
+    prismaData.concessionsJson = JSON.stringify({
+      ...(concessions !== undefined ? concessions : storedConcessions),
+      _examFees: examFees !== undefined ? readStoredExamFees(examFees) : readStoredExamFees(_examFees),
+    });
   }
 
   if (feeStructure !== undefined) {

@@ -158,6 +158,7 @@ export interface SchoolProfile {
   feeStructure?: ClassFeeConfig[];
   feeScheduleHistory?: FeeScheduleHistoryEntry[];
   concessions?: ConcessionCategoryConfig;
+  examFees?: Record<string, number>;
 }
 
 export interface BankReconciliationItem {

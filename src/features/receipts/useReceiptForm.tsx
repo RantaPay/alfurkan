@@ -4,6 +4,7 @@ import { useStudentSearch } from "@/features/students/useStudentSearch";
 import { isPaymentPeriod, type PaymentPeriod } from "@/lib/fee-ledger";
 import { allocatePeriodItems, calculatePeriodFeeBalance, isTermPeriod, type TermPeriod } from "@/lib/payment-period";
 import { getStudentFeeObligations } from "@/lib/student-importer";
+import { DEFAULT_EXAM_FEES } from "@/lib/exam-fees";
 import { ClassFeeConfig, ConcessionCategoryConfig, FeeCategory, Receipt, ReceiptItem, Student } from "@/lib/types";
 import confetti from "canvas-confetti";
 import { findMatchingReceipt } from "@/lib/receipt-duplicate";
@@ -81,6 +82,7 @@ export function useReceiptForm({
     { id: string; bankName: string; accountNumber: string; isDefault?: boolean }[]
   >([]);
   const [feeStructure, setFeeStructure] = useState<ClassFeeConfig[]>([]);
+  const [examFees, setExamFees] = useState<Record<string, number>>({ ...DEFAULT_EXAM_FEES });
   const [concessions, setConcessions] = useState<ConcessionCategoryConfig | undefined>(undefined);
   const [activeTerm, setActiveTerm] = useState<TermPeriod>("1st Term");
   const [activeSession, setActiveSession] = useState("");
@@ -103,6 +105,7 @@ export function useReceiptForm({
               setFeeStructure(d.school.feeStructure);
             }
             setConcessions(d.school?.concessions);
+            setExamFees({ ...DEFAULT_EXAM_FEES, ...(d.school?.examFees || {}) });
             setActiveTerm(isTermPeriod(d.school?.currentTerm) ? d.school.currentTerm : "1st Term");
             setPaymentPeriod(isPaymentPeriod(d.school?.currentTerm) ? d.school.currentTerm : "1st Term");
             setActiveSession((d.school?.currentSession || "").replace(/\bAcademic\s*/gi, "").trim());
@@ -356,5 +359,5 @@ export function useReceiptForm({
   };
 
 
-  return { searchQuery, setSearchQuery, searchResults, searchError, isSearching, selectedStudent, setSelectedStudent, depositorName, setDepositorName, depositorPhone, setDepositorPhone, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, externalCategory, setExternalCategory, paymentMethod, setPaymentMethod, receivingBank, setReceivingBank, receivingDate, setReceivingDate, bankReference, setBankReference, notes, setNotes, isSubmitting, errorMessage, detectedDuplicate, setDetectedDuplicate, isCheckingDuplicate, items, setItems, configuredBanks, activeTerm, activeSession, paymentPeriod, setPaymentPeriod, totalAmount, isLedgerReady, obligations, projectedLedger, studentTotalBill, currentAllocatedTotal, currentBalance, projectedBalance, willBeFull, handleAddItem, handleRemoveItem, handleUpdateItemAmount, handleSubmit, isOpen, onClose };
+  return { searchQuery, setSearchQuery, searchResults, searchError, isSearching, selectedStudent, setSelectedStudent, depositorName, setDepositorName, depositorPhone, setDepositorPhone, isExternalPayer, setIsExternalPayer, externalPayerName, setExternalPayerName, externalCategory, setExternalCategory, paymentMethod, setPaymentMethod, receivingBank, setReceivingBank, receivingDate, setReceivingDate, bankReference, setBankReference, notes, setNotes, isSubmitting, errorMessage, detectedDuplicate, setDetectedDuplicate, isCheckingDuplicate, items, setItems, examFees, configuredBanks, activeTerm, activeSession, paymentPeriod, setPaymentPeriod, totalAmount, isLedgerReady, obligations, projectedLedger, studentTotalBill, currentAllocatedTotal, currentBalance, projectedBalance, willBeFull, handleAddItem, handleRemoveItem, handleUpdateItemAmount, handleSubmit, isOpen, onClose };
 }

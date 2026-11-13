@@ -2,6 +2,7 @@
 import { useConfirmation } from "@/components/ui/confirmation";
 
 import { loadJson } from "@/lib/offline/store";
+import { DEFAULT_EXAM_FEES } from "@/lib/exam-fees";
 import { DEFAULT_CONCESSIONS } from "@/lib/student-importer";
 import {
   BankAccountConfig,
@@ -46,6 +47,7 @@ export function useSettingsForm() {
     bankAccounts: [],
     feeStructure: [],
     concessions: DEFAULT_CONCESSIONS,
+    examFees: { ...DEFAULT_EXAM_FEES },
   });
 
   // Staff users state
@@ -95,6 +97,7 @@ export function useSettingsForm() {
   const [selectedHistorySnapshot, setSelectedHistorySnapshot] = useState<FeeScheduleHistoryEntry | null>(null);
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
   const [savingFees, setSavingFees] = useState(false);
+  const [savingExamFees, setSavingExamFees] = useState(false);
   const [savingConcessions, setSavingConcessions] = useState(false);
 
   // Load Settings and Staff
@@ -393,6 +396,34 @@ export function useSettingsForm() {
     }
   };
 
+  const handleExamFeeChange = (name: string, amount: number) => {
+    setSchool({ ...school, examFees: { ...DEFAULT_EXAM_FEES, ...(school.examFees || {}), [name]: amount } });
+  };
+
+  const handleSaveExamFees = async () => {
+    setErrorMessage("");
+    setSavingExamFees(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examFees: { ...DEFAULT_EXAM_FEES, ...(school.examFees || {}) } }),
+      });
+      const data = await res.json();
+      if (data.success && data.school) {
+        setSchool(data.school);
+        showNotification("Exam fees saved.");
+      } else {
+        setErrorMessage("Failed to save exam fees: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Network error saving exam fees");
+    } finally {
+      setSavingExamFees(false);
+    }
+  };
+
   const handleSaveConcessions = async () => {
     setErrorMessage("");
     setSavingConcessions(true);
@@ -551,5 +582,5 @@ export function useSettingsForm() {
   };
 
 
-  return { loadError, reloadSettings, confirmation, errorMessage, activeTab, setActiveTab, school, setSchool, staffUsers, loading, saving, savedSuccess, statusMessage, isBankModalOpen, setIsBankModalOpen, editingBankIndex, bankModalData, setBankModalData, isStaffModalOpen, setIsStaffModalOpen, staffModalData, setStaffModalData, isResetPasswordModalOpen, setIsResetPasswordModalOpen, resetTargetUser, newPasswordInput, setNewPasswordInput, isSavingPassword, feeRevisionNote, setFeeRevisionNote, selectedHistorySnapshot, setSelectedHistorySnapshot, isSnapshotModalOpen, setIsSnapshotModalOpen, savingFees, savingConcessions, syncSchoolToDb, handleLogoUpload, handleSaveSettings, handleOpenAddBank, handleOpenEditBank, handleSaveBankModal, handleDeleteBank, handleSetDefaultBank, handleFeeChange, handleAddClassLevel, handleRemoveClassLevel, handleLoadAllSchoolClasses, handleSaveFeeSchedule, handleSaveConcessions, handleRestoreSnapshot, handleOpenAddStaff, handleSaveStaff, handleOpenResetPassword, handleSaveResetPassword, handleDeleteStaff };
+  return { loadError, reloadSettings, confirmation, errorMessage, activeTab, setActiveTab, school, setSchool, staffUsers, loading, saving, savedSuccess, statusMessage, isBankModalOpen, setIsBankModalOpen, editingBankIndex, bankModalData, setBankModalData, isStaffModalOpen, setIsStaffModalOpen, staffModalData, setStaffModalData, isResetPasswordModalOpen, setIsResetPasswordModalOpen, resetTargetUser, newPasswordInput, setNewPasswordInput, isSavingPassword, feeRevisionNote, setFeeRevisionNote, selectedHistorySnapshot, setSelectedHistorySnapshot, isSnapshotModalOpen, setIsSnapshotModalOpen, savingFees, savingExamFees, savingConcessions, handleExamFeeChange, handleSaveExamFees, syncSchoolToDb, handleLogoUpload, handleSaveSettings, handleOpenAddBank, handleOpenEditBank, handleSaveBankModal, handleDeleteBank, handleSetDefaultBank, handleFeeChange, handleAddClassLevel, handleRemoveClassLevel, handleLoadAllSchoolClasses, handleSaveFeeSchedule, handleSaveConcessions, handleRestoreSnapshot, handleOpenAddStaff, handleSaveStaff, handleOpenResetPassword, handleSaveResetPassword, handleDeleteStaff };
 }

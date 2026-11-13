@@ -2,6 +2,7 @@
 import { ConcessionsSection } from "@/features/settings/components/ConcessionsSection";
 import { FeeHistorySection } from "@/features/settings/components/FeeHistorySection";
 
+import { DEFAULT_EXAM_FEES } from "@/lib/exam-fees";
 import { useSettingsForm } from "@/features/settings/useSettingsForm";
 import {
   Calendar,
@@ -11,9 +12,9 @@ import {
   Save,
   Trash2
 } from "lucide-react";
-type Props = { form: Pick<ReturnType<typeof useSettingsForm>, "activeTab" | "school" | "setSchool" | "feeRevisionNote" | "setFeeRevisionNote" | "setSelectedHistorySnapshot" | "setIsSnapshotModalOpen" | "savingFees" | "savingConcessions" | "handleFeeChange" | "handleAddClassLevel" | "handleRemoveClassLevel" | "handleLoadAllSchoolClasses" | "handleSaveFeeSchedule" | "handleSaveConcessions" | "handleRestoreSnapshot"> };
+type Props = { form: Pick<ReturnType<typeof useSettingsForm>, "activeTab" | "school" | "setSchool" | "feeRevisionNote" | "setFeeRevisionNote" | "setSelectedHistorySnapshot" | "setIsSnapshotModalOpen" | "savingFees" | "savingExamFees" | "savingConcessions" | "handleFeeChange" | "handleExamFeeChange" | "handleAddClassLevel" | "handleRemoveClassLevel" | "handleLoadAllSchoolClasses" | "handleSaveFeeSchedule" | "handleSaveExamFees" | "handleSaveConcessions" | "handleRestoreSnapshot"> };
 export function FeeScheduleSection({ form }: Props) {
-  const { activeTab, school, setSchool, feeRevisionNote, setFeeRevisionNote, savingFees, handleFeeChange, handleAddClassLevel, handleRemoveClassLevel, handleLoadAllSchoolClasses, handleSaveFeeSchedule } = form;
+  const { activeTab, school, setSchool, feeRevisionNote, setFeeRevisionNote, savingFees, savingExamFees, handleFeeChange, handleExamFeeChange, handleAddClassLevel, handleRemoveClassLevel, handleLoadAllSchoolClasses, handleSaveFeeSchedule, handleSaveExamFees } = form;
   return (<>
     {/* TAB 4: Class Fee Schedule */}
     {activeTab === "fees" && (
@@ -96,6 +97,34 @@ export function FeeScheduleSection({ form }: Props) {
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-[#075E54] focus:outline-none"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Exam fees</h3>
+                <p className="text-xs text-slate-500">These amounts fill in when a cashier selects the exam on a receipt.</p>
+              </div>
+              <button type="button" onClick={handleSaveExamFees} disabled={savingExamFees} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#075E54] px-3 text-xs font-bold text-white disabled:opacity-50">
+                <Save className="h-3.5 w-3.5" />
+                {savingExamFees ? "Saving" : "Save exam fees"}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+              {Object.keys(DEFAULT_EXAM_FEES).map((name) => (
+                <label key={name} className="text-xs font-semibold text-slate-600">
+                  {name}
+                  <input
+                    aria-label={name}
+                    type="number"
+                    min="0"
+                    value={school.examFees?.[name] ?? DEFAULT_EXAM_FEES[name]}
+                    onChange={(event) => handleExamFeeChange(name, Number(event.target.value) || 0)}
+                    className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900"
+                  />
+                </label>
+              ))}
             </div>
           </div>
 
