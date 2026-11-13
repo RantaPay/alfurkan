@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
+import { openOffline } from "@/lib/offline/connection";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -16,7 +17,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     if (!loading && !user) {
       const redirectParam = pathname && pathname !== "/" ? `?redirect=${encodeURIComponent(pathname)}` : "";
-      router.push(`/login${redirectParam}`);
+      const href = `/login${redirectParam}`;
+      if (!openOffline(href)) router.push(href);
     }
   }, [user, loading, router, pathname]);
 

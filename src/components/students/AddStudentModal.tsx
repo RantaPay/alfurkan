@@ -1,6 +1,7 @@
 "use client";
 import { Dialog } from "@/components/ui/dialog";
 
+import { loadJson } from "@/lib/offline/store";
 import { getBillForClass } from "@/lib/student-importer";
 import { formatNaira } from "@/lib/utils";
 import {
@@ -81,8 +82,7 @@ export function AddStudentModal({
   // Load fee structure from settings on open and auto-populate bill
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/settings")
-        .then((res) => res.json())
+      loadJson("/api/settings")
         .then((data) => {
           if (data.success && data.school?.feeStructure) {
             setFeeStructure(data.school.feeStructure);

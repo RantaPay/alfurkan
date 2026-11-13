@@ -1,6 +1,7 @@
 "use client";
 import { useConfirmation } from "@/components/ui/confirmation";
 
+import { loadJson } from "@/lib/offline/store";
 import { DEFAULT_CONCESSIONS } from "@/lib/student-importer";
 import {
   BankAccountConfig,
@@ -102,13 +103,12 @@ export function useSettingsForm() {
       try {
         setLoading(true);
         setLoadError("");
-        const [settingsRes, staffRes] = await Promise.all([
-          fetch("/api/settings"),
-          fetch("/api/staff"),
+        const [settingsData, staffData] = await Promise.all([
+          loadJson("/api/settings"),
+          loadJson("/api/staff"),
         ]);
 
-        const settingsData = await settingsRes.json();
-        if (!settingsRes.ok || !settingsData.success || !settingsData.school) throw new Error(settingsData.error || "Unable to load settings. Reload this page to try again.");
+        if (!settingsData.success || !settingsData.school) throw new Error(settingsData.error || "Unable to load settings. Reload this page to try again.");
         if (settingsData.success && settingsData.school) {
           setSchool({
             ...settingsData.school,
@@ -116,7 +116,6 @@ export function useSettingsForm() {
           });
         }
 
-        const staffData = await staffRes.json();
         if (staffData.success && staffData.users) {
           setStaffUsers(staffData.users);
         }

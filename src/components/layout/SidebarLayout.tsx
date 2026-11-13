@@ -1,6 +1,7 @@
 "use client";
 
 import { OfflineControls } from "@/components/offline/OfflineControls";
+import { openOffline } from "@/lib/offline/connection";
 import { Dialog } from "@/components/ui/dialog";
 import { useApiResource } from "@/features/shared/useApiResource";
 import { useAuth } from "@/lib/auth-context";
@@ -60,7 +61,7 @@ export function SidebarLayout({ children, onOpenIssueModal, schoolName: provided
   const handleIssueClick = () => {
     setIsMobileOpen(false);
     if (onOpenIssueModal) onOpenIssueModal();
-    else router.push("/?action=issue");
+    else if (!openOffline("/?action=issue")) router.push("/?action=issue");
   };
   const initials = user?.name.split(" ").filter(Boolean).map((name) => name[0]).slice(0, 2).join("").toUpperCase() || "AF";
 

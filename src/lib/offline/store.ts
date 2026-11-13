@@ -2,13 +2,14 @@
 
 import { buildAccountReport, type ReportQuery } from "@/lib/report-query";
 import { shouldUseSnapshot } from "@/lib/offline/sync-result";
-import type { Receipt, ReportSummary, SchoolProfile, Student } from "@/lib/types";
+import type { Receipt, ReportSummary, SchoolProfile, StaffUser, Student } from "@/lib/types";
 
 export interface OfflineSnapshot {
   savedAt: string;
   school: SchoolProfile;
   students: Student[];
   receipts: Receipt[];
+  staff?: StaffUser[];
 }
 
 export interface OutboxReceipt {
@@ -166,6 +167,11 @@ export async function readOfflineApi(url: string): Promise<{ success: true; [key
   const path = parsed.pathname;
 
   if (path === "/api/settings") return { success: true, school: snapshot.school };
+  if (path === "/api/staff") return { success: true, users: snapshot.staff || [] };
+  if (path === "/api/classes") {
+    const classes = Array.from(new Set(snapshot.students.map((student) => student.class).filter(Boolean))).sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+    return { success: true, count: classes.length, classes };
+  }
   if (path === "/api/students") {
     const query = (parsed.searchParams.get("query") || "").trim().toLowerCase();
     const students = query

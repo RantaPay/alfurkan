@@ -1,4 +1,5 @@
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { OfflineNavigation } from "@/components/pwa/OfflineNavigation";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AuthProvider } from "@/lib/auth-context";
 import type { Metadata } from "next";
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#F8FAFC] text-slate-900 font-sans">
-        <AuthProvider>{children}<RegisterServiceWorker /><InstallPrompt /></AuthProvider>
+        <AuthProvider>{children}<RegisterServiceWorker /><OfflineNavigation /><InstallPrompt /></AuthProvider>
       </body>
     </html>
   );

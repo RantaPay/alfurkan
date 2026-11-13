@@ -1,5 +1,6 @@
 "use client";
 
+import { setConnectionOnline } from "@/lib/offline/connection";
 import { useEffect, useState } from "react";
 
 async function probeConnection(): Promise<boolean> {
@@ -21,6 +22,7 @@ export function useConnection() {
     let cancelled = false;
     let fails = 0;
     const apply = (value: boolean) => {
+      setConnectionOnline(value);
       if (!cancelled) setOnline(value);
     };
     const check = async () => {

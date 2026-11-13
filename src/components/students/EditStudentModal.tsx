@@ -3,6 +3,7 @@ import { ConfirmationDialog, useConfirmation } from "@/components/ui/confirmatio
 import { Dialog } from "@/components/ui/dialog";
 import { InlineNotice } from "@/components/ui/feedback";
 
+import { loadJson } from "@/lib/offline/store";
 import {
   calculateStudentBill,
   DEFAULT_CONCESSIONS,
@@ -105,8 +106,7 @@ function StudentEditor({
   // Load fee schedule and concessions from settings to auto-fill bills
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/settings")
-        .then((r) => r.json())
+      loadJson("/api/settings")
         .then((d) => {
           if (d.success) {
             if (d.school?.feeStructure) {

@@ -10,6 +10,7 @@ import { findMatchingReceipt } from "@/lib/receipt-duplicate";
 import { loadJson, outboxAsReceipt, readOutbox, readSnapshot, saveOutbox } from "@/lib/offline/store";
 import { shouldUseSnapshot } from "@/lib/offline/sync-result";
 import { syncOutbox } from "@/lib/offline/sync";
+import { openOffline } from "@/lib/offline/connection";
 import { currentPath, receiptHref } from "@/lib/return-path";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -300,7 +301,8 @@ export function useReceiptForm({
       window.dispatchEvent(new Event("alfurqan-offline"));
       void syncOutbox();
       onClose();
-      router.push(receiptHref(clientReceiptId, currentPath(pathname || "/", searchParams)));
+      const pendingHref = receiptHref(clientReceiptId, currentPath(pathname || "/", searchParams));
+      if (!openOffline(pendingHref)) router.push(pendingHref);
     };
 
     if (!navigator.onLine) {
@@ -340,7 +342,8 @@ export function useReceiptForm({
       }
 
       onClose();
-      router.push(receiptHref(data.receipt.id, currentPath(pathname || "/", searchParams)));
+      const savedHref = receiptHref(data.receipt.id, currentPath(pathname || "/", searchParams));
+      if (!openOffline(savedHref)) router.push(savedHref);
     } catch (err: any) {
       if (shouldUseSnapshot(err, navigator.onLine)) {
         await queueOffline();

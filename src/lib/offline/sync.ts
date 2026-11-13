@@ -1,5 +1,6 @@
 "use client";
 
+import { precacheApplication } from "@/lib/offline/precache";
 import { classifySyncResult } from "@/lib/offline/sync-result";
 import { readOutbox, saveOutbox, writeSnapshot, type OutboxReceipt } from "@/lib/offline/store";
 
@@ -96,6 +97,8 @@ export async function downloadForOffline(): Promise<string> {
   const data = await response.json();
   if (!response.ok || !data.success) throw new Error(data.error || "Unable to download the accounts copy.");
   await writeSnapshot(data.snapshot);
+  const receiptIds = Array.isArray(data.snapshot.receipts) ? data.snapshot.receipts.map((receipt: { id?: string }) => receipt.id || "").filter(Boolean) : [];
+  await precacheApplication(receiptIds);
   publish();
   await syncOutbox();
   return data.snapshot.savedAt as string;
