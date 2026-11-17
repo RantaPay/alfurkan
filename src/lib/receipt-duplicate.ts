@@ -33,22 +33,32 @@ function itemKey(items?: { name: string }[]): string {
   return names.filter(Boolean).sort().join(", ");
 }
 
-function paymentDates(input: DuplicateQuery): { formattedDate: string; isoDate: string; raw: string } {
-  let receiptDate = new Date();
-  if (input.date) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
-      const [year, month, day] = input.date.split("-").map(Number);
-      receiptDate = new Date(year, month - 1, day, 12, 0, 0);
-    } else {
-      const parsed = new Date(input.date);
-      if (!isNaN(parsed.getTime())) receiptDate = parsed;
-    }
-  }
-  return {
-    formattedDate: receiptDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
-    isoDate: input.date ? input.date.split("T")[0] : receiptDate.toISOString().split("T")[0],
-    raw: input.date || "",
-  };
+const MONTHS: Record<string, string> = {
+  jan: "01", january: "01",
+  feb: "02", february: "02",
+  mar: "03", march: "03",
+  apr: "04", april: "04",
+  may: "05",
+  jun: "06", june: "06",
+  jul: "07", july: "07",
+  aug: "08", august: "08",
+  sep: "09", sept: "09", september: "09",
+  oct: "10", october: "10",
+  nov: "11", november: "11",
+  dec: "12", december: "12",
+};
+
+/** The day the money was paid. The day the receipt was issued is not part of this. */
+export function paymentDateKey(value?: string | null): string | null {
+  const raw = (value || "").trim();
+  if (!raw) return null;
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const written = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (!written) return null;
+  const month = MONTHS[written[2].toLowerCase()];
+  if (!month) return null;
+  return `${written[3]}-${month}-${written[1].padStart(2, "0")}`;
 }
 
 export function sameReceiptPayment(candidate: DuplicateCandidate, input: DuplicateQuery): boolean {
@@ -67,18 +77,9 @@ export function sameReceiptPayment(candidate: DuplicateCandidate, input: Duplica
     return false;
   }
 
-  const { formattedDate, isoDate, raw } = paymentDates(input);
-  const recordedIso = candidate.timestamp ? candidate.timestamp.split("T")[0] : "";
-  const recorded = candidate.timestamp ? new Date(candidate.timestamp) : null;
-  const recordedFormatted = recorded && !isNaN(recorded.getTime())
-    ? recorded.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-    : "";
-  const sameDate =
-    candidate.date.trim().toLowerCase() === formattedDate.trim().toLowerCase() ||
-    candidate.date.trim().toLowerCase() === raw.trim().toLowerCase() ||
-    (!!isoDate && recordedIso === isoDate) ||
-    (!!recordedFormatted && recordedFormatted.toLowerCase() === formattedDate.toLowerCase());
-  if (!sameDate) return false;
+  const savedPaymentDay = paymentDateKey(candidate.date);
+  const newPaymentDay = paymentDateKey(input.date);
+  if (!savedPaymentDay || savedPaymentDay !== newPaymentDay) return false;
   return itemKey(candidate.items) === itemKey(input.items);
 }
 
