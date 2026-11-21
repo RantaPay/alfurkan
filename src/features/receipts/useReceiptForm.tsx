@@ -164,11 +164,11 @@ export function useReceiptForm({
       selectedStudent.totalTermBill
     )
     : { Tuition: 0, Books: 0, Uniform: 0, PTA: 0 };
-  const currentLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentPeriod, activeTerm);
-  const projectedItems = allocatePeriodItems(items, paymentPeriod, activeTerm, obligations, priorReceipts);
+  const currentLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentPeriod, activeTerm, selectedStudent?.class);
+  const projectedItems = allocatePeriodItems(items, paymentPeriod, activeTerm, obligations, priorReceipts, selectedStudent?.class);
   const projectedLedger = calculatePeriodFeeBalance(obligations, [
     ...priorReceipts, { term: paymentPeriod, amountPaid: totalAmount, items: projectedItems },
-  ], paymentPeriod, activeTerm);
+  ], paymentPeriod, activeTerm, selectedStudent?.class);
   const studentTotalBill = currentLedger.totalBill;
   const currentAllocatedTotal = currentLedger.totalPaid;
   const currentBalance = currentLedger.balanceRemaining;

@@ -248,7 +248,7 @@ export async function updateStudent(
     where: { studentId: id, session: currentSession, isVoided: false },
     include: { items: true },
   });
-  const ledger = calculatePeriodFeeBalance(obligations, currentReceipts, currentTerm, currentTerm);
+  const ledger = calculatePeriodFeeBalance(obligations, currentReceipts, currentTerm, currentTerm, nextClass);
   const { totalPaid: newPaid, balanceRemaining: newBalance } = ledger;
   dataToUpdate.totalTermBill = newBill;
   dataToUpdate.totalPaid = newPaid;

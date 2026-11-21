@@ -302,10 +302,10 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
         include: { items: true },
       })
       : [];
-    const allocatedItems = allocatePeriodItems(receiptItems, paymentTerm, currentTerm, obligations, priorReceipts);
+    const allocatedItems = allocatePeriodItems(receiptItems, paymentTerm, currentTerm, obligations, priorReceipts, student?.class);
     const projectedReceipts = [...priorReceipts, { term: paymentTerm, amountPaid: input.amountPaid, items: allocatedItems }];
-    const previousLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentTerm, currentTerm);
-    const nextBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, paymentTerm, currentTerm);
+    const previousLedger = calculatePeriodFeeBalance(obligations, priorReceipts, paymentTerm, currentTerm, student?.class);
+    const nextBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, paymentTerm, currentTerm, student?.class);
     const effectiveBill = student ? nextBalance.totalBill : input.amountPaid;
     const previousTotalPaid = previousLedger.totalPaid;
     const newTotalPaid = student ? nextBalance.totalPaid : input.amountPaid;
@@ -370,7 +370,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
       const category = it.category as keyof typeof obligations;
       const due = obligations[category];
       const itemTerm = isTermPeriod(it.paymentTerm) ? it.paymentTerm : currentTerm;
-      const lineBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, itemTerm, currentTerm);
+      const lineBalance = calculatePeriodFeeBalance(obligations, projectedReceipts, itemTerm, currentTerm, student?.class);
       const examName = canonicalExamName(it.name);
       const alreadyPaid = examName ? paidTowardExam(priorReceipts, examName) + (examPaidOnReceipt.get(examName) || 0) : 0;
       const examLine = examName ? examCharge(it.name, Number(it.amount), alreadyPaid, examFees) : null;
@@ -428,7 +428,7 @@ export async function createReceipt(input: CreateReceiptInput): Promise<Receipt>
 
     // 6. Update student balance in PostgreSQL (if registered student)
     if (student && allocatedItems.some((item) => item.paymentTerm === currentTerm)) {
-      const currentLedger = calculatePeriodFeeBalance(obligations, projectedReceipts, currentTerm, currentTerm);
+      const currentLedger = calculatePeriodFeeBalance(obligations, projectedReceipts, currentTerm, currentTerm, student?.class);
       await tx.student.update({
         where: { id: student.id },
         data: {
@@ -505,10 +505,10 @@ export async function updateReceipt(receiptId: string, input: {
       })
       : [];
     const earlier = others.filter((receipt) => receipt.timestamp <= existing.timestamp);
-    const allocatedItems = allocatePeriodItems(receiptItems as ReceiptItem[], paymentTerm, currentTerm, obligations, earlier);
+    const allocatedItems = allocatePeriodItems(receiptItems as ReceiptItem[], paymentTerm, currentTerm, obligations, earlier, student?.class);
     const projected = [...earlier, { term: paymentTerm, amountPaid, items: allocatedItems }];
-    const previousLedger = calculatePeriodFeeBalance(obligations, earlier, paymentTerm, currentTerm);
-    const nextBalance = calculatePeriodFeeBalance(obligations, projected, paymentTerm, currentTerm);
+    const previousLedger = calculatePeriodFeeBalance(obligations, earlier, paymentTerm, currentTerm, student?.class);
+    const nextBalance = calculatePeriodFeeBalance(obligations, projected, paymentTerm, currentTerm, student?.class);
     const paymentStatus: "FULL" | "PARTIAL" = student ? (nextBalance.status === "FULL" ? "FULL" : "PARTIAL") : "FULL";
 
     let receiptDate = existing.date;
@@ -544,7 +544,7 @@ export async function updateReceipt(receiptId: string, input: {
             const category = item.category as keyof typeof obligations;
             const due = obligations[category];
             const itemTerm = isTermPeriod(item.paymentTerm) ? item.paymentTerm : currentTerm;
-            const lineBalance = calculatePeriodFeeBalance(obligations, projected, itemTerm, currentTerm);
+            const lineBalance = calculatePeriodFeeBalance(obligations, projected, itemTerm, currentTerm, student?.class);
             const examName = canonicalExamName(item.name);
             const alreadyPaid = examName ? paidTowardExam(earlier, examName) : 0;
             const examLine = examName ? examCharge(item.name, Number(item.amount), alreadyPaid, readStoredExamFees(examFeesOn(school))) : null;
@@ -565,7 +565,7 @@ export async function updateReceipt(receiptId: string, input: {
     if (student && existing.session === currentSession) {
       const active = [...others, updated];
       const activeTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
-      const ledger = calculatePeriodFeeBalance(obligations, active, activeTerm, activeTerm);
+      const ledger = calculatePeriodFeeBalance(obligations, active, activeTerm, activeTerm, student?.class);
       await tx.student.update({
         where: { id: student.id },
         data: {
@@ -654,7 +654,7 @@ export async function voidReceipt(
         student.totalTermBill || 0
       );
       const activeTerm = isTermPeriod(school?.currentTerm) ? school.currentTerm : "1st Term";
-      const ledger = calculatePeriodFeeBalance(obligations, activeReceipts, activeTerm, activeTerm);
+      const ledger = calculatePeriodFeeBalance(obligations, activeReceipts, activeTerm, activeTerm, student.class);
       const { totalBill, totalPaid: newTotalPaid, balanceRemaining: newBalanceRemaining, status: newStatus } = ledger;
 
       await tx.student.update({

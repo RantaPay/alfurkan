@@ -75,6 +75,20 @@ test("legacy receipt lines inherit their receipt period and retain void status",
   assert.equal(calculatePeriodFeeBalance(tuitionOnly, [{ term: "3rd Term", amountPaid: 30000, items: [] }], "3rd Term", "1st Term").status, "FULL");
 });
 
+test("JSS 3, SS 2, and SS 3 whole-session school fees stop after 2nd term", () => {
+  for (const className of ["JSS 3 A", "SS 2 Science", "SS 3"]) {
+    const items = allocatePeriodItems([tuition(60000)], "Whole Session", "1st Term", tuitionOnly, [], className);
+    assert.deepEqual(items.map((item) => item.paymentTerm), ["1st Term", "2nd Term"]);
+    const ledger = calculatePeriodFeeBalance(tuitionOnly, [receipt("Whole Session", items)], "Whole Session", "1st Term", className);
+    assert.equal(ledger.totalBill, 60000);
+    assert.equal(ledger.balanceRemaining, 0);
+    assert.equal(calculatePeriodFeeBalance(tuitionOnly, [], "3rd Term", "1st Term", className).balances.Tuition, 0);
+    assert.equal(calculatePeriodFeeBalance(due, [], "3rd Term", "1st Term", className).balances.Books, 27000);
+  }
+  const ordinary = allocatePeriodItems([tuition(90000)], "Whole Session", "1st Term", tuitionOnly, [], "SS 1 A");
+  assert.deepEqual(ordinary.map((item) => item.paymentTerm), ["1st Term", "2nd Term", "3rd Term"]);
+});
+
 test("payment periods reject arbitrary values", () => {
   assert.equal(isPaymentPeriod("Whole Session"), true);
   assert.equal(isTermPeriod("Whole Session"), false);

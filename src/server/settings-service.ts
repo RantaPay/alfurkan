@@ -172,7 +172,7 @@ export async function updateSchoolProfile(updates: Partial<SchoolProfile> & { fe
       const revisedBill = getBillForClass(s.class, activeFees) || s.totalTermBill;
       const obligations = getStudentFeeObligations(s.fullName, s.class, activeFees, activeConcessions, revisedBill);
       const activeTerm = isTermPeriod(updated.currentTerm) ? updated.currentTerm : "1st Term";
-      const ledger = calculatePeriodFeeBalance(obligations, receiptsByStudent.get(s.id) || [], activeTerm, activeTerm);
+      const ledger = calculatePeriodFeeBalance(obligations, receiptsByStudent.get(s.id) || [], activeTerm, activeTerm, s.class);
       const { totalBill: targetBill, totalPaid: paid, balanceRemaining: bal, status } = ledger;
       if (s.totalTermBill !== targetBill || s.totalPaid !== paid || s.balanceRemaining !== bal || s.status !== status) {
         updateOps.push(

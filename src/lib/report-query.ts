@@ -270,7 +270,7 @@ export function buildAccountReport(
 
     const sessionReceipts = student.receipts.filter((receipt) => !receipt.isVoided && sameAcademicSession(receipt.session, session));
     const obligations = getStudentFeeObligations(student.fullName, student.className, feeStructure, concessions, student.totalTermBill || 0);
-    const ledger = calculatePeriodFeeBalance(obligations, sessionReceipts, ledgerPeriod, activeTerm);
+    const ledger = calculatePeriodFeeBalance(obligations, sessionReceipts, ledgerPeriod, activeTerm, student.className);
     if (!statusMatches(status, ledger.status, ledger.totalBill)) continue;
 
     const matchedBeforeBank = student.receipts.flatMap((receipt) => {
